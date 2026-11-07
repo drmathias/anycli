@@ -5,23 +5,26 @@ namespace AnyCli;
 
 public sealed class ConsoleApp
 {
-    private readonly Dictionary<string, Func<CommandContext, Task<int>>> _commands;
+    private readonly Dictionary<string, Func<IServiceProvider?, CommandContext, Task<int>>> _commands;
     private readonly IReadOnlyList<CommandInfo> _commandInfos;
     private readonly IHelpProvider? _helpProvider;
     private readonly string? _name;
+    private readonly IServiceProvider? _serviceProvider;
     private readonly string? _version;
 
     internal ConsoleApp(
         string? name,
         string? version,
-        Dictionary<string, Func<CommandContext, Task<int>>> commands,
+        Dictionary<string, Func<IServiceProvider?, CommandContext, Task<int>>> commands,
         IReadOnlyList<CommandInfo> commandInfos,
+        IServiceProvider? serviceProvider,
         IHelpProvider? helpProvider)
     {
         _name = name;
         _version = version;
         _commands = commands;
         _commandInfos = commandInfos;
+        _serviceProvider = serviceProvider;
         _helpProvider = helpProvider;
     }
 
@@ -42,18 +45,12 @@ public sealed class ConsoleApp
         if (_helpProvider is not null && IsHelpRequest(args))
         {
             var commandName = args.Length == 2 ? args[0] : null;
-            _helpProvider.WriteHelp(
-                new HelpContext(
-                    _name ?? string.Empty,
-                    output,
-                    commandName,
-                    _commandInfos,
-                    GetOptions()));
+            _helpProvider.WriteHelp(new HelpContext(_name ?? string.Empty, output, commandName, _commandInfos, GetOptions()));
             return 0;
         }
 
         return args.Length == 1 && _commands.TryGetValue(args[0], out var execute)
-            ? await execute(new CommandContext(args[0], output, error)).ConfigureAwait(false)
+            ? await execute(_serviceProvider, new CommandContext(args[0], output, error)).ConfigureAwait(false)
             : throw new NotImplementedException();
     }
 
@@ -70,15 +67,8 @@ public sealed class ConsoleApp
     {
         var options = new List<OptionInfo>(2);
 
-        if (_helpProvider is not null)
-        {
-            options.Add(new OptionInfo(["-h", "--help"], "Prints help information"));
-        }
-
-        if (_version is not null)
-        {
-            options.Add(new OptionInfo(["-v", "--version"], "Prints version information"));
-        }
+        if (_helpProvider is not null) options.Add(new OptionInfo(["-h", "--help"], "Prints help information"));
+        if (_version is not null) options.Add(new OptionInfo(["-v", "--version"], "Prints version information"));
 
         return options;
     }
