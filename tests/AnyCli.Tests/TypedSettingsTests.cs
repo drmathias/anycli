@@ -1,5 +1,3 @@
-using AnyCli;
-
 namespace AnyCli.Tests;
 
 public class TypedSettingsTests

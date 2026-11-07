@@ -3,18 +3,17 @@
 
 namespace AnyCli;
 
-internal enum ArgumentKind
-{
-    Required,
-    Optional,
-    Variadic,
-}
-
-internal sealed class ArgumentDefinition(string name, ArgumentKind kind, Func<string?> defaultFactory)
+internal sealed class ArgumentDefinition(
+    string name,
+    ArgumentArity arity,
+    Type argumentType,
+    Func<string?> defaultFactory)
 {
     public string Name { get; } = name;
 
-    public ArgumentKind Kind { get; } = kind;
+    public ArgumentArity Arity { get; } = arity;
+
+    public Type ArgumentType { get; } = argumentType;
 
     public Func<string?> DefaultFactory { get; } = defaultFactory;
 

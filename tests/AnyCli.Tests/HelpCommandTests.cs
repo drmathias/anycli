@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 // SPDX-License-Identifier: MIT
 
-using AnyCli;
-
 namespace AnyCli.Tests;
 
 public class HelpCommandTests
@@ -89,6 +87,52 @@ public class HelpCommandTests
         await Assert.That(error.ToString()).IsEmpty();
     }
 
+    [Test]
+    public async Task CommandHelp_ExposesArgumentTypes()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureCommands(commands => commands.AddCommand<TypeCommand, TypeMetadataSettings>("types"))
+            .AddHelp<TypeHelpProvider>()
+            .Build();
+
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await app.RunAsync(
+            ["types", "--help"],
+            new TextConsole(new StringReader(string.Empty), output, error));
+
+        await Assert.That(exitCode).IsEqualTo(0);
+        await Assert.That(output.ToString()).IsEqualTo(
+            $"{typeof(int).Name}:1:1:True:False," +
+            $"{typeof(int?).Name}:0:1:False:False," +
+            $"{typeof(string[]).Name}:0:{int.MaxValue}:False:True");
+        await Assert.That(error.ToString()).IsEmpty();
+    }
+
+    [Test]
+    public async Task CommandHelp_ExposesOneOrMoreArity()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureCommands(commands => commands.AddCommand<OneOrMoreCommand, OneOrMoreSettings>("tags"))
+            .AddHelp<TypeHelpProvider>()
+            .Build();
+
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await app.RunAsync(
+            ["tags", "--help"],
+            new TextConsole(new StringReader(string.Empty), output, error));
+
+        await Assert.That(exitCode).IsEqualTo(0);
+        await Assert.That(output.ToString()).IsEqualTo(
+            $"{typeof(string[]).Name}:1:{int.MaxValue}:True:True");
+        await Assert.That(error.ToString()).IsEmpty();
+    }
+
     private static async Task<RunResult> Run(string[] args)
     {
         var app = ConsoleAppBuilder.Create()
@@ -132,6 +176,27 @@ public class HelpCommandTests
     private sealed class ThrowCommand : ICommand<ThrowSettings>
     {
         public int Execute(CommandContext context, ThrowSettings settings) => 0;
+    }
+
+    private sealed class TypeCommand : ICommand<TypeMetadataSettings>
+    {
+        public int Execute(CommandContext context, TypeMetadataSettings settings) => 0;
+    }
+
+    private sealed class OneOrMoreCommand : ICommand<OneOrMoreSettings>
+    {
+        public int Execute(CommandContext context, OneOrMoreSettings settings) => 0;
+    }
+
+    private sealed class TypeHelpProvider : IHelpProvider
+    {
+        public void WriteHelp(HelpContext context) =>
+            context.Console.Output.Write(
+                string.Join(
+                    ",",
+                    context.Arguments.Select(argument =>
+                        $"{argument.ArgumentType.Name}:{argument.Arity.Minimum}:{argument.Arity.Maximum}:" +
+                        $"{argument.IsRequired}:{argument.IsVariadic}")));
     }
 
     private sealed class ThrowHelpProvider : IHelpProvider
@@ -208,4 +273,16 @@ public sealed partial class ThrowSettings
 {
     [Argument(0, Description = "Destination for HTTP traffic")]
     public string Upstream { get; set; } = "";
+}
+
+public sealed partial class TypeMetadataSettings
+{
+    [Argument(0)]
+    public int Count { get; set; }
+
+    [Argument(1, Optional = true)]
+    public int? Retries { get; set; }
+
+    [VariadicArgument(2)]
+    public string[] Tags { get; set; } = [];
 }

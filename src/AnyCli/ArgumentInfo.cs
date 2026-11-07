@@ -8,10 +8,21 @@ namespace AnyCli;
 /// </summary>
 /// <param name="Name">The argument name.</param>
 /// <param name="Description">A short description of the argument.</param>
-/// <param name="IsRequired">Whether the argument is required.</param>
-/// <param name="IsVariadic">Whether the argument consumes all remaining values.</param>
+/// <param name="ArgumentType">The declared argument type.</param>
+/// <param name="Arity">The number of values the argument accepts.</param>
 public sealed record ArgumentInfo(
     string Name,
     string Description,
-    bool IsRequired,
-    bool IsVariadic);
+    Type ArgumentType,
+    ArgumentArity Arity)
+{
+    /// <summary>
+    /// Gets a value indicating whether the argument is required.
+    /// </summary>
+    public bool IsRequired => Arity.IsRequired;
+
+    /// <summary>
+    /// Gets a value indicating whether the argument accepts more than one value.
+    /// </summary>
+    public bool IsVariadic => Arity.IsVariadic;
+}

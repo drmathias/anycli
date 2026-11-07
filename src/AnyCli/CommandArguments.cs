@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 // SPDX-License-Identifier: MIT
 
+using System.Globalization;
+
 namespace AnyCli;
 
 /// <summary>
@@ -8,18 +10,40 @@ namespace AnyCli;
 /// </summary>
 public sealed class CommandArguments
 {
-    private readonly IReadOnlyDictionary<string, ArgumentKind> _kinds;
+    private readonly IReadOnlyDictionary<string, ArgumentArity> _arities;
+    private readonly IEnumParser _enumParser;
     private readonly IReadOnlySet<string> _supplied;
     private readonly IReadOnlyDictionary<string, object?> _values;
 
     internal CommandArguments(
-        IReadOnlyDictionary<string, ArgumentKind> kinds,
+        IReadOnlyDictionary<string, ArgumentArity> arities,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string> supplied)
+        IReadOnlySet<string> supplied,
+        IEnumParser enumParser)
     {
-        _kinds = kinds;
+        _arities = arities;
         _values = values;
         _supplied = supplied;
+        _enumParser = enumParser;
+    }
+
+    /// <summary>
+    /// Parses an enum argument value.
+    /// </summary>
+    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <param name="value">The raw argument value.</param>
+    /// <param name="argumentName">The argument name used in error messages.</param>
+    /// <returns>The parsed enum value.</returns>
+    /// <exception cref="CommandArgumentException">The value could not be parsed.</exception>
+    public TEnum ParseEnum<TEnum>(string value, string argumentName)
+        where TEnum : struct, Enum
+    {
+        if (_enumParser.TryParse(value, CultureInfo.InvariantCulture, out TEnum result))
+        {
+            return result;
+        }
+
+        throw ArgumentParsing.CreateInvalidValue(value, argumentName, typeof(TEnum));
     }
 
     /// <summary>
@@ -32,8 +56,10 @@ public sealed class CommandArguments
     /// </exception>
     public string GetRequired(string name)
     {
-        EnsureKind(name, ArgumentKind.Required);
-        return (string)_values[name]!;
+        return GetArity(name) != ArgumentArity.ExactlyOne
+            ? throw new InvalidOperationException(
+                $"Argument '{name}' does not accept exactly one required value.")
+            : (string)_values[name]!;
     }
 
     /// <summary>
@@ -46,8 +72,10 @@ public sealed class CommandArguments
     /// </exception>
     public string? GetOptional(string name)
     {
-        EnsureKind(name, ArgumentKind.Optional);
-        return (string?)_values[name];
+        return GetArity(name) != ArgumentArity.ZeroOrOne
+            ? throw new InvalidOperationException(
+                $"Argument '{name}' does not accept zero or one value.")
+            : (string?)_values[name];
     }
 
     /// <summary>
@@ -61,7 +89,12 @@ public sealed class CommandArguments
     /// </exception>
     public bool TryGetOptional(string name, out string? value)
     {
-        EnsureKind(name, ArgumentKind.Optional);
+        if (GetArity(name) != ArgumentArity.ZeroOrOne)
+        {
+            throw new InvalidOperationException(
+                $"Argument '{name}' does not accept zero or one value.");
+        }
+
         value = (string?)_values[name];
         return _supplied.Contains(name);
     }
@@ -76,23 +109,18 @@ public sealed class CommandArguments
     /// </exception>
     public IReadOnlyList<string> GetVariadic(string name)
     {
-        EnsureKind(name, ArgumentKind.Variadic);
-        return (IReadOnlyList<string>)_values[name]!;
+        return !GetArity(name).IsVariadic
+            ? throw new InvalidOperationException(
+                $"Argument '{name}' does not accept multiple values.")
+            : (IReadOnlyList<string>)_values[name]!;
     }
 
-    private void EnsureKind(string name, ArgumentKind expected)
+    private ArgumentArity GetArity(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
 
-        if (!_kinds.TryGetValue(name, out var actual))
-        {
-            throw new InvalidOperationException($"No argument named '{name}' is defined for this command.");
-        }
-
-        if (actual != expected)
-        {
-            throw new InvalidOperationException(
-                $"Argument '{name}' is {actual.ToString().ToLowerInvariant()}, not {expected.ToString().ToLowerInvariant()}.");
-        }
+        return !_arities.TryGetValue(name, out var arity)
+            ? throw new InvalidOperationException($"No argument named '{name}' is defined for this command.")
+            : arity;
     }
 }

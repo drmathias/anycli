@@ -7,62 +7,55 @@ internal static class CommandArgumentsParser
 {
     public static CommandArguments Parse(
         IReadOnlyList<ArgumentDefinition> definitions,
-        ReadOnlySpan<string> tokens)
+        ReadOnlySpan<string> tokens,
+        IEnumParser enumParser)
     {
-        var kinds = new Dictionary<string, ArgumentKind>(StringComparer.Ordinal);
+        var arities = new Dictionary<string, ArgumentArity>(StringComparer.Ordinal);
         var values = new Dictionary<string, object?>(StringComparer.Ordinal);
         var supplied = new HashSet<string>(StringComparer.Ordinal);
         var index = 0;
 
         foreach (var definition in definitions)
         {
-            kinds[definition.Name] = definition.Kind;
+            arities[definition.Name] = definition.Arity;
 
-            switch (definition.Kind)
+            var available = tokens.Length - index;
+            var count = definition.Arity.Maximum == int.MaxValue
+                ? available
+                : Math.Min(definition.Arity.Maximum, available);
+
+            if (count < definition.Arity.Minimum)
             {
-                case ArgumentKind.Required:
-                    if (index >= tokens.Length)
-                    {
-                        throw new CommandArgumentException(
-                            $"Missing required argument '{definition.Name}'.");
-                    }
+                throw new CommandArgumentException(
+                    $"Missing required argument '{definition.Name}'.");
+            }
 
-                    values[definition.Name] = tokens[index++];
-                    break;
+            if (definition.Arity.IsVariadic)
+            {
+                var items = new List<string>(count);
+                for (var itemIndex = 0; itemIndex < count; itemIndex++)
+                {
+                    items.Add(tokens[index++]);
+                }
 
-                case ArgumentKind.Optional:
-                    if (index < tokens.Length)
-                    {
-                        values[definition.Name] = tokens[index++];
-                        supplied.Add(definition.Name);
-                    }
-                    else
-                    {
-                        values[definition.Name] = definition.DefaultFactory();
-                    }
-
-                    break;
-
-                case ArgumentKind.Variadic:
-                    var items = new List<string>();
-                    while (index < tokens.Length)
-                    {
-                        items.Add(tokens[index++]);
-                    }
-
-                    values[definition.Name] = items;
-                    break;
-
-                default:
-                    throw new InvalidOperationException($"Unknown argument kind '{definition.Kind}'.");
+                values[definition.Name] = items;
+            }
+            else if (count > 0)
+            {
+                values[definition.Name] = tokens[index++];
+                if (definition.Arity.Minimum == 0)
+                {
+                    supplied.Add(definition.Name);
+                }
+            }
+            else
+            {
+                values[definition.Name] = definition.DefaultFactory();
             }
         }
 
-        if (index < tokens.Length)
-        {
-            throw new CommandArgumentException($"Unexpected argument '{tokens[index]}'.");
-        }
-
-        return new CommandArguments(kinds, values, supplied);
+        return index < tokens.Length
+            ? throw new CommandArgumentException($"Unexpected argument '{tokens[index]}'.")
+            : new CommandArguments(arities, values, supplied, enumParser);
     }
 }

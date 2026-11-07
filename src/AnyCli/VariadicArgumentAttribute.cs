@@ -23,4 +23,10 @@ public sealed class VariadicArgumentAttribute(int position) : Attribute
     /// Gets or sets the argument description shown in help output.
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets a custom parser type implementing
+    /// <see cref="IArgumentParser{T}"/> for the array element type.
+    /// </summary>
+    public Type? Parser { get; set; }
 }

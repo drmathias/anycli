@@ -19,7 +19,19 @@ public sealed class CommandArgumentBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
     public CommandArgumentBuilder Add(string name) =>
-        Add(name, ArgumentKind.Required, static () => null);
+        Add(name, ArgumentArity.ExactlyOne, typeof(string), static () => null);
+
+    /// <summary>
+    /// Adds a required argument with the specified value type.
+    /// </summary>
+    /// <typeparam name="T">The argument value type.</typeparam>
+    /// <param name="name">The argument name.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    public CommandArgumentBuilder Add<T>(string name) =>
+        Add(name, ArgumentArity.ExactlyOne, typeof(T), static () => null);
 
     /// <summary>
     /// Adds an optional argument that defaults to <see langword="null"/>.
@@ -30,7 +42,20 @@ public sealed class CommandArgumentBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
     public CommandArgumentBuilder AddOptional(string name) =>
-        Add(name, ArgumentKind.Optional, static () => null);
+        Add(name, ArgumentArity.ZeroOrOne, typeof(string), static () => null);
+
+    /// <summary>
+    /// Adds an optional argument with the specified value type that defaults to
+    /// <see langword="null"/>.
+    /// </summary>
+    /// <typeparam name="T">The argument value type.</typeparam>
+    /// <param name="name">The argument name.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    public CommandArgumentBuilder AddOptional<T>(string name) =>
+        Add(name, ArgumentArity.ZeroOrOne, typeof(T), static () => null);
 
     /// <summary>
     /// Adds an optional argument with a constant default value.
@@ -47,7 +72,7 @@ public sealed class CommandArgumentBuilder
     public CommandArgumentBuilder AddOptional(string name, string defaultValue)
     {
         ArgumentNullException.ThrowIfNull(defaultValue);
-        return Add(name, ArgumentKind.Optional, () => defaultValue);
+        return Add(name, ArgumentArity.ZeroOrOne, typeof(string), () => defaultValue);
     }
 
     /// <summary>
@@ -67,7 +92,7 @@ public sealed class CommandArgumentBuilder
     public CommandArgumentBuilder AddOptional(string name, Func<string?> defaultValueFactory)
     {
         ArgumentNullException.ThrowIfNull(defaultValueFactory);
-        return Add(name, ArgumentKind.Optional, defaultValueFactory);
+        return Add(name, ArgumentArity.ZeroOrOne, typeof(string), defaultValueFactory);
     }
 
     /// <summary>
@@ -82,7 +107,56 @@ public sealed class CommandArgumentBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
     public CommandArgumentBuilder AddVariadic(string name) =>
-        Add(name, ArgumentKind.Variadic, static () => null);
+        AddVariadic(name, ArgumentArity.ZeroOrMore);
+
+    /// <summary>
+    /// Adds a variadic argument with the specified arity.
+    /// </summary>
+    /// <param name="name">The argument name.</param>
+    /// <param name="arity">The number of values the argument accepts.</param>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// A variadic argument must be the last argument.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace, or
+    /// <paramref name="arity"/> does not accept multiple values.
+    /// </exception>
+    public CommandArgumentBuilder AddVariadic(string name, ArgumentArity arity) =>
+        AddVariadicCore(name, arity, typeof(string[]), static () => null);
+
+    /// <summary>
+    /// Adds a variadic argument with the specified element type that consumes all
+    /// remaining values.
+    /// </summary>
+    /// <typeparam name="T">The array element type.</typeparam>
+    /// <param name="name">The argument name.</param>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// A variadic argument must be the last argument.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    public CommandArgumentBuilder AddVariadic<T>(string name) =>
+        AddVariadic<T>(name, ArgumentArity.ZeroOrMore);
+
+    /// <summary>
+    /// Adds a variadic argument with the specified element type and arity.
+    /// </summary>
+    /// <typeparam name="T">The array element type.</typeparam>
+    /// <param name="name">The argument name.</param>
+    /// <param name="arity">The number of values the argument accepts.</param>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// A variadic argument must be the last argument.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace, or
+    /// <paramref name="arity"/> does not accept multiple values.
+    /// </exception>
+    public CommandArgumentBuilder AddVariadic<T>(string name, ArgumentArity arity) =>
+        AddVariadicCore(name, arity, typeof(T[]), static () => null);
 
     /// <summary>
     /// Sets the description of the most recently added argument.
@@ -114,11 +188,31 @@ public sealed class CommandArgumentBuilder
         return _arguments.ToArray();
     }
 
-    private CommandArgumentBuilder Add(string name, ArgumentKind kind, Func<string?> defaultFactory)
+    private CommandArgumentBuilder Add(
+        string name,
+        ArgumentArity arity,
+        Type argumentType,
+        Func<string?> defaultFactory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        _arguments.Add(new ArgumentDefinition(name, kind, defaultFactory));
+        _arguments.Add(new ArgumentDefinition(name, arity, argumentType, defaultFactory));
         return this;
+    }
+
+    private CommandArgumentBuilder AddVariadicCore(
+        string name,
+        ArgumentArity arity,
+        Type argumentType,
+        Func<string?> defaultFactory)
+    {
+        if (!arity.IsVariadic)
+        {
+            throw new ArgumentException(
+                "A variadic argument must accept more than one value.",
+                nameof(arity));
+        }
+
+        return Add(name, arity, argumentType, defaultFactory);
     }
 
     private void Validate()
@@ -139,18 +233,18 @@ public sealed class CommandArgumentBuilder
                 throw new InvalidOperationException("A variadic argument must be the last argument.");
             }
 
-            if (argument.Kind == ArgumentKind.Required && optionalSeen)
+            if (argument.Arity.IsRequired && !argument.Arity.IsVariadic && optionalSeen)
             {
                 throw new InvalidOperationException(
                     "Required arguments must appear before optional arguments.");
             }
 
-            if (argument.Kind == ArgumentKind.Optional)
+            if (!argument.Arity.IsVariadic && !argument.Arity.IsRequired)
             {
                 optionalSeen = true;
             }
 
-            if (argument.Kind == ArgumentKind.Variadic)
+            if (argument.Arity.IsVariadic)
             {
                 variadicSeen = true;
             }
