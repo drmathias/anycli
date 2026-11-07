@@ -31,6 +31,30 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task ReportsUnsupportedTypeAlongsideSupportedArguments()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadSettings
+            {
+                [Argument(0)]
+                public string Name { get; set; } = "";
+
+                [Argument(1)]
+                public object Value { get; set; } = new();
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI001");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Value");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task ReportsInvalidArgumentParser()
     {
         var result = RunGenerator(
