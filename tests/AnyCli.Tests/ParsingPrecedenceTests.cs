@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
+//
+// SPDX-License-Identifier: MIT
+
 using AnyCli;
 
 [assembly: ArgumentParser<AnyCli.Tests.PrecedenceValue, AnyCli.Tests.AssemblyPrecedenceParser>]

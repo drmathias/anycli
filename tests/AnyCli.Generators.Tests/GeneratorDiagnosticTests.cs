@@ -1,5 +1,9 @@
+// SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
+//
+// SPDX-License-Identifier: MIT
+
 using System.Collections.Immutable;
-using AnyCli.Generators;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 

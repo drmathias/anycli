@@ -29,7 +29,10 @@ indent_size = 4
 tab_width = 4
 
 # New line preferences
-insert_final_newline = false
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+end_of_line = lf
 
 #### .NET Coding Conventions ####
 [*.{cs,vb}]
@@ -386,4 +389,51 @@ dotnet_naming_style.s_camelcase.required_prefix = s_
 dotnet_naming_style.s_camelcase.required_suffix = 
 dotnet_naming_style.s_camelcase.word_separator = 
 dotnet_naming_style.s_camelcase.capitalization = camel_case
+
+#### Analyzer and lint configuration ####
+[*.cs]
+
+# Code style diagnostics
+dotnet_diagnostic.IDE0005.severity = warning
+dotnet_diagnostic.IDE0055.severity = warning
+dotnet_diagnostic.IDE0079.severity = warning
+
+# Enable .NET analyzer categories as suggestions by default, with
+# higher-signal categories raised to warnings.
+dotnet_analyzer_diagnostic.category-Design.severity = suggestion
+dotnet_analyzer_diagnostic.category-Documentation.severity = suggestion
+dotnet_analyzer_diagnostic.category-Globalization.severity = suggestion
+dotnet_analyzer_diagnostic.category-Interoperability.severity = none
+dotnet_analyzer_diagnostic.category-Maintainability.severity = suggestion
+dotnet_analyzer_diagnostic.category-Naming.severity = suggestion
+dotnet_analyzer_diagnostic.category-Performance.severity = suggestion
+dotnet_analyzer_diagnostic.category-Reliability.severity = warning
+dotnet_analyzer_diagnostic.category-Security.severity = warning
+dotnet_analyzer_diagnostic.category-Usage.severity = suggestion
+
+# Async code should await without capturing the synchronization context.
+dotnet_diagnostic.CA2007.severity = warning
+
+# Generated and intermediate files are not maintained by hand.
+[**/obj/**/*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+
+[**/*.g.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+
+[**/*.generated.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+
+# Tests commonly use underscore-separated names and execute async code
+# directly without ConfigureAwait.
+[tests/**/*.cs]
+dotnet_diagnostic.CA1051.severity = none
+dotnet_diagnostic.CA1062.severity = none
+dotnet_diagnostic.CA1515.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA2007.severity = none
 
