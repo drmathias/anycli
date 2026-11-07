@@ -124,9 +124,9 @@ public class HelpCommandTests
 
     private sealed record RunResult(int ExitCode, string Output, string Error);
 
-    private sealed class NoOpCommand : ICommand
+    private sealed class NoOpCommand : EmptyCommand
     {
-        public int Execute(CommandContext context) => 0;
+        public override int Execute(CommandContext context) => 0;
     }
 
     private sealed class ThrowCommand : ICommand<ThrowSettings>

@@ -20,7 +20,7 @@ public sealed class CommandConfigurator<TExitCode>
     }
 
     /// <summary>
-    /// Registers a synchronous command.
+    /// Registers a synchronous command that does not use settings.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
@@ -33,9 +33,9 @@ public sealed class CommandConfigurator<TExitCode>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
-        where TCommand : class, IExitCodeCommand<TExitCode>
+        where TCommand : EmptyCommand<TExitCode>
     {
-        _builder.AddCommand<TCommand>(name, description);
+        _builder.AddEmptyExitCodeCommand<TCommand, TExitCode>(name, description);
         return this;
     }
 
@@ -61,7 +61,7 @@ public sealed class CommandConfigurator<TExitCode>
     }
 
     /// <summary>
-    /// Registers an asynchronous command.
+    /// Registers an asynchronous command that does not use settings.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
@@ -74,9 +74,9 @@ public sealed class CommandConfigurator<TExitCode>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
-        where TCommand : class, IAsyncExitCodeCommand<TExitCode>
+        where TCommand : EmptyAsyncCommand<TExitCode>
     {
-        _builder.AddAsyncCommand<TCommand>(name, description);
+        _builder.AddEmptyExitCodeAsyncCommand<TCommand, TExitCode>(name, description);
         return this;
     }
 

@@ -79,7 +79,7 @@ public sealed class ConsoleAppBuilder
     }
 
     /// <summary>
-    /// Registers a synchronous command.
+    /// Registers a synchronous command that does not use settings.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
@@ -92,11 +92,11 @@ public sealed class ConsoleAppBuilder
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddCommand<
+    internal ConsoleAppBuilder AddEmptyCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
-        where TCommand : class, ICommand
+        where TCommand : EmptyCommand
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
@@ -109,7 +109,7 @@ public sealed class ConsoleAppBuilder
     }
 
     /// <summary>
-    /// Registers an asynchronous command.
+    /// Registers an asynchronous command that does not use settings.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
@@ -122,16 +122,72 @@ public sealed class ConsoleAppBuilder
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddAsyncCommand<
+    internal ConsoleAppBuilder AddEmptyAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
-        where TCommand : class, IAsyncCommand
+        where TCommand : EmptyAsyncCommand
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         _commands[name] = new CommandRegistration(
             (serviceProvider, context, _) => ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context),
+            []);
+        _commandInfos[name] = CreateCommandInfo(name, description, []);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a synchronous command that does not use settings and returns a custom exit code enum.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
+    /// <param name="name">The command name.</param>
+    /// <param name="description">A short description shown in help output.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    internal ConsoleAppBuilder AddEmptyExitCodeCommand<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
+        TExitCode>(string name, string description = "")
+        where TCommand : EmptyCommand<TExitCode>
+        where TExitCode : struct, Enum
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        _commands[name] = new CommandRegistration(
+            (serviceProvider, context, _) => Task.FromResult(
+                Convert.ToInt32(
+                    ResolveCommand<TCommand>(serviceProvider).Execute(context),
+                    CultureInfo.InvariantCulture)),
+            []);
+        _commandInfos[name] = CreateCommandInfo(name, description, []);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers an asynchronous command that does not use settings and returns a custom exit code enum.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
+    /// <param name="name">The command name.</param>
+    /// <param name="description">A short description shown in help output.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    internal ConsoleAppBuilder AddEmptyExitCodeAsyncCommand<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
+        TExitCode>(string name, string description = "")
+        where TCommand : EmptyAsyncCommand<TExitCode>
+        where TExitCode : struct, Enum
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        _commands[name] = new CommandRegistration(
+            (serviceProvider, context, _) => ConvertExitCodeAsync(
+                ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context)),
             []);
         _commandInfos[name] = CreateCommandInfo(name, description, []);
         return this;

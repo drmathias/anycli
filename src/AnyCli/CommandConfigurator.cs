@@ -18,7 +18,7 @@ public sealed class CommandConfigurator
     }
 
     /// <summary>
-    /// Registers a synchronous command.
+    /// Registers a synchronous command that does not use settings.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
@@ -31,9 +31,9 @@ public sealed class CommandConfigurator
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
-        where TCommand : class, ICommand
+        where TCommand : EmptyCommand
     {
-        _builder.AddCommand<TCommand>(name, description);
+        _builder.AddEmptyCommand<TCommand>(name, description);
         return this;
     }
 
@@ -59,7 +59,7 @@ public sealed class CommandConfigurator
     }
 
     /// <summary>
-    /// Registers an asynchronous command.
+    /// Registers an asynchronous command that does not use settings.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
@@ -72,9 +72,9 @@ public sealed class CommandConfigurator
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
-        where TCommand : class, IAsyncCommand
+        where TCommand : EmptyAsyncCommand
     {
-        _builder.AddAsyncCommand<TCommand>(name, description);
+        _builder.AddEmptyAsyncCommand<TCommand>(name, description);
         return this;
     }
 

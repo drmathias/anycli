@@ -16,14 +16,6 @@ public class CommandTests
     }
 
     [Test]
-    public async Task Command_ReturningCustomEnum_ConvertsToInt()
-    {
-        var result = await Run<ReturnEnumCommand>("deploy");
-
-        await Assert.That(result.ExitCode).IsEqualTo((int)DeployExitCode.InvalidConfiguration);
-    }
-
-    [Test]
     public async Task Command_ReceivesContextWithNameAndWriters()
     {
         var result = await Run<DescribeCommand>("describe");
@@ -89,7 +81,7 @@ public class CommandTests
     }
 
     private static async Task<RunResult> Run<TCommand>(string commandName)
-        where TCommand : class, ICommand, new()
+        where TCommand : EmptyCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -106,43 +98,32 @@ public class CommandTests
 
     private sealed record RunResult(int ExitCode, string Output, string Error);
 
-    private enum DeployExitCode
+    private sealed class ReturnIntCommand : EmptyCommand
     {
-        Success = 0,
-        InvalidConfiguration = 3,
+        public override int Execute(CommandContext context) => 42;
     }
 
-    private sealed class ReturnIntCommand : ICommand
+    private sealed class DescribeCommand : EmptyCommand
     {
-        public int Execute(CommandContext context) => 42;
-    }
-
-    private sealed class ReturnEnumCommand : IExitCodeCommand<DeployExitCode>
-    {
-        public DeployExitCode Execute(CommandContext context) => DeployExitCode.InvalidConfiguration;
-    }
-
-    private sealed class DescribeCommand : ICommand
-    {
-        public int Execute(CommandContext context)
+        public override int Execute(CommandContext context)
         {
             context.Console.Output.Write(context.Name);
             return 0;
         }
     }
 
-    private sealed class WriteErrorCommand : ICommand
+    private sealed class WriteErrorCommand : EmptyCommand
     {
-        public int Execute(CommandContext context)
+        public override int Execute(CommandContext context)
         {
             context.Console.Error.Write("boom");
             return 0;
         }
     }
 
-    private sealed class ReadInputCommand : ICommand
+    private sealed class ReadInputCommand : EmptyCommand
     {
-        public int Execute(CommandContext context)
+        public override int Execute(CommandContext context)
         {
             context.Console.Output.Write(context.Console.Input.ReadLine());
             return 0;

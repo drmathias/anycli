@@ -14,14 +14,6 @@ public class AsyncCommandTests
     }
 
     [Test]
-    public async Task AsyncCommand_ReturningTaskOfCustomEnum_ConvertsToInt()
-    {
-        var result = await RunAsync<ReturnEnumAsyncCommand>("deploy");
-
-        await Assert.That(result.ExitCode).IsEqualTo((int)DeployExitCode.InvalidConfiguration);
-    }
-
-    [Test]
     public async Task AsyncCommand_IsAwaitedBeforeRunCompletes()
     {
         var result = await RunAsync<DelayedCommand>("slow");
@@ -30,7 +22,7 @@ public class AsyncCommandTests
     }
 
     private static async Task<RunResult> RunAsync<TCommand>(string commandName)
-        where TCommand : class, IAsyncCommand, new()
+        where TCommand : EmptyAsyncCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -47,33 +39,18 @@ public class AsyncCommandTests
 
     private sealed record RunResult(int ExitCode, string Output, string Error);
 
-    private enum DeployExitCode
+    private sealed class ReturnIntAsyncCommand : EmptyAsyncCommand
     {
-        Success = 0,
-        InvalidConfiguration = 3,
-    }
-
-    private sealed class ReturnIntAsyncCommand : IAsyncCommand
-    {
-        public async Task<int> ExecuteAsync(CommandContext context)
+        public override async Task<int> ExecuteAsync(CommandContext context)
         {
             await Task.Yield();
             return 42;
         }
     }
 
-    private sealed class ReturnEnumAsyncCommand : IAsyncExitCodeCommand<DeployExitCode>
+    private sealed class DelayedCommand : EmptyAsyncCommand
     {
-        public async Task<DeployExitCode> ExecuteAsync(CommandContext context)
-        {
-            await Task.Yield();
-            return DeployExitCode.InvalidConfiguration;
-        }
-    }
-
-    private sealed class DelayedCommand : IAsyncCommand
-    {
-        public async Task<int> ExecuteAsync(CommandContext context)
+        public override async Task<int> ExecuteAsync(CommandContext context)
         {
             await Task.Yield();
             context.Console.Output.Write("done");

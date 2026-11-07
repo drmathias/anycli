@@ -116,27 +116,22 @@ public class DependencyInjectionTests
         public void WriteHelp(HelpContext context) => context.Console.Output.Write(greeting.Greeting);
     }
 
-    private sealed class GreetCommand(GreetingService greeting) : ICommand
+    private sealed class GreetCommand(GreetingService greeting) : EmptyCommand
     {
-        public int Execute(CommandContext context)
+        public override int Execute(CommandContext context)
         {
             context.Console.Output.Write(greeting.Greeting);
             return 0;
         }
     }
 
-    private sealed class AsyncGreetCommand(GreetingService greeting) : IAsyncExitCodeCommand<GreetExitCode>
+    private sealed class AsyncGreetCommand(GreetingService greeting) : EmptyAsyncCommand
     {
-        public async Task<GreetExitCode> ExecuteAsync(CommandContext context)
+        public override async Task<int> ExecuteAsync(CommandContext context)
         {
             await Task.Yield();
             context.Console.Output.Write($"async:{greeting.Greeting}");
-            return GreetExitCode.Success;
+            return 0;
         }
-    }
-
-    private enum GreetExitCode
-    {
-        Success = 0,
     }
 }

@@ -77,7 +77,7 @@ public class SpectreConsoleAdapterTests
     }
 
     private static async Task<RunResult> Run<TCommand>(string commandName)
-        where TCommand : class, ICommand, new()
+        where TCommand : EmptyCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -96,9 +96,9 @@ public class SpectreConsoleAdapterTests
 
     private sealed record RunResult(int ExitCode, string Output, string Error);
 
-    private sealed class PropertyCommand : ICommand
+    private sealed class PropertyCommand : EmptyCommand
     {
-        public int Execute(CommandContext context)
+        public override int Execute(CommandContext context)
         {
             context.AnsiConsole.Output.Markup("out");
             context.AnsiConsole.Error.Markup("err");
@@ -106,9 +106,9 @@ public class SpectreConsoleAdapterTests
         }
     }
 
-    private sealed class CachingCommand : ICommand
+    private sealed class CachingCommand : EmptyCommand
     {
-        public int Execute(CommandContext context)
+        public override int Execute(CommandContext context)
         {
             var first = context.AnsiConsole;
             var second = context.AnsiConsole;
@@ -117,9 +117,9 @@ public class SpectreConsoleAdapterTests
         }
     }
 
-    private sealed class MixedCommand : ICommand
+    private sealed class MixedCommand : EmptyCommand
     {
-        public int Execute(CommandContext context)
+        public override int Execute(CommandContext context)
         {
             context.Console.Output.WriteLine("raw");
             context.AnsiConsole.Output.Markup("ok");
@@ -127,9 +127,9 @@ public class SpectreConsoleAdapterTests
         }
     }
 
-    private sealed class ErrorCommand : ICommand
+    private sealed class ErrorCommand : EmptyCommand
     {
-        public int Execute(CommandContext context)
+        public override int Execute(CommandContext context)
         {
             context.AnsiConsole.Error.Markup("boom");
             return 0;
