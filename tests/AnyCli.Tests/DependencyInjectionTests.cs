@@ -69,6 +69,31 @@ public class DependencyInjectionTests
         await Assert.That(created).IsEqualTo(2);
     }
 
+    [Test]
+    public async Task HelpProvider_IsResolvedFromProvider()
+    {
+        var serviceProvider = new TestServiceProvider();
+        serviceProvider.Add(() => new InjectedHelpProvider(new GreetingService("help")));
+
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .UseServiceProvider(serviceProvider)
+            .ConfigureCommands(_ => { })
+            .AddHelp<InjectedHelpProvider>()
+            .Build();
+
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await app.RunAsync(
+            ["--help"],
+            new TextConsole(new StringReader(string.Empty), output, error));
+
+        await Assert.That(exitCode).IsEqualTo(0);
+        await Assert.That(output.ToString()).IsEqualTo("help");
+        await Assert.That(error.ToString()).IsEmpty();
+    }
+
     private sealed class TestServiceProvider : IServiceProvider
     {
         private readonly Dictionary<Type, Func<object>> _factories = [];
@@ -84,6 +109,11 @@ public class DependencyInjectionTests
     private sealed class GreetingService(string greeting)
     {
         public string Greeting { get; } = greeting;
+    }
+
+    private sealed class InjectedHelpProvider(GreetingService greeting) : IHelpProvider
+    {
+        public void WriteHelp(HelpContext context) => context.Console.Output.Write(greeting.Greeting);
     }
 
     private sealed class GreetCommand(GreetingService greeting) : ICommand

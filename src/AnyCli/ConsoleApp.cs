@@ -13,7 +13,7 @@ public sealed class ConsoleApp
 {
     private readonly Dictionary<string, CommandRegistration> _commands;
     private readonly IReadOnlyList<CommandInfo> _commandInfos;
-    private readonly IHelpProvider? _helpProvider;
+    private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private readonly string? _name;
     private readonly IServiceProvider? _serviceProvider;
     private readonly string? _version;
@@ -24,14 +24,14 @@ public sealed class ConsoleApp
         Dictionary<string, CommandRegistration> commands,
         IReadOnlyList<CommandInfo> commandInfos,
         IServiceProvider? serviceProvider,
-        IHelpProvider? helpProvider)
+        Func<IServiceProvider?, IHelpProvider>? helpProviderFactory)
     {
         _name = name;
         _version = version;
         _commands = commands;
         _commandInfos = commandInfos;
         _serviceProvider = serviceProvider;
-        _helpProvider = helpProvider;
+        _helpProviderFactory = helpProviderFactory;
     }
 
     /// <summary>
@@ -81,14 +81,14 @@ public sealed class ConsoleApp
             return 0;
         }
 
-        if (_helpProvider is not null && IsHelpRequest(args))
+        if (_helpProviderFactory is not null && IsHelpRequest(args))
         {
             var commandName = args.Length == 2 ? args[0] : null;
             var commandInfo = commandName is null
                 ? null
                 : _commandInfos.FirstOrDefault(info => info.Name == commandName);
 
-            _helpProvider.WriteHelp(
+            _helpProviderFactory(_serviceProvider).WriteHelp(
                 new HelpContext(
                     _name ?? string.Empty,
                     console,
@@ -123,7 +123,7 @@ public sealed class ConsoleApp
     {
         var options = new List<OptionInfo>(2);
 
-        if (_helpProvider is not null) options.Add(new OptionInfo(["-h", "--help"], "Prints help information"));
+        if (_helpProviderFactory is not null) options.Add(new OptionInfo(["-h", "--help"], "Prints help information"));
         if (_version is not null) options.Add(new OptionInfo(["-v", "--version"], "Prints version information"));
 
         return options;

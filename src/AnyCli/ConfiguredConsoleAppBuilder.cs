@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 // SPDX-License-Identifier: MIT
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace AnyCli;
 
 /// <summary>
@@ -64,9 +66,12 @@ public sealed class ConfiguredConsoleAppBuilder
     /// <returns>The current builder.</returns>
     /// <remarks>
     /// No default help provider is supplied. A provider must be registered to enable help.
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the help provider is
+    /// resolved from it; otherwise, it is created with its public parameterless constructor.
     /// </remarks>
-    public ConfiguredConsoleAppBuilder AddHelp<THelpProvider>()
-        where THelpProvider : class, IHelpProvider, new()
+    public ConfiguredConsoleAppBuilder AddHelp<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
+        where THelpProvider : class, IHelpProvider
     {
         _builder.AddHelp<THelpProvider>();
         return this;

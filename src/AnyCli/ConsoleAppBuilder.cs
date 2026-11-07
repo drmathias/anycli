@@ -14,7 +14,7 @@ public sealed class ConsoleAppBuilder
     private readonly Dictionary<string, CommandRegistration> _commands = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, CommandInfo> _commandInfos = new(StringComparer.Ordinal);
-    private IHelpProvider? _helpProvider;
+    private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private IServiceProvider? _serviceProvider;
     private string? _name;
     private string? _version;
@@ -319,11 +319,14 @@ public sealed class ConsoleAppBuilder
     /// <returns>The current builder.</returns>
     /// <remarks>
     /// No default help provider is supplied. A provider must be registered to enable help.
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the help provider is
+    /// resolved from it; otherwise, it is created with its public parameterless constructor.
     /// </remarks>
-    public ConsoleAppBuilder AddHelp<THelpProvider>()
-        where THelpProvider : class, IHelpProvider, new()
+    public ConsoleAppBuilder AddHelp<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
+        where THelpProvider : class, IHelpProvider
     {
-        _helpProvider = new THelpProvider();
+        _helpProviderFactory = serviceProvider => ResolveHelpProvider<THelpProvider>(serviceProvider);
         return this;
     }
 
@@ -338,7 +341,7 @@ public sealed class ConsoleAppBuilder
             new Dictionary<string, CommandRegistration>(_commands, StringComparer.Ordinal),
             [.. _commandInfos.Values],
             _serviceProvider,
-            _helpProvider);
+            _helpProviderFactory);
 
     private static IReadOnlyList<ArgumentDefinition> BuildArguments(
         Action<CommandArgumentBuilder>? configureArguments)
@@ -379,6 +382,20 @@ public sealed class ConsoleAppBuilder
     private static async Task<int> ConvertExitCodeAsync<TExitCode>(Task<TExitCode> exitCode)
         where TExitCode : struct, Enum =>
         Convert.ToInt32(await exitCode.ConfigureAwait(false), CultureInfo.InvariantCulture);
+
+    private static THelpProvider ResolveHelpProvider<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>(
+        IServiceProvider? serviceProvider)
+        where THelpProvider : class
+    {
+        return serviceProvider is null
+            ? Activator.CreateInstance<THelpProvider>()
+                ?? throw new InvalidOperationException(
+                    $"Could not create help provider '{typeof(THelpProvider).FullName}'.")
+            : serviceProvider.GetService(typeof(THelpProvider)) as THelpProvider
+                ?? throw new InvalidOperationException(
+                    $"Service '{typeof(THelpProvider).FullName}' is not registered.");
+    }
 
     private static TCommand ResolveCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
