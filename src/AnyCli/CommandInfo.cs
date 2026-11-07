@@ -3,4 +3,9 @@
 
 namespace AnyCli;
 
+/// <summary>
+/// Describes a registered command.
+/// </summary>
+/// <param name="Name">The command name.</param>
+/// <param name="Description">A short description of the command.</param>
 public sealed record CommandInfo(string Name, string Description);

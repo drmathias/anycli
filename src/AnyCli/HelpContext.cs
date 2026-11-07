@@ -3,6 +3,9 @@
 
 namespace AnyCli;
 
+/// <summary>
+/// Provides the data needed to render help output.
+/// </summary>
 public sealed class HelpContext
 {
     internal HelpContext(
@@ -19,13 +22,28 @@ public sealed class HelpContext
         Options = options;
     }
 
+    /// <summary>
+    /// Gets the application name.
+    /// </summary>
     public string AppName { get; }
 
+    /// <summary>
+    /// Gets the writer used for help output.
+    /// </summary>
     public TextWriter Output { get; }
 
+    /// <summary>
+    /// Gets the command name being described, or <see langword="null"/> for root help.
+    /// </summary>
     public string? CommandName { get; }
 
+    /// <summary>
+    /// Gets the registered commands.
+    /// </summary>
     public IReadOnlyList<CommandInfo> Commands { get; }
 
+    /// <summary>
+    /// Gets the available application options.
+    /// </summary>
     public IReadOnlyList<OptionInfo> Options { get; }
 }

@@ -3,7 +3,14 @@
 
 namespace AnyCli;
 
+/// <summary>
+/// Writes help output for the application or a single command.
+/// </summary>
 public interface IHelpProvider
 {
+    /// <summary>
+    /// Writes help text to <see cref="HelpContext.Output"/>.
+    /// </summary>
+    /// <param name="context">The help context.</param>
     void WriteHelp(HelpContext context);
 }

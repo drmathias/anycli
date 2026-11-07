@@ -5,6 +5,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace AnyCli;
 
+/// <summary>
+/// Configures and creates a <see cref="ConsoleApp"/>.
+/// </summary>
 public sealed class ConsoleAppBuilder
 {
     private readonly Dictionary<string, Func<IServiceProvider?, CommandContext, Task<int>>> _commands = new(StringComparer.Ordinal);
@@ -19,8 +22,20 @@ public sealed class ConsoleAppBuilder
     {
     }
 
+    /// <summary>
+    /// Creates a new builder.
+    /// </summary>
+    /// <returns>A new <see cref="ConsoleAppBuilder"/> instance.</returns>
     public static ConsoleAppBuilder Create() => new();
 
+    /// <summary>
+    /// Sets the application name.
+    /// </summary>
+    /// <param name="name">The application name.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
     public ConsoleAppBuilder WithName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -28,6 +43,14 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the application version.
+    /// </summary>
+    /// <param name="version">The application version.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="version"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
     public ConsoleAppBuilder WithVersion(string version)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
@@ -35,6 +58,18 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the service provider used to resolve commands.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider.</param>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// When set, commands are resolved with <see cref="IServiceProvider.GetService(Type)"/>
+    /// instead of being constructed directly.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="serviceProvider"/> is <see langword="null"/>.
+    /// </exception>
     public ConsoleAppBuilder UseServiceProvider(IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -42,6 +77,20 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    /// <summary>
+    /// Registers a synchronous command.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <param name="name">The command name.</param>
+    /// <param name="description">A short description shown in help output.</param>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the command is resolved
+    /// from it; otherwise, the command is created with its public parameterless constructor.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
     public ConsoleAppBuilder AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
@@ -55,6 +104,20 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    /// <summary>
+    /// Registers an asynchronous command.
+    /// </summary>
+    /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <param name="name">The command name.</param>
+    /// <param name="description">A short description shown in help output.</param>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the command is resolved
+    /// from it; otherwise, the command is created with its public parameterless constructor.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
     public ConsoleAppBuilder AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
@@ -67,6 +130,14 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    /// <summary>
+    /// Registers the help provider used by <c>-h</c> and <c>--help</c>.
+    /// </summary>
+    /// <typeparam name="THelpProvider">The help provider type.</typeparam>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// No default help provider is supplied. A provider must be registered to enable help.
+    /// </remarks>
     public ConsoleAppBuilder AddHelp<THelpProvider>()
         where THelpProvider : class, IHelpProvider, new()
     {
@@ -74,6 +145,10 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    /// <summary>
+    /// Creates the configured application.
+    /// </summary>
+    /// <returns>A new <see cref="ConsoleApp"/> instance.</returns>
     public ConsoleApp Build() =>
         new(
             _name,

@@ -3,6 +3,12 @@
 
 namespace AnyCli;
 
+/// <summary>
+/// A configured command-line application.
+/// </summary>
+/// <remarks>
+/// Instances are created with <see cref="ConsoleAppBuilder.Build"/>.
+/// </remarks>
 public sealed class ConsoleApp
 {
     private readonly Dictionary<string, Func<IServiceProvider?, CommandContext, Task<int>>> _commands;
@@ -28,8 +34,23 @@ public sealed class ConsoleApp
         _helpProvider = helpProvider;
     }
 
+    /// <summary>
+    /// Runs the application using the console for output.
+    /// </summary>
+    /// <param name="args">The command-line arguments.</param>
+    /// <returns>The process exit code.</returns>
     public Task<int> RunAsync(string[] args) => RunAsync(args, Console.Out, Console.Error);
 
+    /// <summary>
+    /// Runs the application using the specified writers.
+    /// </summary>
+    /// <param name="args">The command-line arguments.</param>
+    /// <param name="output">The writer for standard output.</param>
+    /// <param name="error">The writer for error output.</param>
+    /// <returns>The process exit code.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="args"/>, <paramref name="output"/>, or <paramref name="error"/> is <see langword="null"/>.
+    /// </exception>
     public async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error)
     {
         ArgumentNullException.ThrowIfNull(args);
