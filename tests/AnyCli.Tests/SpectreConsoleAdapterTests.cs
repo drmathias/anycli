@@ -81,7 +81,7 @@ public class SpectreConsoleAdapterTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .AddCommand<TCommand>(commandName)
+            .ConfigureCommands(commands => commands.AddCommand<TCommand>(commandName))
             .Build();
 
         using var output = new StringWriter();

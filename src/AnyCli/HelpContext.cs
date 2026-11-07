@@ -12,12 +12,14 @@ public sealed class HelpContext
         string appName,
         IConsoleWriter console,
         string? commandName,
+        IReadOnlyList<ArgumentInfo> arguments,
         IReadOnlyList<CommandInfo> commands,
         IReadOnlyList<OptionInfo> options)
     {
         AppName = appName;
         Console = console;
         CommandName = commandName;
+        Arguments = arguments;
         Commands = commands;
         Options = options;
     }
@@ -36,6 +38,11 @@ public sealed class HelpContext
     /// Gets the command name being described, or <see langword="null"/> for root help.
     /// </summary>
     public string? CommandName { get; }
+
+    /// <summary>
+    /// Gets the arguments for the command being described, or an empty list for root help.
+    /// </summary>
+    public IReadOnlyList<ArgumentInfo> Arguments { get; }
 
     /// <summary>
     /// Gets the registered commands.

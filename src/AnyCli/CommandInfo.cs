@@ -8,4 +8,10 @@ namespace AnyCli;
 /// </summary>
 /// <param name="Name">The command name.</param>
 /// <param name="Description">A short description of the command.</param>
-public sealed record CommandInfo(string Name, string Description);
+public sealed record CommandInfo(string Name, string Description)
+{
+    /// <summary>
+    /// Gets the command's positional arguments.
+    /// </summary>
+    public IReadOnlyList<ArgumentInfo> Arguments { get; init; } = [];
+}

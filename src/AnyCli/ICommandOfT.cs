@@ -10,9 +10,10 @@ namespace AnyCli;
 /// </summary>
 /// <typeparam name="TExitCode">The enum type used as the exit code.</typeparam>
 /// <remarks>
-/// The enum value is converted to an <see cref="int"/>.
+/// The enum value is converted to an <see cref="int"/> with
+/// <see cref="Convert.ToInt32(object)"/> when the command completes.
 /// </remarks>
-public interface ICommand<TExitCode> : ICommand
+public interface IExitCodeCommand<TExitCode> : ICommand
     where TExitCode : struct, Enum
 {
     /// <summary>

@@ -34,7 +34,7 @@ public class AsyncCommandTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .AddAsyncCommand<TCommand>(commandName)
+            .ConfigureCommands(commands => commands.AddAsyncCommand<TCommand>(commandName))
             .Build();
 
         using var output = new StringWriter();
@@ -62,7 +62,7 @@ public class AsyncCommandTests
         }
     }
 
-    private sealed class ReturnEnumAsyncCommand : IAsyncCommand<DeployExitCode>
+    private sealed class ReturnEnumAsyncCommand : IAsyncExitCodeCommand<DeployExitCode>
     {
         public async Task<DeployExitCode> ExecuteAsync(CommandContext context)
         {

@@ -12,7 +12,7 @@ namespace AnyCli;
 /// <remarks>
 /// The enum value is converted to an <see cref="int"/> when the command completes.
 /// </remarks>
-public interface IAsyncCommand<TExitCode> : IAsyncCommand
+public interface IAsyncExitCodeCommand<TExitCode> : IAsyncCommand
     where TExitCode : struct, Enum
 {
     /// <summary>

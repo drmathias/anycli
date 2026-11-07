@@ -25,6 +25,21 @@ public class HelpCommandTests
             retrieve  Closes a Jvln tunnel
         """;
 
+    private const string ExpectedThrowHelp =
+        """
+        Description:
+            Opens a Jvln HTTP tunnel
+
+        Usage:
+            jvln throw <upstream> [OPTIONS]
+
+        Arguments:
+            <upstream>  Destination for HTTP traffic
+
+        Options:
+            -h, --help                          Prints help information
+        """;
+
     [Test]
     [Arguments("-h")]
     [Arguments("--help")]
@@ -49,17 +64,45 @@ public class HelpCommandTests
         await Assert.That(result.Error).IsEmpty();
     }
 
+    [Test]
+    [Arguments("-h")]
+    [Arguments("--help")]
+    public async Task CommandHelp_IncludesArgumentMetadata(string flag)
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("jvln")
+            .ConfigureCommands(commands => commands.AddCommand<ThrowCommand, ThrowSettings>(
+                "throw",
+                "Opens a Jvln HTTP tunnel"))
+            .AddHelp<ThrowHelpProvider>()
+            .Build();
+
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await app.RunAsync(
+            ["throw", flag],
+            new TextConsole(new StringReader(string.Empty), output, error));
+
+        await Assert.That(exitCode).IsEqualTo(0);
+        await Assert.That(Normalize(output.ToString())).IsEqualTo(Normalize(ExpectedThrowHelp));
+        await Assert.That(error.ToString()).IsEmpty();
+    }
+
     private static async Task<RunResult> Run(string[] args)
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("jvln")
             .WithVersion("1.0.0")
-            .AddCommand<NoOpCommand>("arm", "Starts the Jvln daemon")
-            .AddCommand<NoOpCommand>("disarm", "Stops the Jvln daemon")
-            .AddCommand<NoOpCommand>("status", "Retrives the current status of the Jvln daemon")
-            .AddCommand<NoOpCommand>("target", "Establishes a secure connection with a Jvln server")
-            .AddCommand<NoOpCommand>("throw", "Opens a Jvln tunnel")
-            .AddCommand<NoOpCommand>("retrieve", "Closes a Jvln tunnel")
+            .ConfigureCommands(commands =>
+            {
+                commands.AddCommand<NoOpCommand>("arm", "Starts the Jvln daemon");
+                commands.AddCommand<NoOpCommand>("disarm", "Stops the Jvln daemon");
+                commands.AddCommand<NoOpCommand>("status", "Retrives the current status of the Jvln daemon");
+                commands.AddCommand<NoOpCommand>("target", "Establishes a secure connection with a Jvln server");
+                commands.AddCommand<NoOpCommand>("throw", "Opens a Jvln tunnel");
+                commands.AddCommand<NoOpCommand>("retrieve", "Closes a Jvln tunnel");
+            })
             .AddHelp<StubHelpProvider>()
             .Build();
 
@@ -84,6 +127,48 @@ public class HelpCommandTests
     private sealed class NoOpCommand : ICommand
     {
         public int Execute(CommandContext context) => 0;
+    }
+
+    private sealed class ThrowCommand : ICommand<ThrowSettings>
+    {
+        public int Execute(CommandContext context, ThrowSettings settings) => 0;
+    }
+
+    private sealed class ThrowHelpProvider : IHelpProvider
+    {
+        public void WriteHelp(HelpContext context)
+        {
+            var command = context.Commands.Single(command => command.Name == context.CommandName);
+            var output = context.Console.Output;
+
+            output.WriteLine("Description:");
+            output.WriteLine($"    {command.Description}");
+            output.WriteLine();
+            output.WriteLine("Usage:");
+
+            var arguments = string.Join(
+                " ",
+                context.Arguments.Select(argument => argument.IsVariadic
+                    ? $"<{argument.Name}>..."
+                    : $"<{argument.Name}>"));
+            output.WriteLine($"    {context.AppName} {context.CommandName} {arguments} [OPTIONS]");
+            output.WriteLine();
+            output.WriteLine("Arguments:");
+
+            foreach (var argument in context.Arguments)
+            {
+                output.WriteLine($"    <{argument.Name}>  {argument.Description}");
+            }
+
+            output.WriteLine();
+            output.WriteLine("Options:");
+
+            foreach (var option in context.Options)
+            {
+                var names = string.Join(", ", option.Names);
+                output.WriteLine($"    {names,-36}{option.Description}");
+            }
+        }
     }
 
     private sealed class StubHelpProvider : IHelpProvider
@@ -117,4 +202,10 @@ public class HelpCommandTests
             }
         }
     }
+}
+
+public sealed partial class ThrowSettings
+{
+    [Argument(0, Description = "Destination for HTTP traffic")]
+    public string Upstream { get; set; } = "";
 }

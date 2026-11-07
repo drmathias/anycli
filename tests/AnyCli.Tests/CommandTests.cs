@@ -38,7 +38,7 @@ public class CommandTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .AddCommand<ReadInputCommand>("read")
+            .ConfigureCommands(commands => commands.AddCommand<ReadInputCommand>("read"))
             .Build();
 
         using var input = new StringReader("hello");
@@ -57,7 +57,7 @@ public class CommandTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .AddCommand<WriteErrorCommand>("fail")
+            .ConfigureCommands(commands => commands.AddCommand<WriteErrorCommand>("fail"))
             .Build();
 
         using var output = new StringWriter();
@@ -76,7 +76,7 @@ public class CommandTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .WithVersion("9.9.9")
-            .AddCommand<ReturnIntCommand>("add")
+            .ConfigureCommands(commands => commands.AddCommand<ReturnIntCommand>("add"))
             .Build();
 
         using var output = new StringWriter();
@@ -93,7 +93,7 @@ public class CommandTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .AddCommand<TCommand>(commandName)
+            .ConfigureCommands(commands => commands.AddCommand<TCommand>(commandName))
             .Build();
 
         using var output = new StringWriter();
@@ -117,7 +117,7 @@ public class CommandTests
         public int Execute(CommandContext context) => 42;
     }
 
-    private sealed class ReturnEnumCommand : ICommand<DeployExitCode>
+    private sealed class ReturnEnumCommand : IExitCodeCommand<DeployExitCode>
     {
         public DeployExitCode Execute(CommandContext context) => DeployExitCode.InvalidConfiguration;
     }

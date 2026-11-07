@@ -11,7 +11,7 @@ namespace AnyCli;
 /// </remarks>
 public sealed class ConsoleApp
 {
-    private readonly Dictionary<string, Func<IServiceProvider?, CommandContext, Task<int>>> _commands;
+    private readonly Dictionary<string, CommandRegistration> _commands;
     private readonly IReadOnlyList<CommandInfo> _commandInfos;
     private readonly IHelpProvider? _helpProvider;
     private readonly string? _name;
@@ -21,7 +21,7 @@ public sealed class ConsoleApp
     internal ConsoleApp(
         string? name,
         string? version,
-        Dictionary<string, Func<IServiceProvider?, CommandContext, Task<int>>> commands,
+        Dictionary<string, CommandRegistration> commands,
         IReadOnlyList<CommandInfo> commandInfos,
         IServiceProvider? serviceProvider,
         IHelpProvider? helpProvider)
@@ -84,19 +84,30 @@ public sealed class ConsoleApp
         if (_helpProvider is not null && IsHelpRequest(args))
         {
             var commandName = args.Length == 2 ? args[0] : null;
+            var commandInfo = commandName is null
+                ? null
+                : _commandInfos.FirstOrDefault(info => info.Name == commandName);
+
             _helpProvider.WriteHelp(
                 new HelpContext(
                     _name ?? string.Empty,
                     console,
                     commandName,
+                    commandInfo?.Arguments ?? [],
                     _commandInfos,
                     GetOptions()));
             return 0;
         }
 
-        return args.Length == 1 && _commands.TryGetValue(args[0], out var execute)
-            ? await execute.Invoke(_serviceProvider, new CommandContext(args[0], console)).ConfigureAwait(false)
-            : throw new NotImplementedException();
+        if (args.Length >= 1 && _commands.TryGetValue(args[0], out var command))
+        {
+            var arguments = CommandArgumentsParser.Parse(command.Arguments, args.AsSpan(1));
+            return await command.Execute
+                .Invoke(_serviceProvider, new CommandContext(args[0], console, arguments))
+                .ConfigureAwait(false);
+        }
+
+        throw new NotImplementedException();
     }
 
     private static bool IsVersionRequest(string[] args) =>

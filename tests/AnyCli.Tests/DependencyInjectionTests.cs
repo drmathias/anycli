@@ -13,7 +13,7 @@ public class DependencyInjectionTests
 
         var app = ConsoleAppBuilder.Create()
             .UseServiceProvider(serviceProvider)
-            .AddCommand<GreetCommand>("greet")
+            .ConfigureCommands(commands => commands.AddCommand<GreetCommand>("greet"))
             .Build();
 
         using var output = new StringWriter();
@@ -34,7 +34,7 @@ public class DependencyInjectionTests
 
         var app = ConsoleAppBuilder.Create()
             .UseServiceProvider(serviceProvider)
-            .AddAsyncCommand<AsyncGreetCommand>("greet")
+            .ConfigureCommands(commands => commands.AddAsyncCommand<AsyncGreetCommand>("greet"))
             .Build();
 
         using var output = new StringWriter();
@@ -60,7 +60,7 @@ public class DependencyInjectionTests
 
         var app = ConsoleAppBuilder.Create()
             .UseServiceProvider(serviceProvider)
-            .AddCommand<GreetCommand>("greet")
+            .ConfigureCommands(commands => commands.AddCommand<GreetCommand>("greet"))
             .Build();
 
         await app.RunAsync(["greet"], new StringWriter(), new StringWriter());
@@ -95,7 +95,7 @@ public class DependencyInjectionTests
         }
     }
 
-    private sealed class AsyncGreetCommand(GreetingService greeting) : IAsyncCommand<GreetExitCode>
+    private sealed class AsyncGreetCommand(GreetingService greeting) : IAsyncExitCodeCommand<GreetExitCode>
     {
         public async Task<GreetExitCode> ExecuteAsync(CommandContext context)
         {
