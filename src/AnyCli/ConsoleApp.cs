@@ -103,7 +103,7 @@ public sealed class ConsoleApp
         {
             var arguments = CommandArgumentsParser.Parse(command.Arguments, args.AsSpan(1));
             return await command.Execute
-                .Invoke(_serviceProvider, new CommandContext(args[0], console, arguments))
+                .Invoke(_serviceProvider, new CommandContext(args[0], console), arguments)
                 .ConfigureAwait(false);
         }
 

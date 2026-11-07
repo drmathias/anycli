@@ -84,9 +84,6 @@ public sealed class ConsoleAppBuilder
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
-    /// <param name="configureArguments">
-    /// An optional callback that defines the command's positional arguments.
-    /// </param>
     /// <returns>The current builder.</returns>
     /// <remarks>
     /// If a service provider was set with <see cref="UseServiceProvider"/>, the command is resolved
@@ -98,18 +95,16 @@ public sealed class ConsoleAppBuilder
     internal ConsoleAppBuilder AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description = "",
-        Action<CommandArgumentBuilder>? configureArguments = null)
+        string description = "")
         where TCommand : class, ICommand
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var arguments = BuildArguments(configureArguments);
         _commands[name] = new CommandRegistration(
-            (serviceProvider, context) =>
+            (serviceProvider, context, _) =>
                 Task.FromResult(ResolveCommand<TCommand>(serviceProvider).Execute(context)),
-            arguments);
-        _commandInfos[name] = CreateCommandInfo(name, description, arguments);
+            []);
+        _commandInfos[name] = CreateCommandInfo(name, description, []);
         return this;
     }
 
@@ -119,9 +114,6 @@ public sealed class ConsoleAppBuilder
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
-    /// <param name="configureArguments">
-    /// An optional callback that defines the command's positional arguments.
-    /// </param>
     /// <returns>The current builder.</returns>
     /// <remarks>
     /// If a service provider was set with <see cref="UseServiceProvider"/>, the command is resolved
@@ -133,17 +125,15 @@ public sealed class ConsoleAppBuilder
     internal ConsoleAppBuilder AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description = "",
-        Action<CommandArgumentBuilder>? configureArguments = null)
+        string description = "")
         where TCommand : class, IAsyncCommand
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var arguments = BuildArguments(configureArguments);
         _commands[name] = new CommandRegistration(
-            (serviceProvider, context) => ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context),
-            arguments);
-        _commandInfos[name] = CreateCommandInfo(name, description, arguments);
+            (serviceProvider, context, _) => ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context),
+            []);
+        _commandInfos[name] = CreateCommandInfo(name, description, []);
         return this;
     }
 
@@ -168,9 +158,9 @@ public sealed class ConsoleAppBuilder
 
         var arguments = BuildSettingsArguments<TSettings>();
         _commands[name] = new CommandRegistration(
-            (serviceProvider, context) =>
+            (serviceProvider, context, commandArguments) =>
             {
-                var settings = TSettings.Bind(context.Arguments);
+                var settings = TSettings.Bind(commandArguments);
                 return Task.FromResult(
                     ResolveCommand<TCommand>(serviceProvider).Execute(context, settings));
             },
@@ -203,9 +193,9 @@ public sealed class ConsoleAppBuilder
 
         var arguments = BuildSettingsArguments<TSettings>();
         _commands[name] = new CommandRegistration(
-            (serviceProvider, context) =>
+            (serviceProvider, context, commandArguments) =>
             {
-                var settings = TSettings.Bind(context.Arguments);
+                var settings = TSettings.Bind(commandArguments);
                 var exitCode = ResolveCommand<TCommand>(serviceProvider).Execute(context, settings);
                 return Task.FromResult(Convert.ToInt32(exitCode, CultureInfo.InvariantCulture));
             },
@@ -235,9 +225,9 @@ public sealed class ConsoleAppBuilder
 
         var arguments = BuildSettingsArguments<TSettings>();
         _commands[name] = new CommandRegistration(
-            (serviceProvider, context) =>
+            (serviceProvider, context, commandArguments) =>
             {
-                var settings = TSettings.Bind(context.Arguments);
+                var settings = TSettings.Bind(commandArguments);
                 return ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, settings);
             },
             arguments);
@@ -269,9 +259,9 @@ public sealed class ConsoleAppBuilder
 
         var arguments = BuildSettingsArguments<TSettings>();
         _commands[name] = new CommandRegistration(
-            (serviceProvider, context) =>
+            (serviceProvider, context, commandArguments) =>
             {
-                var settings = TSettings.Bind(context.Arguments);
+                var settings = TSettings.Bind(commandArguments);
                 return ConvertExitCodeAsync(
                     ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, settings));
             },
@@ -342,19 +332,6 @@ public sealed class ConsoleAppBuilder
             [.. _commandInfos.Values],
             _serviceProvider,
             _helpProviderFactory);
-
-    private static IReadOnlyList<ArgumentDefinition> BuildArguments(
-        Action<CommandArgumentBuilder>? configureArguments)
-    {
-        if (configureArguments is null)
-        {
-            return [];
-        }
-
-        var builder = new CommandArgumentBuilder();
-        configureArguments(builder);
-        return builder.Build();
-    }
 
     private static IReadOnlyList<ArgumentDefinition> BuildSettingsArguments<TSettings>()
         where TSettings : class, ICommandSettings<TSettings>

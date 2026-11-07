@@ -23,9 +23,6 @@ public sealed class CommandConfigurator
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
-    /// <param name="configureArguments">
-    /// An optional callback that defines the command's positional arguments.
-    /// </param>
     /// <returns>The current configurator.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
@@ -33,11 +30,10 @@ public sealed class CommandConfigurator
     public CommandConfigurator AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description = "",
-        Action<CommandArgumentBuilder>? configureArguments = null)
+        string description = "")
         where TCommand : class, ICommand
     {
-        _builder.AddCommand<TCommand>(name, description, configureArguments);
+        _builder.AddCommand<TCommand>(name, description);
         return this;
     }
 
@@ -68,9 +64,6 @@ public sealed class CommandConfigurator
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
-    /// <param name="configureArguments">
-    /// An optional callback that defines the command's positional arguments.
-    /// </param>
     /// <returns>The current configurator.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
@@ -78,11 +71,10 @@ public sealed class CommandConfigurator
     public CommandConfigurator AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description = "",
-        Action<CommandArgumentBuilder>? configureArguments = null)
+        string description = "")
         where TCommand : class, IAsyncCommand
     {
-        _builder.AddAsyncCommand<TCommand>(name, description, configureArguments);
+        _builder.AddAsyncCommand<TCommand>(name, description);
         return this;
     }
 

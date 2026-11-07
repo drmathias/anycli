@@ -8,11 +8,10 @@ namespace AnyCli;
 /// </summary>
 public sealed class CommandContext
 {
-    internal CommandContext(string name, IConsole console, CommandArguments arguments)
+    internal CommandContext(string name, IConsole console)
     {
         Name = name;
         Console = console;
-        Arguments = arguments;
     }
 
     /// <summary>
@@ -24,9 +23,4 @@ public sealed class CommandContext
     /// Gets the console used by the command.
     /// </summary>
     public IConsole Console { get; }
-
-    /// <summary>
-    /// Gets the parsed positional arguments for the command.
-    /// </summary>
-    public CommandArguments Arguments { get; }
 }
