@@ -57,21 +57,24 @@ public sealed class ConsoleApp
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(error);
 
+        var outputWriter = new TextWriterOutputWriter(output);
+        var errorWriter = new TextWriterOutputWriter(error);
+
         if (IsVersionRequest(args))
         {
-            output.WriteLine(_version);
+            outputWriter.WriteLine(_version);
             return 0;
         }
 
         if (_helpProvider is not null && IsHelpRequest(args))
         {
             var commandName = args.Length == 2 ? args[0] : null;
-            _helpProvider.WriteHelp(new HelpContext(_name ?? string.Empty, output, commandName, _commandInfos, GetOptions()));
+            _helpProvider.WriteHelp(new HelpContext(_name ?? string.Empty, outputWriter, commandName, _commandInfos, GetOptions()));
             return 0;
         }
 
         return args.Length == 1 && _commands.TryGetValue(args[0], out var execute)
-            ? await execute(_serviceProvider, new CommandContext(args[0], output, error)).ConfigureAwait(false)
+            ? await execute.Invoke(_serviceProvider, new CommandContext(args[0], outputWriter, errorWriter)).ConfigureAwait(false)
             : throw new NotImplementedException();
     }
 

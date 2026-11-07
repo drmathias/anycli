@@ -34,6 +34,24 @@ public class CommandTests
     }
 
     [Test]
+    public async Task Command_WritesToErrorWriter()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .AddCommand<WriteErrorCommand>("fail")
+            .Build();
+
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await app.RunAsync(["fail"], output, error);
+
+        await Assert.That(exitCode).IsEqualTo(0);
+        await Assert.That(output.ToString()).IsEmpty();
+        await Assert.That(error.ToString()).IsEqualTo("boom");
+    }
+
+    [Test]
     public async Task VersionFlag_StillWorksWhenCommandsAreRegistered()
     {
         var app = ConsoleAppBuilder.Create()
@@ -90,6 +108,15 @@ public class CommandTests
         public int Execute(CommandContext context)
         {
             context.Output.Write(context.Name);
+            return 0;
+        }
+    }
+
+    private sealed class WriteErrorCommand : ICommand
+    {
+        public int Execute(CommandContext context)
+        {
+            context.Error.Write("boom");
             return 0;
         }
     }

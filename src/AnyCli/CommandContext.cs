@@ -8,7 +8,7 @@ namespace AnyCli;
 /// </summary>
 public sealed class CommandContext
 {
-    internal CommandContext(string name, TextWriter output, TextWriter error)
+    internal CommandContext(string name, IOutputWriter output, IOutputWriter error)
     {
         Name = name;
         Output = output;
@@ -23,10 +23,10 @@ public sealed class CommandContext
     /// <summary>
     /// Gets the writer used for standard output.
     /// </summary>
-    public TextWriter Output { get; }
+    public IOutputWriter Output { get; }
 
     /// <summary>
     /// Gets the writer used for error output.
     /// </summary>
-    public TextWriter Error { get; }
+    public IOutputWriter Error { get; }
 }

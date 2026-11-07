@@ -10,7 +10,7 @@ public sealed class HelpContext
 {
     internal HelpContext(
         string appName,
-        TextWriter output,
+        IOutputWriter output,
         string? commandName,
         IReadOnlyList<CommandInfo> commands,
         IReadOnlyList<OptionInfo> options)
@@ -30,7 +30,7 @@ public sealed class HelpContext
     /// <summary>
     /// Gets the writer used for help output.
     /// </summary>
-    public TextWriter Output { get; }
+    public IOutputWriter Output { get; }
 
     /// <summary>
     /// Gets the command name being described, or <see langword="null"/> for root help.
