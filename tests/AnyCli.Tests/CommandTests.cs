@@ -34,6 +34,25 @@ public class CommandTests
     }
 
     [Test]
+    public async Task Command_ReadsFromInput()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .AddCommand<ReadInputCommand>("read")
+            .Build();
+
+        using var input = new StringReader("hello");
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        var exitCode = await app.RunAsync(["read"], new TextConsole(input, output, error));
+
+        await Assert.That(exitCode).IsEqualTo(0);
+        await Assert.That(output.ToString()).IsEqualTo("hello");
+        await Assert.That(error.ToString()).IsEmpty();
+    }
+
+    [Test]
     public async Task Command_WritesToErrorWriter()
     {
         var app = ConsoleAppBuilder.Create()
@@ -107,7 +126,7 @@ public class CommandTests
     {
         public int Execute(CommandContext context)
         {
-            context.Output.Write(context.Name);
+            context.Console.Output.Write(context.Name);
             return 0;
         }
     }
@@ -116,7 +135,16 @@ public class CommandTests
     {
         public int Execute(CommandContext context)
         {
-            context.Error.Write("boom");
+            context.Console.Error.Write("boom");
+            return 0;
+        }
+    }
+
+    private sealed class ReadInputCommand : ICommand
+    {
+        public int Execute(CommandContext context)
+        {
+            context.Console.Output.Write(context.Console.Input.ReadLine());
             return 0;
         }
     }

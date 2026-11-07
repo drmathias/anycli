@@ -9,7 +9,7 @@ namespace AnyCli;
 public interface IHelpProvider
 {
     /// <summary>
-    /// Writes help text to <see cref="HelpContext.Output"/>.
+    /// Writes help text to <see cref="HelpContext.Console"/>.
     /// </summary>
     /// <param name="context">The help context.</param>
     void WriteHelp(HelpContext context);

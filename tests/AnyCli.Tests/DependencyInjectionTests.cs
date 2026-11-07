@@ -90,7 +90,7 @@ public class DependencyInjectionTests
     {
         public int Execute(CommandContext context)
         {
-            context.Output.Write(greeting.Greeting);
+            context.Console.Output.Write(greeting.Greeting);
             return 0;
         }
     }
@@ -100,7 +100,7 @@ public class DependencyInjectionTests
         public async Task<GreetExitCode> ExecuteAsync(CommandContext context)
         {
             await Task.Yield();
-            context.Output.Write($"async:{greeting.Greeting}");
+            context.Console.Output.Write($"async:{greeting.Greeting}");
             return GreetExitCode.Success;
         }
     }

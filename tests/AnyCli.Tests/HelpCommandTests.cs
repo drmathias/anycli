@@ -93,27 +93,27 @@ public class HelpCommandTests
             if (context.CommandName is not null)
             {
                 var command = context.Commands.Single(command => command.Name == context.CommandName);
-                context.Output.Write($"{command.Name}: {command.Description}");
+                context.Console.Output.Write($"{command.Name}: {command.Description}");
                 return;
             }
 
-            context.Output.WriteLine("Usage:");
-            context.Output.WriteLine($"    {context.AppName} [OPTIONS] <COMMAND>");
-            context.Output.WriteLine();
-            context.Output.WriteLine("Options:");
+            context.Console.Output.WriteLine("Usage:");
+            context.Console.Output.WriteLine($"    {context.AppName} [OPTIONS] <COMMAND>");
+            context.Console.Output.WriteLine();
+            context.Console.Output.WriteLine("Options:");
             foreach (var option in context.Options)
             {
                 var names = string.Join(", ", option.Names);
-                context.Output.WriteLine($"    {names.PadRight(15)}{option.Description}");
+                context.Console.Output.WriteLine($"    {names,-15}{option.Description}");
             }
 
-            context.Output.WriteLine();
-            context.Output.WriteLine("Commands:");
+            context.Console.Output.WriteLine();
+            context.Console.Output.WriteLine("Commands:");
 
             var nameWidth = context.Commands.Max(command => command.Name.Length);
             foreach (var command in context.Commands)
             {
-                context.Output.WriteLine($"    {command.Name.PadRight(nameWidth)}  {command.Description}");
+                context.Console.Output.WriteLine($"    {command.Name.PadRight(nameWidth)}  {command.Description}");
             }
         }
     }

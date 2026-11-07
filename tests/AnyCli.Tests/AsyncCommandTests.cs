@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 // SPDX-License-Identifier: MIT
 
-using AnyCli;
-
 namespace AnyCli.Tests;
 
 public class AsyncCommandTests
@@ -78,7 +76,7 @@ public class AsyncCommandTests
         public async Task<int> ExecuteAsync(CommandContext context)
         {
             await Task.Yield();
-            context.Output.Write("done");
+            context.Console.Output.Write("done");
             return 0;
         }
     }

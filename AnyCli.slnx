@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/AnyCli.SpectreConsole/AnyCli.SpectreConsole.csproj" />
     <Project Path="src/AnyCli/AnyCli.csproj" />
   </Folder>
   <Folder Name="/tests/">

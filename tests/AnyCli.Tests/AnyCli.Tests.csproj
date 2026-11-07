@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AnyCli\AnyCli.csproj" />
+    <ProjectReference Include="..\..\src\AnyCli.SpectreConsole\AnyCli.SpectreConsole.csproj" />
   </ItemGroup>
 
 </Project>

@@ -35,30 +35,45 @@ public sealed class ConsoleApp
     }
 
     /// <summary>
-    /// Runs the application using the console for output.
+    /// Runs the application using the system console.
     /// </summary>
     /// <param name="args">The command-line arguments.</param>
     /// <returns>The process exit code.</returns>
-    public Task<int> RunAsync(string[] args) => RunAsync(args, Console.Out, Console.Error);
+    public Task<int> RunAsync(string[] args) =>
+        RunAsync(args, new TextConsole(Console.In, Console.Out, Console.Error));
 
     /// <summary>
-    /// Runs the application using the specified writers.
+    /// Runs the application using the specified writers and the system input.
     /// </summary>
     /// <param name="args">The command-line arguments.</param>
     /// <param name="output">The writer for standard output.</param>
     /// <param name="error">The writer for error output.</param>
     /// <returns>The process exit code.</returns>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="args"/>, <paramref name="output"/>, or <paramref name="error"/> is <see langword="null"/>.
+    /// <paramref name="output"/> or <paramref name="error"/> is <see langword="null"/>.
     /// </exception>
-    public async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error)
+    public Task<int> RunAsync(string[] args, TextWriter output, TextWriter error)
     {
-        ArgumentNullException.ThrowIfNull(args);
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(error);
+        return RunAsync(args, new TextConsole(Console.In, output, error));
+    }
 
-        var outputWriter = new TextWriterOutputWriter(output);
-        var errorWriter = new TextWriterOutputWriter(error);
+    /// <summary>
+    /// Runs the application using the specified console.
+    /// </summary>
+    /// <param name="args">The command-line arguments.</param>
+    /// <param name="console">The console used for input, output, and errors.</param>
+    /// <returns>The process exit code.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="args"/> or <paramref name="console"/> is <see langword="null"/>.
+    /// </exception>
+    public async Task<int> RunAsync(string[] args, IConsole console)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        ArgumentNullException.ThrowIfNull(console);
+
+        var outputWriter = console.Output;
 
         if (IsVersionRequest(args))
         {
@@ -69,12 +84,18 @@ public sealed class ConsoleApp
         if (_helpProvider is not null && IsHelpRequest(args))
         {
             var commandName = args.Length == 2 ? args[0] : null;
-            _helpProvider.WriteHelp(new HelpContext(_name ?? string.Empty, outputWriter, commandName, _commandInfos, GetOptions()));
+            _helpProvider.WriteHelp(
+                new HelpContext(
+                    _name ?? string.Empty,
+                    console,
+                    commandName,
+                    _commandInfos,
+                    GetOptions()));
             return 0;
         }
 
         return args.Length == 1 && _commands.TryGetValue(args[0], out var execute)
-            ? await execute.Invoke(_serviceProvider, new CommandContext(args[0], outputWriter, errorWriter)).ConfigureAwait(false)
+            ? await execute.Invoke(_serviceProvider, new CommandContext(args[0], console)).ConfigureAwait(false)
             : throw new NotImplementedException();
     }
 
@@ -87,7 +108,7 @@ public sealed class ConsoleApp
 
     private static bool IsHelpFlag(string arg) => arg is "-h" or "--help";
 
-    private IReadOnlyList<OptionInfo> GetOptions()
+    private List<OptionInfo> GetOptions()
     {
         var options = new List<OptionInfo>(2);
 
