@@ -160,6 +160,33 @@ public sealed class CommandArgumentBuilder
         AddVariadicCore(name, arity, typeof(T[]), static () => null);
 
     /// <summary>
+    /// Adds a variadic argument with the specified element type, collection type, and arity.
+    /// </summary>
+    /// <typeparam name="T">The collection element type.</typeparam>
+    /// <param name="name">The argument name.</param>
+    /// <param name="collectionType">The declared collection type.</param>
+    /// <param name="arity">The number of values the argument accepts.</param>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// A variadic argument must be the last argument.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="collectionType"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace, or
+    /// <paramref name="arity"/> does not accept multiple values.
+    /// </exception>
+    public CommandArgumentBuilder AddVariadic<T>(
+        string name,
+        Type collectionType,
+        ArgumentArity arity)
+    {
+        ArgumentNullException.ThrowIfNull(collectionType);
+        return AddVariadicCore(name, arity, collectionType, static () => null);
+    }
+
+    /// <summary>
     /// Sets the description of the most recently added argument.
     /// </summary>
     /// <param name="description">The argument description.</param>

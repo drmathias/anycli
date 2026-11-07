@@ -45,7 +45,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         id: "ANYCLI003",
         title: "Invalid variadic argument",
         messageFormat:
-            "Variadic argument property '{0}' must be a single-dimensional array; actual type '{1}'",
+            "Variadic argument property '{0}' must be a supported collection type; actual type '{1}'",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -54,6 +54,15 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         id: "ANYCLI004",
         title: "Duplicate argument parser registration",
         messageFormat: "Multiple argument parsers are registered for type '{0}'",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidVariadicMinimumCountDiagnostic = new(
+        id: "ANYCLI005",
+        title: "Invalid variadic minimum count",
+        messageFormat:
+            "Variadic argument property '{0}' has MinimumCount {1}; it must be non-negative",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -133,6 +142,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 var name = ToCamelCase(property.Name);
                 var description = string.Empty;
                 var optional = false;
+                var minimumCount = 0;
                 ITypeSymbol? parserType = null;
                 foreach (var namedArgument in attribute.NamedArguments)
                 {
@@ -154,14 +164,21 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     {
                         parserType = customParserType;
                     }
+                    else if (namedArgument.Key == "MinimumCount" &&
+                             namedArgument.Value.Value is int customMinimumCount)
+                    {
+                        minimumCount = customMinimumCount;
+                    }
                 }
 
                 ITypeSymbol argumentType;
                 ITypeSymbol valueType;
                 string elementTypeFullName;
+                string collectionTypeFullName;
+                var collectionKind = VariadicCollectionKind.Array;
                 if (isVariadic)
                 {
-                    if (property.Type is not IArrayTypeSymbol { Rank: 1 } array)
+                    if (!TryGetVariadicCollection(property.Type, out var elementType, out collectionKind))
                     {
                         diagnostics.Add(new DiagnosticModel(
                             InvalidVariadicArgumentDiagnostic,
@@ -171,9 +188,20 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                         continue;
                     }
 
-                    argumentType = array.ElementType;
-                    valueType = UnwrapNullable(array.ElementType);
-                    elementTypeFullName = GetTypeName(array.ElementType);
+                    if (minimumCount < 0)
+                    {
+                        diagnostics.Add(new DiagnosticModel(
+                            InvalidVariadicMinimumCountDiagnostic,
+                            GetLocation(property),
+                            property.Name,
+                            minimumCount));
+                        continue;
+                    }
+
+                    argumentType = elementType;
+                    valueType = UnwrapNullable(elementType);
+                    elementTypeFullName = GetTypeName(elementType);
+                    collectionTypeFullName = GetTypeName(property.Type);
                     optional = false;
                 }
                 else
@@ -181,6 +209,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     argumentType = property.Type;
                     valueType = UnwrapNullable(property.Type);
                     elementTypeFullName = GetTypeName(property.Type);
+                    collectionTypeFullName = GetTypeName(property.Type);
                 }
 
                 if (!TryCreateParsePlan(
@@ -214,6 +243,9 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     optional,
                     isVariadic,
                     elementTypeFullName,
+                    collectionTypeFullName,
+                    collectionKind,
+                    minimumCount,
                     parsePlan));
             }
         }
@@ -234,6 +266,45 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
 
     private static Location GetLocation(IPropertySymbol property) =>
         property.Locations.FirstOrDefault() ?? Location.None;
+
+    private static bool TryGetVariadicCollection(
+        ITypeSymbol type,
+        out ITypeSymbol elementType,
+        out VariadicCollectionKind collectionKind)
+    {
+        if (type is IArrayTypeSymbol { Rank: 1 } array)
+        {
+            elementType = array.ElementType;
+            collectionKind = VariadicCollectionKind.Array;
+            return true;
+        }
+
+        if (type is INamedTypeSymbol named &&
+            named.TypeArguments.Length == 1 &&
+            named.OriginalDefinition.ContainingNamespace.ToDisplayString() == "System.Collections.Generic")
+        {
+            var kind = named.OriginalDefinition.MetadataName switch
+            {
+                "IReadOnlyList`1" => (VariadicCollectionKind?)VariadicCollectionKind.ReadOnlyList,
+                "List`1" => VariadicCollectionKind.List,
+                "ICollection`1" => VariadicCollectionKind.Collection,
+                "IEnumerable`1" => VariadicCollectionKind.Enumerable,
+                "HashSet`1" => VariadicCollectionKind.HashSet,
+                _ => null,
+            };
+
+            if (kind is not null)
+            {
+                elementType = named.TypeArguments[0];
+                collectionKind = kind.Value;
+                return true;
+            }
+        }
+
+        elementType = null!;
+        collectionKind = default;
+        return false;
+    }
 
     private static string GetTypeName(ITypeSymbol type) =>
         type.WithNullableAnnotation(NullableAnnotation.NotAnnotated)
@@ -500,22 +571,25 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             source.Append(indent).Append("        arguments.");
             if (argument.Variadic)
             {
-                source.Append("AddVariadic");
-            }
-            else if (argument.Optional)
-            {
-                source.Append("AddOptional");
+                source.Append("AddVariadic<")
+                    .Append(argument.ElementTypeFullName)
+                    .Append(">(")
+                    .Append(SymbolDisplay.FormatLiteral(argument.Name, true))
+                    .Append(", typeof(")
+                    .Append(argument.CollectionTypeFullName)
+                    .Append("), ")
+                    .Append(GetVariadicArityExpression(argument.MinimumCount))
+                    .AppendLine(");");
             }
             else
             {
-                source.Append("Add");
+                source.Append(argument.Optional ? "AddOptional" : "Add")
+                    .Append('<')
+                    .Append(argument.ElementTypeFullName)
+                    .Append(">(")
+                    .Append(SymbolDisplay.FormatLiteral(argument.Name, true))
+                    .AppendLine(");");
             }
-
-            source.Append('<')
-                .Append(argument.ElementTypeFullName)
-                .Append(">(")
-                .Append(SymbolDisplay.FormatLiteral(argument.Name, true))
-                .AppendLine(");");
 
             if (argument.Description.Length > 0)
             {
@@ -542,64 +616,52 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             var literalName = SymbolDisplay.FormatLiteral(argument.Name, true);
             if (argument.Variadic)
             {
-                if (argument.ParsePlan.Kind == ParseKind.String)
-                {
-                    source.Append(indent)
-                        .Append("        settings.")
-                        .Append(argument.PropertyName)
-                        .Append(" = global::System.Linq.Enumerable.ToArray(arguments.GetVariadic(")
-                        .Append(literalName)
-                        .AppendLine("));");
-                }
-                else
-                {
-                    var rawLocal = "__raw" + localIndex;
-                    var valuesLocal = "__values" + localIndex;
-                    var indexLocal = "__i" + localIndex;
-                    source.Append(indent)
-                        .Append("        var ")
-                        .Append(rawLocal)
-                        .Append(" = arguments.GetVariadic(")
-                        .Append(literalName)
-                        .AppendLine(");");
-                    source.Append(indent)
-                        .Append("        var ")
-                        .Append(valuesLocal)
-                        .Append(" = new ")
-                        .Append(argument.ElementTypeFullName)
-                        .Append('[')
-                        .Append(rawLocal)
-                        .AppendLine(".Count];");
-                    source.Append(indent)
-                        .Append("        for (var ")
-                        .Append(indexLocal)
-                        .Append(" = 0; ")
-                        .Append(indexLocal)
-                        .Append(" < ")
-                        .Append(rawLocal)
-                        .Append(".Count; ")
-                        .Append(indexLocal)
-                        .AppendLine("++)");
-                    source.Append(indent).AppendLine("        {");
-                    source.Append(indent)
-                        .Append("            ")
-                        .Append(valuesLocal)
-                        .Append('[')
-                        .Append(indexLocal)
-                        .Append("] = ")
-                        .Append(GetParseExpression(
-                            argument,
-                            rawLocal + "[" + indexLocal + "]",
-                            literalName))
-                        .AppendLine(";");
-                    source.Append(indent).AppendLine("        }");
-                    source.Append(indent)
-                        .Append("        settings.")
-                        .Append(argument.PropertyName)
-                        .Append(" = ")
-                        .Append(valuesLocal)
-                        .AppendLine(";");
-                }
+                var rawLocal = "__raw" + localIndex;
+                var valuesLocal = "__values" + localIndex;
+                var indexLocal = "__i" + localIndex;
+                source.Append(indent)
+                    .Append("        var ")
+                    .Append(rawLocal)
+                    .Append(" = arguments.GetVariadic(")
+                    .Append(literalName)
+                    .AppendLine(");");
+                source.Append(indent)
+                    .Append("        var ")
+                    .Append(valuesLocal)
+                    .Append(" = new ")
+                    .Append(argument.ElementTypeFullName)
+                    .Append('[')
+                    .Append(rawLocal)
+                    .AppendLine(".Count];");
+                source.Append(indent)
+                    .Append("        for (var ")
+                    .Append(indexLocal)
+                    .Append(" = 0; ")
+                    .Append(indexLocal)
+                    .Append(" < ")
+                    .Append(rawLocal)
+                    .Append(".Count; ")
+                    .Append(indexLocal)
+                    .AppendLine("++)");
+                source.Append(indent).AppendLine("        {");
+                source.Append(indent)
+                    .Append("            ")
+                    .Append(valuesLocal)
+                    .Append('[')
+                    .Append(indexLocal)
+                    .Append("] = ")
+                    .Append(GetParseExpression(
+                        argument,
+                        rawLocal + "[" + indexLocal + "]",
+                        literalName))
+                    .AppendLine(";");
+                source.Append(indent).AppendLine("        }");
+                source.Append(indent)
+                    .Append("        settings.")
+                    .Append(argument.PropertyName)
+                    .Append(" = ")
+                    .Append(GetCollectionExpression(argument, valuesLocal))
+                    .AppendLine(";");
             }
             else if (argument.Optional)
             {
@@ -648,6 +710,26 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             model.FullTypeName.Replace("global::", string.Empty).Replace('.', '_') + ".CommandSettings.g.cs",
             SourceText.From(source.ToString(), Encoding.UTF8));
     }
+
+    private static string GetVariadicArityExpression(int minimumCount) =>
+        minimumCount switch
+        {
+            0 => "global::AnyCli.ArgumentArity.ZeroOrMore",
+            1 => "global::AnyCli.ArgumentArity.OneOrMore",
+            _ => $"new global::AnyCli.ArgumentArity({minimumCount}, global::System.Int32.MaxValue)",
+        };
+
+    private static string GetCollectionExpression(
+        ArgumentModel argument,
+        string valuesExpression) =>
+        argument.CollectionKind switch
+        {
+            VariadicCollectionKind.Array => valuesExpression,
+            VariadicCollectionKind.HashSet =>
+                $"new global::System.Collections.Generic.HashSet<{argument.ElementTypeFullName}>({valuesExpression})",
+            _ =>
+                $"new global::System.Collections.Generic.List<{argument.ElementTypeFullName}>({valuesExpression})",
+        };
 
     private static string GetParseExpression(
         ArgumentModel argument,
@@ -728,6 +810,9 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             bool optional,
             bool variadic,
             string elementTypeFullName,
+            string collectionTypeFullName,
+            VariadicCollectionKind collectionKind,
+            int minimumCount,
             ParsePlan parsePlan)
         {
             Name = name;
@@ -737,6 +822,9 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             Optional = optional;
             Variadic = variadic;
             ElementTypeFullName = elementTypeFullName;
+            CollectionTypeFullName = collectionTypeFullName;
+            CollectionKind = collectionKind;
+            MinimumCount = minimumCount;
             ParsePlan = parsePlan;
         }
 
@@ -753,6 +841,12 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         public bool Variadic { get; }
 
         public string ElementTypeFullName { get; }
+
+        public string CollectionTypeFullName { get; }
+
+        public VariadicCollectionKind CollectionKind { get; }
+
+        public int MinimumCount { get; }
 
         public ParsePlan ParsePlan { get; }
     }
@@ -791,6 +885,16 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         public Location Location { get; } = location;
 
         public object?[] MessageArgs { get; } = messageArgs;
+    }
+
+    private enum VariadicCollectionKind
+    {
+        Array,
+        ReadOnlyList,
+        List,
+        Collection,
+        Enumerable,
+        HashSet,
     }
 
     private enum ParseKind

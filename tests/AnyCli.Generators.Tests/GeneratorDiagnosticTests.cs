@@ -234,6 +234,82 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task GeneratesSettingsForCollectionTargets()
+    {
+        var result = RunGenerator(
+            """
+            using System.Collections.Generic;
+            using AnyCli;
+
+            public sealed partial class A
+            {
+                [VariadicArgument(0)]
+                public IReadOnlyList<int> Values { get; set; } = [];
+            }
+
+            public sealed partial class B
+            {
+                [VariadicArgument(0)]
+                public List<int> Values { get; set; } = [];
+            }
+
+            public sealed partial class C
+            {
+                [VariadicArgument(0)]
+                public ICollection<int> Values { get; set; } = [];
+            }
+
+            public sealed partial class D
+            {
+                [VariadicArgument(0)]
+                public IEnumerable<int> Values { get; set; } = [];
+            }
+
+            public sealed partial class E
+            {
+                [VariadicArgument(0)]
+                public HashSet<int> Values { get; set; } = [];
+            }
+
+            public sealed partial class F
+            {
+                [VariadicArgument(0, MinimumCount = 1)]
+                public int[] Values { get; set; } = [];
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(6);
+        await Assert.That(errors.Length).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsInvalidVariadicMinimumCount()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadSettings
+            {
+                [VariadicArgument(0, MinimumCount = -1)]
+                public string[] Values { get; set; } = [];
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI005");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Values");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task GeneratesSettingsForSupportedArgumentTypes()
     {
         var result = RunGenerator(
