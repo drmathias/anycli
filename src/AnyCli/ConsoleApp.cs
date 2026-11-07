@@ -13,7 +13,6 @@ public sealed class ConsoleApp
 {
     private readonly Dictionary<string, CommandRegistration> _commands;
     private readonly IReadOnlyList<CommandInfo> _commandInfos;
-    private readonly IEnumParser _enumParser;
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private readonly string? _name;
     private readonly IServiceProvider? _serviceProvider;
@@ -25,8 +24,7 @@ public sealed class ConsoleApp
         Dictionary<string, CommandRegistration> commands,
         IReadOnlyList<CommandInfo> commandInfos,
         IServiceProvider? serviceProvider,
-        Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
-        IEnumParser enumParser)
+        Func<IServiceProvider?, IHelpProvider>? helpProviderFactory)
     {
         _name = name;
         _version = version;
@@ -34,7 +32,6 @@ public sealed class ConsoleApp
         _commandInfos = commandInfos;
         _serviceProvider = serviceProvider;
         _helpProviderFactory = helpProviderFactory;
-        _enumParser = enumParser;
     }
 
     /// <summary>
@@ -106,8 +103,7 @@ public sealed class ConsoleApp
         {
             var arguments = CommandArgumentsParser.Parse(
                 command.Arguments,
-                args.AsSpan(1),
-                _enumParser);
+                args.AsSpan(1));
             return await command.Execute
                 .Invoke(_serviceProvider, new CommandContext(args[0], console), arguments)
                 .ConfigureAwait(false);

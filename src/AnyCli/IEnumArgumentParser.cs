@@ -7,9 +7,8 @@ namespace AnyCli;
 /// Parses command-line argument values for enum types.
 /// </summary>
 /// <remarks>
-/// Register an implementation with
-/// <see cref="CommandParsingDefaults.SetEnumArgumentParser{TParser}"/> to override the default
-/// enum parsing behavior for the application.
+/// Register an implementation with <see cref="EnumArgumentParserAttribute{TParser}"/> to override
+/// the default enum parsing behavior for the application.
 /// </remarks>
 public interface IEnumArgumentParser
 {

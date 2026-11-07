@@ -46,21 +46,6 @@ public sealed class ConfiguredConsoleAppBuilder
     }
 
     /// <summary>
-    /// Configures application-wide defaults for command argument parsing.
-    /// </summary>
-    /// <param name="configure">The defaults configuration callback.</param>
-    /// <returns>The current builder.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="configure"/> is <see langword="null"/>.
-    /// </exception>
-    public ConfiguredConsoleAppBuilder ConfigureParsingDefaults(
-        Action<CommandParsingDefaults> configure)
-    {
-        _builder.ConfigureParsingDefaults(configure);
-        return this;
-    }
-
-    /// <summary>
     /// Sets the service provider used to resolve commands.
     /// </summary>
     /// <param name="serviceProvider">The service provider.</param>

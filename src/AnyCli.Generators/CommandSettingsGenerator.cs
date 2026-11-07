@@ -1,11 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 // SPDX-License-Identifier: MIT
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -20,6 +17,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
     private const string VariadicArgumentAttributeName = "AnyCli.VariadicArgumentAttribute";
     private const string SettingsInterfaceName = "ICommandSettings`1";
     private const string ArgumentParserAttributeName = "ArgumentParserAttribute`2";
+    private const string EnumArgumentParserAttributeName = "EnumArgumentParserAttribute`1";
     private const string ArgumentParserInterfaceName = "IArgumentParser`1";
     private const string ParsableInterfaceName = "IParsable`1";
     private const string SpanParsableInterfaceName = "ISpanParsable`1";
@@ -184,7 +182,13 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     elementTypeFullName = GetTypeName(property.Type);
                 }
 
-                if (!TryCreateParsePlan(argumentType, valueType, parserType, registrations.Parsers, out var parsePlan))
+                if (!TryCreateParsePlan(
+                    argumentType,
+                    valueType,
+                    parserType,
+                    registrations.Parsers,
+                    registrations.EnumParser,
+                    out var parsePlan))
                 {
                     diagnostics.Add(parserType is null
                         ? new DiagnosticModel(
@@ -213,21 +217,18 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             }
         }
 
-        if (arguments.Count == 0 && diagnostics.Count == 0)
-        {
-            return null;
-        }
-
-        return new SettingsModel(
-            type.ContainingNamespace.IsGlobalNamespace ? string.Empty : type.ContainingNamespace.ToDisplayString(),
-            type.Name,
-            type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            GetAccessibility(type.DeclaredAccessibility),
-            type.IsSealed,
-            type.IsRecord,
-            ImplementsSettingsInterface(type),
-            arguments.OrderBy(argument => argument.Position).ToArray(),
-            diagnostics.ToArray());
+        return arguments.Count == 0 && diagnostics.Count == 0
+            ? null
+            : new SettingsModel(
+                type.ContainingNamespace.IsGlobalNamespace ? string.Empty : type.ContainingNamespace.ToDisplayString(),
+                type.Name,
+                type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                GetAccessibility(type.DeclaredAccessibility),
+                type.IsSealed,
+                type.IsRecord,
+                ImplementsSettingsInterface(type),
+                [.. arguments.OrderBy(argument => argument.Position)],
+                [.. diagnostics]);
     }
 
     private static Location GetLocation(IPropertySymbol property) =>
@@ -254,6 +255,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         ITypeSymbol valueType,
         ITypeSymbol? parserType,
         IReadOnlyDictionary<ITypeSymbol, ITypeSymbol> registeredParsers,
+        ITypeSymbol? enumParser,
         out ParsePlan parsePlan)
     {
         if (parserType is not null)
@@ -291,10 +293,15 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
 
         if (valueType.TypeKind == TypeKind.Enum)
         {
-            parsePlan = new ParsePlan(
-                ParseKind.Enum,
-                valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                null);
+            parsePlan = enumParser is null
+                ? new ParsePlan(
+                    ParseKind.Enum,
+                    valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                    null)
+                : new ParsePlan(
+                    ParseKind.EnumCustom,
+                    valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                    enumParser.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
             return true;
         }
 
@@ -349,6 +356,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
     {
         var parsers = new Dictionary<ITypeSymbol, ITypeSymbol>(SymbolEqualityComparer.Default);
         var diagnostics = new List<DiagnosticModel>();
+        ITypeSymbol? enumParser = null;
 
         foreach (var attribute in compilation.Assembly.GetAttributes())
         {
@@ -357,8 +365,19 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             var attributeClass = attribute.AttributeClass;
             if (attributeClass is null ||
                 !attributeClass.IsGenericType ||
-                attributeClass.OriginalDefinition.MetadataName != ArgumentParserAttributeName ||
-                attributeClass.OriginalDefinition.ContainingNamespace.ToDisplayString() != "AnyCli" ||
+                attributeClass.OriginalDefinition.ContainingNamespace.ToDisplayString() != "AnyCli")
+            {
+                continue;
+            }
+
+            if (attributeClass.OriginalDefinition.MetadataName == EnumArgumentParserAttributeName &&
+                attributeClass.TypeArguments.Length == 1)
+            {
+                enumParser = attributeClass.TypeArguments[0];
+                continue;
+            }
+
+            if (attributeClass.OriginalDefinition.MetadataName != ArgumentParserAttributeName ||
                 attributeClass.TypeArguments.Length != 2)
             {
                 continue;
@@ -378,7 +397,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             parsers[valueType] = parserType;
         }
 
-        return new RegistrationSet(parsers, diagnostics);
+        return new RegistrationSet(parsers, enumParser, diagnostics);
     }
 
     private static Location GetLocation(AttributeData attribute, CancellationToken cancellationToken) =>
@@ -637,8 +656,11 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         {
             ParseKind.String => rawExpression,
             ParseKind.Enum =>
-                $"arguments.ParseEnum<{argument.ParsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.ArgumentParsing.ParseEnum<{argument.ParsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, {literalName})",
+            ParseKind.EnumCustom =>
+                $"global::AnyCli.ArgumentParsing.ParseEnumCustom<{argument.ParsePlan.ValueTypeFullName}, " +
+                $"{argument.ParsePlan.ParserTypeFullName}>({rawExpression}, {literalName})",
             ParseKind.SpanParsable =>
                 $"global::AnyCli.ArgumentParsing.ParseSpanParsable<{argument.ParsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
@@ -736,9 +758,12 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
 
     private sealed class RegistrationSet(
         IReadOnlyDictionary<ITypeSymbol, ITypeSymbol> parsers,
+        ITypeSymbol? enumParser,
         IReadOnlyList<DiagnosticModel> diagnostics)
     {
         public IReadOnlyDictionary<ITypeSymbol, ITypeSymbol> Parsers { get; } = parsers;
+
+        public ITypeSymbol? EnumParser { get; } = enumParser;
 
         public IReadOnlyList<DiagnosticModel> Diagnostics { get; } = diagnostics;
     }
@@ -771,6 +796,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
     {
         String,
         Enum,
+        EnumCustom,
         SpanParsable,
         Parsable,
         Custom,

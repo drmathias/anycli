@@ -161,6 +161,51 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task UsesAssemblyLevelEnumArgumentParserRegistration()
+    {
+        var result = RunGenerator(
+            """
+            using System;
+            using AnyCli;
+
+            [assembly: EnumArgumentParser<ModeParser>]
+
+            public enum Mode
+            {
+                Fast,
+                Slow,
+            }
+
+            public sealed class ModeParser : IEnumArgumentParser
+            {
+                public static bool TryParse<TEnum>(
+                    string value,
+                    IFormatProvider? provider,
+                    out TEnum result)
+                    where TEnum : struct, Enum =>
+                    Enum.TryParse(value, ignoreCase: false, out result);
+            }
+
+            public sealed partial class GoodSettings
+            {
+                [Argument(0)]
+                public Mode Mode { get; set; }
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(result.GeneratedSourceTexts.Single().Contains("ParseEnumCustom")).IsTrue();
+        await Assert.That(result.GeneratedSourceTexts.Single().Contains("ModeParser")).IsTrue();
+        await Assert.That(errors.Length).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task GeneratesSettingsForSupportedArgumentTypes()
     {
         var result = RunGenerator(
@@ -231,16 +276,20 @@ public class GeneratorDiagnosticTests
             compilation,
             out var outputCompilation,
             out var generatorDiagnostics);
-        var generatedSourceCount = driver
+        var generatedSources = driver
             .GetRunResult()
             .Results
             .SelectMany(result => result.GeneratedSources)
-            .Count();
+            .ToArray();
+        var generatedSourceTexts = generatedSources
+            .Select(source => source.SourceText.ToString())
+            .ToImmutableArray();
 
         return new GeneratorResult(
             outputCompilation,
             generatorDiagnostics,
-            generatedSourceCount);
+            generatedSources.Length,
+            generatedSourceTexts);
     }
 
     private static ImmutableArray<MetadataReference> CreateReferences()
@@ -260,5 +309,6 @@ public class GeneratorDiagnosticTests
     private sealed record GeneratorResult(
         Compilation OutputCompilation,
         ImmutableArray<Diagnostic> GeneratorDiagnostics,
-        int GeneratedSourceCount);
+        int GeneratedSourceCount,
+        ImmutableArray<string> GeneratedSourceTexts);
 }

@@ -14,7 +14,6 @@ public sealed class ConsoleAppBuilder
     private readonly Dictionary<string, CommandRegistration> _commands = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, CommandInfo> _commandInfos = new(StringComparer.Ordinal);
-    private readonly CommandParsingDefaults _parsingDefaults = new();
     private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private IServiceProvider? _serviceProvider;
     private string? _name;
@@ -57,21 +56,6 @@ public sealed class ConsoleAppBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
         _version = version;
-        return this;
-    }
-
-    /// <summary>
-    /// Configures application-wide defaults for command argument parsing.
-    /// </summary>
-    /// <param name="configure">The defaults configuration callback.</param>
-    /// <returns>The current builder.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="configure"/> is <see langword="null"/>.
-    /// </exception>
-    public ConsoleAppBuilder ConfigureParsingDefaults(Action<CommandParsingDefaults> configure)
-    {
-        ArgumentNullException.ThrowIfNull(configure);
-        configure(_parsingDefaults);
         return this;
     }
 
@@ -403,8 +387,7 @@ public sealed class ConsoleAppBuilder
             new Dictionary<string, CommandRegistration>(_commands, StringComparer.Ordinal),
             [.. _commandInfos.Values],
             _serviceProvider,
-            _helpProviderFactory,
-            _parsingDefaults.EnumParser);
+            _helpProviderFactory);
 
     private static IReadOnlyList<ArgumentDefinition> BuildSettingsArguments<TSettings>()
         where TSettings : class, ICommandSettings<TSettings>

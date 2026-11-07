@@ -1,3 +1,7 @@
+using AnyCli;
+
+[assembly: EnumArgumentParser<AnyCli.Tests.TestEnumArgumentParser>]
+
 namespace AnyCli.Tests;
 
 public class EnumParsingTests
@@ -60,29 +64,16 @@ public class EnumParsingTests
     }
 
     [Test]
-    public async Task CustomEnumArgumentParser_OverridesDefaults()
+    public async Task AssemblyEnumArgumentParser_OverridesDefaults()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<GlobalEnumCommand, GlobalEnumSettings>("mode"))
-            .ConfigureParsingDefaults(defaults =>
-                defaults.SetEnumArgumentParser<StrictEnumArgumentParser>())
             .Build();
-        CommandArgumentException? exception = null;
 
-        var result = await Run(app, ["mode", "VerySlow"]);
-        try
-        {
-            _ = await Run(app, ["mode", "very-slow"]);
-        }
-        catch (CommandArgumentException ex)
-        {
-            exception = ex;
-        }
+        var result = await Run(app, ["mode", "custom"]);
 
         await Assert.That(result.Output).IsEqualTo("VerySlow");
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("very-slow");
     }
 
     private static async Task<RunResult> Run(ConsoleApp app, string[] args)
@@ -115,13 +106,22 @@ public sealed partial class GlobalEnumSettings
     public KebabMode Mode { get; set; }
 }
 
-public sealed class StrictEnumArgumentParser : IEnumArgumentParser
+public sealed class TestEnumArgumentParser : IEnumArgumentParser
 {
     public static bool TryParse<TEnum>(
         string value,
         IFormatProvider? provider,
         out TEnum result)
-        where TEnum : struct, Enum => Enum.TryParse(value, ignoreCase: false, out result);
+        where TEnum : struct, Enum
+    {
+        if (typeof(TEnum) == typeof(KebabMode) && value == "custom")
+        {
+            result = (TEnum)(object)KebabMode.VerySlow;
+            return true;
+        }
+
+        return DefaultEnumArgumentParser.TryParse(value, provider, out result);
+    }
 }
 
 public enum KebabMode

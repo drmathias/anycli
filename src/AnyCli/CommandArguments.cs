@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 // SPDX-License-Identifier: MIT
 
-using System.Globalization;
-
 namespace AnyCli;
 
 /// <summary>
@@ -11,39 +9,17 @@ namespace AnyCli;
 public sealed class CommandArguments
 {
     private readonly IReadOnlyDictionary<string, ArgumentArity> _arities;
-    private readonly IEnumParser _enumParser;
     private readonly IReadOnlySet<string> _supplied;
     private readonly IReadOnlyDictionary<string, object?> _values;
 
     internal CommandArguments(
         IReadOnlyDictionary<string, ArgumentArity> arities,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string> supplied,
-        IEnumParser enumParser)
+        IReadOnlySet<string> supplied)
     {
         _arities = arities;
         _values = values;
         _supplied = supplied;
-        _enumParser = enumParser;
-    }
-
-    /// <summary>
-    /// Parses an enum argument value.
-    /// </summary>
-    /// <typeparam name="TEnum">The enum type.</typeparam>
-    /// <param name="value">The raw argument value.</param>
-    /// <param name="argumentName">The argument name used in error messages.</param>
-    /// <returns>The parsed enum value.</returns>
-    /// <exception cref="CommandArgumentException">The value could not be parsed.</exception>
-    public TEnum ParseEnum<TEnum>(string value, string argumentName)
-        where TEnum : struct, Enum
-    {
-        if (_enumParser.TryParse(value, CultureInfo.InvariantCulture, out TEnum result))
-        {
-            return result;
-        }
-
-        throw ArgumentParsing.CreateInvalidValue(value, argumentName, typeof(TEnum));
     }
 
     /// <summary>

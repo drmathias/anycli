@@ -7,8 +7,7 @@ internal static class CommandArgumentsParser
 {
     public static CommandArguments Parse(
         IReadOnlyList<ArgumentDefinition> definitions,
-        ReadOnlySpan<string> tokens,
-        IEnumParser enumParser)
+        ReadOnlySpan<string> tokens)
     {
         var arities = new Dictionary<string, ArgumentArity>(StringComparer.Ordinal);
         var values = new Dictionary<string, object?>(StringComparer.Ordinal);
@@ -56,6 +55,6 @@ internal static class CommandArgumentsParser
 
         return index < tokens.Length
             ? throw new CommandArgumentException($"Unexpected argument '{tokens[index]}'.")
-            : new CommandArguments(arities, values, supplied, enumParser);
+            : new CommandArguments(arities, values, supplied);
     }
 }
