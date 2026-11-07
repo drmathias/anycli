@@ -1,4 +1,7 @@
 using System.Globalization;
+using AnyCli;
+
+[assembly: ArgumentParser<AnyCli.Tests.RegisteredWidget, AnyCli.Tests.RegisteredWidgetParser>]
 
 namespace AnyCli.Tests;
 
@@ -122,6 +125,16 @@ public class TypedArgumentParsingTests
     }
 
     [Test]
+    public async Task ParsesTypesRegisteredWithAssemblyAttribute()
+    {
+        var app = CreateApp<RegisteredWidgetCommand, RegisteredWidgetSettings>("registered");
+
+        var result = await Run(app, ["registered", "widget:hello"]);
+
+        await Assert.That(result.Output).IsEqualTo("hello");
+    }
+
+    [Test]
     public async Task ParsesCustomTypesWithParser()
     {
         var app = CreateApp<WidgetCommand, WidgetSettings>("widget");
@@ -220,6 +233,15 @@ public class TypedArgumentParsingTests
             return 0;
         }
     }
+
+    private sealed class RegisteredWidgetCommand : ICommand<RegisteredWidgetSettings>
+    {
+        public int Execute(CommandContext context, RegisteredWidgetSettings settings)
+        {
+            context.Console.Output.Write(settings.Widget.Name);
+            return 0;
+        }
+    }
 }
 
 public sealed class OneOrMoreSettings : ICommandSettings<OneOrMoreSettings>
@@ -272,6 +294,12 @@ public sealed partial class ParsableOnlySettings
     public ParsableOnly Value { get; set; } = new(string.Empty);
 }
 
+public sealed partial class RegisteredWidgetSettings
+{
+    [Argument(0)]
+    public RegisteredWidget Widget { get; set; } = new(string.Empty);
+}
+
 public sealed record ParsableOnly(string Value) : IParsable<ParsableOnly>
 {
     public static ParsableOnly Parse(string s, IFormatProvider? provider) =>
@@ -283,6 +311,27 @@ public sealed record ParsableOnly(string Value) : IParsable<ParsableOnly>
         if (s is not null && s.StartsWith(prefix, StringComparison.Ordinal))
         {
             result = new ParsableOnly(s[prefix.Length..]);
+            return true;
+        }
+
+        result = null!;
+        return false;
+    }
+}
+
+public sealed record RegisteredWidget(string Name);
+
+public sealed class RegisteredWidgetParser : IArgumentParser<RegisteredWidget>
+{
+    public static bool TryParse(
+        string value,
+        IFormatProvider? provider,
+        out RegisteredWidget result)
+    {
+        const string prefix = "widget:";
+        if (value.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            result = new RegisteredWidget(value[prefix.Length..]);
             return true;
         }
 

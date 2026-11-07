@@ -8,3 +8,4 @@ Rule ID | Category | Severity | Notes
 ANYCLI001 | AnyCli | Error | Unsupported argument type
 ANYCLI002 | AnyCli | Error | Invalid argument parser
 ANYCLI003 | AnyCli | Error | Invalid variadic argument
+ANYCLI004 | AnyCli | Error | Duplicate argument parser registration

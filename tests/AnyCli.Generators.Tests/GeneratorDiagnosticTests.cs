@@ -78,6 +78,89 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task UsesAssemblyLevelArgumentParserRegistration()
+    {
+        var result = RunGenerator(
+            """
+            using System;
+            using AnyCli;
+
+            [assembly: ArgumentParser<Widget, WidgetParser>]
+
+            public sealed class Widget
+            {
+            }
+
+            public sealed class WidgetParser : IArgumentParser<Widget>
+            {
+                public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
+                {
+                    result = new Widget();
+                    return true;
+                }
+            }
+
+            public sealed partial class GoodSettings
+            {
+                [Argument(0)]
+                public Widget Widget { get; set; } = new();
+
+                [VariadicArgument(1)]
+                public Widget[] Widgets { get; set; } = [];
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(errors.Length).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsDuplicateArgumentParserRegistrations()
+    {
+        var result = RunGenerator(
+            """
+            using System;
+            using AnyCli;
+
+            [assembly: ArgumentParser<Widget, WidgetParser1>]
+            [assembly: ArgumentParser<Widget, WidgetParser2>]
+
+            public sealed class Widget
+            {
+            }
+
+            public sealed class WidgetParser1 : IArgumentParser<Widget>
+            {
+                public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
+                {
+                    result = new Widget();
+                    return true;
+                }
+            }
+
+            public sealed class WidgetParser2 : IArgumentParser<Widget>
+            {
+                public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
+                {
+                    result = new Widget();
+                    return true;
+                }
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI004");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Widget");
+    }
+
+    [Test]
     public async Task GeneratesSettingsForSupportedArgumentTypes()
     {
         var result = RunGenerator(

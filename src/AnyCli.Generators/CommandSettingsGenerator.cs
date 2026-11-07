@@ -19,6 +19,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
     private const string ArgumentAttributeName = "AnyCli.ArgumentAttribute";
     private const string VariadicArgumentAttributeName = "AnyCli.VariadicArgumentAttribute";
     private const string SettingsInterfaceName = "ICommandSettings`1";
+    private const string ArgumentParserAttributeName = "ArgumentParserAttribute`2";
     private const string ArgumentParserInterfaceName = "IArgumentParser`1";
     private const string ParsableInterfaceName = "IParsable`1";
     private const string SpanParsableInterfaceName = "ISpanParsable`1";
@@ -27,7 +28,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         id: "ANYCLI001",
         title: "Unsupported argument type",
         messageFormat:
-            "Argument property '{0}' has unsupported type '{1}'; use a type that implements IParsable<T>, an enum, or specify Parser = typeof(...) implementing IArgumentParser<{1}>",
+            "Argument property '{0}' has unsupported type '{1}'; use a type that implements IParsable<T>, an enum, specify Parser = typeof(...), or register an ArgumentParserAttribute<{1}, TParser>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -50,6 +51,14 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor DuplicateArgumentParserDiagnostic = new(
+        id: "ANYCLI004",
+        title: "Duplicate argument parser registration",
+        messageFormat: "Multiple argument parsers are registered for type '{0}'",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var models = context.SyntaxProvider
@@ -58,9 +67,18 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 static (syntaxContext, cancellationToken) => GetModel(syntaxContext, cancellationToken))
             .Where(static model => model is not null);
 
+        var registrations = context.CompilationProvider.Select(
+            static (compilation, cancellationToken) =>
+                GetArgumentParserRegistrations(compilation, cancellationToken));
+
         context.RegisterSourceOutput(
             models,
             static (productionContext, model) => Emit(productionContext, model!));
+
+        context.RegisterSourceOutput(
+            registrations,
+            static (productionContext, registrationSet) =>
+                ReportRegistrationDiagnostics(productionContext, registrationSet));
     }
 
     private static bool IsCandidate(SyntaxNode node) =>
@@ -86,6 +104,9 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             return null;
         }
 
+        var registrations = GetArgumentParserRegistrations(
+            context.SemanticModel.Compilation,
+            cancellationToken);
         var arguments = new List<ArgumentModel>();
         var diagnostics = new List<DiagnosticModel>();
         foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
@@ -163,7 +184,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     elementTypeFullName = GetTypeName(property.Type);
                 }
 
-                if (!TryCreateParsePlan(argumentType, valueType, parserType, out var parsePlan))
+                if (!TryCreateParsePlan(argumentType, valueType, parserType, registrations.Parsers, out var parsePlan))
                 {
                     diagnostics.Add(parserType is null
                         ? new DiagnosticModel(
@@ -232,6 +253,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         ITypeSymbol argumentType,
         ITypeSymbol valueType,
         ITypeSymbol? parserType,
+        IReadOnlyDictionary<ITypeSymbol, ITypeSymbol> registeredParsers,
         out ParsePlan parsePlan)
     {
         if (parserType is not null)
@@ -246,6 +268,15 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 ParseKind.Custom,
                 valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 parserType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            return true;
+        }
+
+        if (registeredParsers.TryGetValue(valueType, out var registeredParser))
+        {
+            parsePlan = new ParsePlan(
+                ParseKind.Custom,
+                valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                registeredParser.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
             return true;
         }
 
@@ -311,6 +342,60 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "System" &&
                 currentInterface.TypeArguments.Length == 1 &&
                 SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], type));
+
+    private static RegistrationSet GetArgumentParserRegistrations(
+        Compilation compilation,
+        CancellationToken cancellationToken)
+    {
+        var parsers = new Dictionary<ITypeSymbol, ITypeSymbol>(SymbolEqualityComparer.Default);
+        var diagnostics = new List<DiagnosticModel>();
+
+        foreach (var attribute in compilation.Assembly.GetAttributes())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var attributeClass = attribute.AttributeClass;
+            if (attributeClass is null ||
+                !attributeClass.IsGenericType ||
+                attributeClass.OriginalDefinition.MetadataName != ArgumentParserAttributeName ||
+                attributeClass.OriginalDefinition.ContainingNamespace.ToDisplayString() != "AnyCli" ||
+                attributeClass.TypeArguments.Length != 2)
+            {
+                continue;
+            }
+
+            var valueType = attributeClass.TypeArguments[0];
+            var parserType = attributeClass.TypeArguments[1];
+            if (parsers.ContainsKey(valueType))
+            {
+                diagnostics.Add(new DiagnosticModel(
+                    DuplicateArgumentParserDiagnostic,
+                    GetLocation(attribute, cancellationToken),
+                    valueType.ToDisplayString()));
+                continue;
+            }
+
+            parsers[valueType] = parserType;
+        }
+
+        return new RegistrationSet(parsers, diagnostics);
+    }
+
+    private static Location GetLocation(AttributeData attribute, CancellationToken cancellationToken) =>
+        attribute.ApplicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation() ?? Location.None;
+
+    private static void ReportRegistrationDiagnostics(
+        SourceProductionContext context,
+        RegistrationSet registrations)
+    {
+        foreach (var diagnostic in registrations.Diagnostics)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                diagnostic.Descriptor,
+                diagnostic.Location,
+                diagnostic.MessageArgs));
+        }
+    }
 
     private static string ToCamelCase(string value)
     {
@@ -647,6 +732,15 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         public string ElementTypeFullName { get; }
 
         public ParsePlan ParsePlan { get; }
+    }
+
+    private sealed class RegistrationSet(
+        IReadOnlyDictionary<ITypeSymbol, ITypeSymbol> parsers,
+        IReadOnlyList<DiagnosticModel> diagnostics)
+    {
+        public IReadOnlyDictionary<ITypeSymbol, ITypeSymbol> Parsers { get; } = parsers;
+
+        public IReadOnlyList<DiagnosticModel> Diagnostics { get; } = diagnostics;
     }
 
     private sealed class ParsePlan(
