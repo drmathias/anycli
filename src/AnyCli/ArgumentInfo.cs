@@ -15,15 +15,4 @@ public sealed record ArgumentInfo(
     string Name,
     string Description,
     Type ArgumentType,
-    ArgumentArity Arity)
-{
-    /// <summary>
-    /// Gets a value indicating whether the argument is required.
-    /// </summary>
-    public bool IsRequired => Arity.IsRequired;
-
-    /// <summary>
-    /// Gets a value indicating whether the argument accepts more than one value.
-    /// </summary>
-    public bool IsVariadic => Arity.IsVariadic;
-}
+    ArgumentArity Arity);
