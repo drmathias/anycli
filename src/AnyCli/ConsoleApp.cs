@@ -14,6 +14,7 @@ public sealed class ConsoleApp
 {
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
+    private readonly IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories;
     private readonly string? _name;
     private readonly CommandNode _root;
     private readonly IServiceProvider? _serviceProvider;
@@ -29,7 +30,8 @@ public sealed class ConsoleApp
         IServiceProvider? serviceProvider,
         Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
         Func<IServiceProvider?, IUnrecognizedCommandHandler> unrecognizedCommandHandlerFactory,
-        int unrecognizedCommandExitCode)
+        int unrecognizedCommandExitCode,
+        IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> interceptorFactories)
     {
         _name = name;
         _version = version;
@@ -39,6 +41,7 @@ public sealed class ConsoleApp
         _helpProviderFactory = helpProviderFactory;
         _unrecognizedCommandHandlerFactory = unrecognizedCommandHandlerFactory;
         _unrecognizedCommandExitCode = unrecognizedCommandExitCode;
+        _interceptorFactories = interceptorFactories;
     }
 
     /// <summary>
@@ -291,15 +294,41 @@ public sealed class ConsoleApp
 
         ValidateRequiredGlobalOptions(globalOptionValues);
 
-        return await command.Execute
-            .Invoke(
-                _serviceProvider,
-                new CommandContext(
-                    path,
-                    console,
-                    new CommandOptionValues(globalOptionValues)),
-                arguments!)
+        var context = new CommandContext(
+            path,
+            console,
+            new CommandOptionValues(globalOptionValues));
+
+        return await ExecuteWithInterceptorsAsync(
+                context,
+                () => command.Execute.Invoke(_serviceProvider, context, arguments!))
             .ConfigureAwait(false);
+    }
+
+    private Task<int> ExecuteWithInterceptorsAsync(
+        CommandContext context,
+        Func<Task<int>> next)
+    {
+        if (_interceptorFactories.Count == 0)
+        {
+            return next();
+        }
+
+        var interceptors = new ICommandInterceptor[_interceptorFactories.Count];
+        for (var index = 0; index < interceptors.Length; index++)
+        {
+            interceptors[index] = _interceptorFactories[index](_serviceProvider);
+        }
+
+        var pipeline = next;
+        for (var index = interceptors.Length - 1; index >= 0; index--)
+        {
+            var interceptor = interceptors[index];
+            var inner = pipeline;
+            pipeline = () => interceptor.InterceptAsync(context, inner);
+        }
+
+        return pipeline();
     }
 
     private static CommandInfo CreateCommandInfo(

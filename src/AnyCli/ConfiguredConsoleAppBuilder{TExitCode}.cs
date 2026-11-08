@@ -50,6 +50,24 @@ public sealed class ConfiguredConsoleAppBuilder<TExitCode> : ConfiguredConsoleAp
     }
 
     /// <inheritdoc/>
+    public override ConfiguredConsoleAppBuilder<TExitCode> AddInterceptor<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor>()
+        where TInterceptor : class
+    {
+        base.AddInterceptor<TInterceptor>();
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public override ConfiguredConsoleAppBuilder<TExitCode> AddInterceptor<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor,
+        TCommandExitCode>()
+    {
+        base.AddInterceptor<TInterceptor, TCommandExitCode>();
+        return this;
+    }
+
+    /// <inheritdoc/>
     public override ConfiguredConsoleAppBuilder<TExitCode> AddHelp<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
         where THelpProvider : class

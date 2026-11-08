@@ -13,6 +13,7 @@ namespace AnyCli;
 public sealed class ConsoleAppBuilder
 {
     private readonly GlobalOptionBuilder _globalOptions = new();
+    private readonly List<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories = [];
     private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private IServiceProvider? _serviceProvider;
     private Func<IServiceProvider?, IUnrecognizedCommandHandler> _unrecognizedCommandHandlerFactory =
@@ -401,6 +402,47 @@ public sealed class ConsoleAppBuilder
     }
 
     /// <summary>
+    /// Registers a command execution interceptor.
+    /// </summary>
+    /// <typeparam name="TInterceptor">The interceptor type.</typeparam>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// Interceptors run in registration order before the command and in reverse order after it.
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the interceptor is
+    /// resolved from it; otherwise, it is created with its public parameterless constructor.
+    /// </remarks>
+    public ConsoleAppBuilder AddInterceptor<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor>()
+        where TInterceptor : class, ICommandInterceptor
+    {
+        _interceptorFactories.Add(serviceProvider => ResolveInterceptor<TInterceptor>(serviceProvider));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a command execution interceptor for a custom exit code enum.
+    /// </summary>
+    /// <typeparam name="TInterceptor">The interceptor type.</typeparam>
+    /// <typeparam name="TCommandExitCode">The exit code enum type.</typeparam>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// Interceptors run in registration order before the command and in reverse order after it.
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the interceptor is
+    /// resolved from it; otherwise, it is created with its public parameterless constructor.
+    /// </remarks>
+    public ConsoleAppBuilder AddInterceptor<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor,
+        TCommandExitCode>()
+        where TInterceptor : class, ICommandInterceptor<TCommandExitCode>
+        where TCommandExitCode : struct, Enum
+    {
+        _interceptorFactories.Add(
+            serviceProvider => new CommandInterceptorAdapter<TCommandExitCode>(
+                ResolveInterceptor<TInterceptor>(serviceProvider)));
+        return this;
+    }
+
+    /// <summary>
     /// Registers the help provider used by <c>-h</c> and <c>--help</c>.
     /// </summary>
     /// <typeparam name="THelpProvider">The help provider type.</typeparam>
@@ -447,7 +489,8 @@ public sealed class ConsoleAppBuilder
             _serviceProvider,
             _helpProviderFactory,
             _unrecognizedCommandHandlerFactory,
-            _unrecognizedCommandExitCode);
+            _unrecognizedCommandExitCode,
+            [.. _interceptorFactories]);
     }
 
     private static void ValidateCommandTree(CommandNode parent)
@@ -588,6 +631,20 @@ public sealed class ConsoleAppBuilder
             : serviceProvider.GetService(typeof(THandler)) as THandler
                 ?? throw new InvalidOperationException(
                     $"Service '{typeof(THandler).FullName}' is not registered.");
+    }
+
+    private static TInterceptor ResolveInterceptor<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor>(
+        IServiceProvider? serviceProvider)
+        where TInterceptor : class
+    {
+        return serviceProvider is null
+            ? Activator.CreateInstance<TInterceptor>()
+                ?? throw new InvalidOperationException(
+                    $"Could not create command interceptor '{typeof(TInterceptor).FullName}'.")
+            : serviceProvider.GetService(typeof(TInterceptor)) as TInterceptor
+                ?? throw new InvalidOperationException(
+                    $"Service '{typeof(TInterceptor).FullName}' is not registered.");
     }
 
     private static TCommand ResolveCommand<
