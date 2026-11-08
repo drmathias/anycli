@@ -56,7 +56,7 @@ public class UnrecognizedCommandTests
     }
 
     [Test]
-    public async Task GenericConfigurator_AcceptsEnumExitCode()
+    public async Task GenericRegistrar_AcceptsEnumExitCode()
     {
         var app = ConsoleAppBuilder.Create()
             .ConfigureCommands<UnrecognizedExitCode>(_ => { })
@@ -96,7 +96,7 @@ public class UnrecognizedCommandTests
     {
         public void Handle(UnrecognizedCommandContext context)
         {
-            context.Console.Output.WriteLine($"custom:{context.CommandName}");
+            context.Console.Output.WriteLine($"custom:{context.AttemptedCommandPath}");
         }
     }
 

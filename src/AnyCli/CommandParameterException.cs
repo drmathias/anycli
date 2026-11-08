@@ -5,15 +5,15 @@
 namespace AnyCli;
 
 /// <summary>
-/// The exception thrown when command-line arguments cannot be bound to a command.
+/// The exception thrown when command-line parameters cannot be bound to a command.
 /// </summary>
-public sealed class CommandArgumentException : Exception
+public sealed class CommandParameterException : Exception
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CommandArgumentException"/> class.
+    /// Initializes a new instance of the <see cref="CommandParameterException"/> class.
     /// </summary>
     /// <param name="message">The error message.</param>
-    public CommandArgumentException(string message)
+    public CommandParameterException(string message)
         : base(message)
     {
     }

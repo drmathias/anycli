@@ -51,12 +51,12 @@ public class ConfigureCommandsTests
         await Assert.That(asyncResult.ExitCode).IsEqualTo((int)TestExitCode.Failed);
     }
 
-    private sealed class IntCommand : EmptyCommand
+    private sealed class IntCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context) => 7;
     }
 
-    private sealed class AsyncIntCommand : EmptyAsyncCommand
+    private sealed class AsyncIntCommand : NoParametersAsyncCommand
     {
         public override async Task<int> ExecuteAsync(CommandContext context)
         {
@@ -65,12 +65,12 @@ public class ConfigureCommandsTests
         }
     }
 
-    private sealed class EnumCommand : EmptyCommand<TestExitCode>
+    private sealed class EnumCommand : NoParametersCommand<TestExitCode>
     {
         public override TestExitCode Execute(CommandContext context) => TestExitCode.Failed;
     }
 
-    private sealed class AsyncEnumCommand : EmptyAsyncCommand<TestExitCode>
+    private sealed class AsyncEnumCommand : NoParametersAsyncCommand<TestExitCode>
     {
         public override async Task<TestExitCode> ExecuteAsync(CommandContext context)
         {

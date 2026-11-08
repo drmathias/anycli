@@ -79,11 +79,11 @@ public class GlobalOptionTests
     }
 
     [Test]
-    public async Task TypedCommandSettings_AndGlobalOptions_WorkTogether()
+    public async Task TypedCommandParameters_AndGlobalOptions_WorkTogether()
     {
         var app = ConsoleAppBuilder.Create()
             .WithGlobalOptions(options => options.AddValue<string>("log-level").SetAliases("l").SetDescription("Log level"))
-            .ConfigureCommands(commands => commands.AddCommand<GlobalTypedCommand, GlobalTypedSettings>("run"))
+            .ConfigureCommands(commands => commands.AddCommand<GlobalTypedCommand, GlobalTypedParameters>("run"))
             .Build();
 
         var result = await TestAppHarness.RunAsync(
@@ -116,13 +116,13 @@ public class GlobalOptionTests
             .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand>("run"))
             .Build();
 
-        CommandArgumentException? exception = null;
+        CommandParameterException? exception = null;
 
         try
         {
             _ = await TestAppHarness.RunAsync(app, ["run"]);
         }
-        catch (CommandArgumentException ex)
+        catch (CommandParameterException ex)
         {
             exception = ex;
         }
@@ -184,13 +184,13 @@ public class GlobalOptionTests
             .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand>("run"))
             .Build();
 
-        CommandArgumentException? exception = null;
+        CommandParameterException? exception = null;
 
         try
         {
             _ = await TestAppHarness.RunAsync(app, ["--verbose", "run"]);
         }
-        catch (CommandArgumentException ex)
+        catch (CommandParameterException ex)
         {
             exception = ex;
         }
@@ -208,7 +208,7 @@ public class GlobalOptionTests
         {
             _ = ConsoleAppBuilder.Create()
                 .WithGlobalOptions(options => options.AddValue<string>("log-level"))
-                .ConfigureCommands(commands => commands.AddCommand<GlobalConflictCommand, GlobalConflictSettings>("run"))
+                .ConfigureCommands(commands => commands.AddCommand<GlobalConflictCommand, GlobalConflictParameters>("run"))
                 .Build();
         }
         catch (InvalidOperationException ex)
@@ -262,34 +262,34 @@ public class GlobalOptionTests
         await Assert.That(exception!.Message).Contains("--log-level");
     }
 
-    private sealed class GlobalEchoCommand : EmptyCommand
+    private sealed class GlobalEchoCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {
-            var logLevel = context.GlobalOptions.TryGetValue("log-level", out var value)
+            var logLevel = context.GlobalOptionValues.TryGetValue("log-level", out var value)
                 ? value
                 : "none";
-            var tags = string.Join(",", context.GlobalOptions.GetValues("tag"));
+            var tags = string.Join(",", context.GlobalOptionValues.GetValues("tag"));
             context.Console.Output.Write($"{logLevel}|{tags}");
             return 0;
         }
     }
 
-    private sealed class GlobalTypedCommand : ICommand<GlobalTypedSettings>
+    private sealed class GlobalTypedCommand : ICommand<GlobalTypedParameters>
     {
-        public int Execute(CommandContext context, GlobalTypedSettings settings)
+        public int Execute(CommandContext context, GlobalTypedParameters parameters)
         {
-            var logLevel = context.GlobalOptions.TryGetValue("log-level", out var value)
+            var logLevel = context.GlobalOptionValues.TryGetValue("log-level", out var value)
                 ? value
                 : "none";
-            context.Console.Output.Write($"{settings.Input}:{settings.Verbose}:{logLevel}");
+            context.Console.Output.Write($"{parameters.Input}:{parameters.Verbose}:{logLevel}");
             return 0;
         }
     }
 
-    private sealed class GlobalConflictCommand : ICommand<GlobalConflictSettings>
+    private sealed class GlobalConflictCommand : ICommand<GlobalConflictParameters>
     {
-        public int Execute(CommandContext context, GlobalConflictSettings settings) => 0;
+        public int Execute(CommandContext context, GlobalConflictParameters parameters) => 0;
     }
 
     private sealed class GlobalHelpProvider : IHelpProvider
@@ -307,7 +307,7 @@ public class GlobalOptionTests
     }
 }
 
-public sealed partial class GlobalTypedSettings
+public sealed partial class GlobalTypedParameters
 {
     [Argument(0)]
     public string Input { get; set; } = "";
@@ -316,7 +316,7 @@ public sealed partial class GlobalTypedSettings
     public bool Verbose { get; set; }
 }
 
-public sealed partial class GlobalConflictSettings
+public sealed partial class GlobalConflictParameters
 {
     [Option("log-level")]
     public string LogLevel { get; set; } = "";

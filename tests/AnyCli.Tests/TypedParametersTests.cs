@@ -6,14 +6,14 @@ using AnyCli.Tests.Fixtures;
 
 namespace AnyCli.Tests;
 
-public class TypedSettingsTests
+public class TypedParametersTests
 {
     [Test]
-    public async Task TypedSettings_BindRequiredAndOptionalArguments()
+    public async Task TypedParameters_BindRequiredAndOptionalArguments()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddCommand<CopyCommand, CopySettings>("copy", "Copies files"))
+            .ConfigureCommands(commands => commands.AddCommand<CopyCommand, CopyParameters>("copy", "Copies files"))
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["copy", "source.txt"]);
@@ -23,11 +23,11 @@ public class TypedSettingsTests
     }
 
     [Test]
-    public async Task TypedSettings_BindVariadicArguments()
+    public async Task TypedParameters_BindVariadicArguments()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddCommand<CopyCommand, CopySettings>("copy", "Copies files"))
+            .ConfigureCommands(commands => commands.AddCommand<CopyCommand, CopyParameters>("copy", "Copies files"))
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["copy", "source.txt", "dest.txt", "fast", "a", "b"]);
@@ -37,11 +37,11 @@ public class TypedSettingsTests
     }
 
     [Test]
-    public async Task TypedSettings_UseComputedPropertyInitializerAsDefault()
+    public async Task TypedParameters_UseComputedPropertyInitializerAsDefault()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddCommand<ComputedCommand, ComputedSettings>("computed"))
+            .ConfigureCommands(commands => commands.AddCommand<ComputedCommand, ComputedParameters>("computed"))
             .Build();
 
         var missing = await TestAppHarness.RunAsync(app, ["computed"]);
@@ -52,25 +52,25 @@ public class TypedSettingsTests
     }
 
     [Test]
-    public async Task TypedSettings_SupportCustomExitCodeEnums()
+    public async Task TypedParameters_SupportCustomExitCodeEnums()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands<SettingsExitCode>(commands => commands
-                .AddCommand<ExitCodeCommand, ExitCodeSettings>("exit"))
+            .ConfigureCommands<ParametersExitCode>(commands => commands
+                .AddCommand<ExitCodeCommand, ExitCodeParameters>("exit"))
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["exit", "ignored"]);
 
-        await Assert.That(result.ExitCode).IsEqualTo((int)SettingsExitCode.Failed);
+        await Assert.That(result.ExitCode).IsEqualTo((int)ParametersExitCode.Failed);
     }
 
     [Test]
-    public async Task TypedSettings_WorkWithAsyncCommands()
+    public async Task TypedParameters_WorkWithAsyncCommands()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddAsyncCommand<AsyncSettingsCommand, AsyncSettings>("async"))
+            .ConfigureCommands(commands => commands.AddAsyncCommand<AsyncParametersCommand, AsyncParameters>("async"))
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["async", "hello"]);
@@ -79,43 +79,43 @@ public class TypedSettingsTests
         await Assert.That(result.Output).IsEqualTo("hello");
     }
 
-    private sealed class CopyCommand : ICommand<CopySettings>
+    private sealed class CopyCommand : ICommand<CopyParameters>
     {
-        public int Execute(CommandContext context, CopySettings settings)
+        public int Execute(CommandContext context, CopyParameters parameters)
         {
             context.Console.Output.Write(
-                $"{settings.Source}|{settings.Destination ?? "<null>"}|{settings.Label}|{string.Join(",", settings.Extras)}");
+                $"{parameters.Source}|{parameters.Destination ?? "<null>"}|{parameters.Label}|{string.Join(",", parameters.Extras)}");
             return 0;
         }
     }
 
-    private sealed class ComputedCommand : ICommand<ComputedSettings>
+    private sealed class ComputedCommand : ICommand<ComputedParameters>
     {
-        public int Execute(CommandContext context, ComputedSettings settings)
+        public int Execute(CommandContext context, ComputedParameters parameters)
         {
-            context.Console.Output.Write(settings.Label);
+            context.Console.Output.Write(parameters.Label);
             return 0;
         }
     }
 
-    private sealed class ExitCodeCommand : ICommand<ExitCodeSettings, SettingsExitCode>
+    private sealed class ExitCodeCommand : ICommand<ExitCodeParameters, ParametersExitCode>
     {
-        public SettingsExitCode Execute(CommandContext context, ExitCodeSettings settings) =>
-            SettingsExitCode.Failed;
+        public ParametersExitCode Execute(CommandContext context, ExitCodeParameters parameters) =>
+            ParametersExitCode.Failed;
     }
 
-    private sealed class AsyncSettingsCommand : IAsyncCommand<AsyncSettings>
+    private sealed class AsyncParametersCommand : IAsyncCommand<AsyncParameters>
     {
-        public async Task<int> ExecuteAsync(CommandContext context, AsyncSettings settings)
+        public async Task<int> ExecuteAsync(CommandContext context, AsyncParameters parameters)
         {
             await Task.Yield();
-            context.Console.Output.Write(settings.Name);
+            context.Console.Output.Write(parameters.Name);
             return 0;
         }
     }
 }
 
-public sealed partial class CopySettings
+public sealed partial class CopyParameters
 {
     [Argument(0)]
     public string Source { get; set; } = "";
@@ -130,7 +130,7 @@ public sealed partial class CopySettings
     public string[] Extras { get; set; } = [];
 }
 
-public sealed partial class ComputedSettings
+public sealed partial class ComputedParameters
 {
     [Argument(0, Optional = true)]
     public string Label { get; set; } = CreateDefaultLabel();
@@ -138,19 +138,19 @@ public sealed partial class ComputedSettings
     private static string CreateDefaultLabel() => "computed";
 }
 
-public sealed partial class ExitCodeSettings
+public sealed partial class ExitCodeParameters
 {
     [Argument(0)]
     public string Name { get; set; } = "";
 }
 
-public sealed partial class AsyncSettings
+public sealed partial class AsyncParameters
 {
     [Argument(0)]
     public string Name { get; set; } = "";
 }
 
-public enum SettingsExitCode
+public enum ParametersExitCode
 {
     Success = 0,
     Failed = 4,

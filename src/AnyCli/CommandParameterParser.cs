@@ -4,7 +4,7 @@
 
 namespace AnyCli;
 
-internal static class CommandArgumentsParser
+internal static class CommandParameterParser
 {
     public static int ParseLeadingGlobalOptions(
         IReadOnlyList<OptionDefinition> globalOptionDefinitions,
@@ -148,7 +148,7 @@ internal static class CommandArgumentsParser
         return -1;
     }
 
-    public static CommandArguments? Parse(
+    public static ParsedCommandParameters? Parse(
         IReadOnlyList<ArgumentDefinition> definitions,
         IReadOnlyList<OptionDefinition> optionDefinitions,
         IReadOnlyList<OptionDefinition> globalOptionDefinitions,
@@ -226,7 +226,7 @@ internal static class CommandArgumentsParser
         {
             if (option.Required && !commandOptionValues.ContainsKey(option.Name))
             {
-                throw new CommandArgumentException($"Missing required option '{option.Name}'.");
+                throw new CommandParameterException($"Missing required option '{option.Name}'.");
             }
         }
 
@@ -246,7 +246,7 @@ internal static class CommandArgumentsParser
 
             if (count < definition.Arity.Minimum)
             {
-                throw new CommandArgumentException(
+                throw new CommandParameterException(
                     $"Missing required argument '{definition.Name}'.");
             }
 
@@ -276,14 +276,12 @@ internal static class CommandArgumentsParser
 
         if (position < positionalValues.Count)
         {
-            throw new CommandArgumentException(
+            throw new CommandParameterException(
                 $"Unexpected argument '{positionalValues[position]}'.");
         }
 
-        return new CommandArguments(
-            arities,
-            values,
-            supplied,
+        return new ParsedCommandParameters(
+            new CommandArgumentValues(arities, values, supplied),
             new CommandOptionValues(commandOptionValues));
     }
 
@@ -366,12 +364,12 @@ internal static class CommandArgumentsParser
             var name = token[..equalsIndex];
             if (name.Length != 2)
             {
-                throw new CommandArgumentException($"Invalid option '{name}'.");
+                throw new CommandParameterException($"Invalid option '{name}'.");
             }
 
             if (!optionLookup.TryGetValue(name, out var binding))
             {
-                throw new CommandArgumentException($"Unknown option '{name}'.");
+                throw new CommandParameterException($"Unknown option '{name}'.");
             }
 
             AddOptionValue(
@@ -386,14 +384,14 @@ internal static class CommandArgumentsParser
         {
             if (!optionLookup.TryGetValue(token, out var binding))
             {
-                throw new CommandArgumentException($"Unknown option '{token}'.");
+                throw new CommandParameterException($"Unknown option '{token}'.");
             }
 
             if (binding.Definition.TakesValue)
             {
                 if (index + 1 >= tokens.Length || tokens[index + 1] == "--")
                 {
-                    throw new CommandArgumentException(
+                    throw new CommandParameterException(
                         $"Missing value for option '{token}'.");
                 }
 
@@ -412,12 +410,12 @@ internal static class CommandArgumentsParser
             var name = "-" + token[characterIndex];
             if (!optionLookup.TryGetValue(name, out var binding))
             {
-                throw new CommandArgumentException($"Unknown option '{name}'.");
+                throw new CommandParameterException($"Unknown option '{name}'.");
             }
 
             if (binding.Definition.TakesValue)
             {
-                throw new CommandArgumentException(
+                throw new CommandParameterException(
                     $"Option '{name}' requires a separate value; use '{name} value' or '{name}=value'.");
             }
 
@@ -439,7 +437,7 @@ internal static class CommandArgumentsParser
         var name = equalsIndex >= 0 ? token[..equalsIndex] : token;
         if (!optionLookup.TryGetValue(name, out var binding))
         {
-            throw new CommandArgumentException($"Unknown option '{name}'.");
+            throw new CommandParameterException($"Unknown option '{name}'.");
         }
 
         if (binding.Definition.TakesValue)
@@ -456,7 +454,7 @@ internal static class CommandArgumentsParser
 
             if (index + 1 >= tokens.Length || tokens[index + 1] == "--")
             {
-                throw new CommandArgumentException(
+                throw new CommandParameterException(
                     $"Missing value for option '{name}'.");
             }
 

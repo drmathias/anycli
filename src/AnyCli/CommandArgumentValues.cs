@@ -5,30 +5,23 @@
 namespace AnyCli;
 
 /// <summary>
-/// Provides the parsed positional arguments for a command.
+/// Provides the parsed positional argument values for a command.
 /// </summary>
-public sealed class CommandArguments
+public sealed class CommandArgumentValues
 {
     private readonly IReadOnlyDictionary<string, ArgumentArity> _arities;
     private readonly IReadOnlySet<string> _supplied;
     private readonly IReadOnlyDictionary<string, object?> _values;
 
-    internal CommandArguments(
+    internal CommandArgumentValues(
         IReadOnlyDictionary<string, ArgumentArity> arities,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string> supplied,
-        CommandOptionValues options)
+        IReadOnlySet<string> supplied)
     {
         _arities = arities;
         _values = values;
         _supplied = supplied;
-        Options = options;
     }
-
-    /// <summary>
-    /// Gets the parsed named option values.
-    /// </summary>
-    public CommandOptionValues Options { get; }
 
     /// <summary>
     /// Gets the value of a required argument.

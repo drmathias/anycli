@@ -14,10 +14,10 @@ public sealed class DefaultUnrecognizedCommandHandler : IUnrecognizedCommandHand
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        context.Console.Error.WriteLine(string.IsNullOrEmpty(context.CommandName)
+        context.Console.Error.WriteLine(string.IsNullOrEmpty(context.AttemptedCommandPath)
             ? "No command was specified."
             : context.IsMissingSubcommand
-                ? $"Command '{context.CommandName}' requires a subcommand."
-                : $"Unknown command '{context.CommandName}'.");
+                ? $"Command '{context.AttemptedCommandPath}' requires a subcommand."
+                : $"Unknown command '{context.AttemptedCommandPath}'.");
     }
 }

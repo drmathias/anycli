@@ -14,7 +14,7 @@ internal sealed class ArgumentDefinition(
 
     public ArgumentArity Arity { get; } = arity;
 
-    public Type ArgumentType { get; } = argumentType;
+    public Type DeclaredType { get; } = argumentType;
 
     public Func<string?> DefaultFactory { get; } = defaultFactory;
 

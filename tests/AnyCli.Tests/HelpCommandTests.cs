@@ -72,7 +72,7 @@ public class HelpCommandTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("jvln")
-            .ConfigureCommands(commands => commands.AddCommand<ThrowCommand, ThrowSettings>(
+            .ConfigureCommands(commands => commands.AddCommand<ThrowCommand, ThrowParameters>(
                 "throw",
                 "Opens a Jvln HTTP tunnel"))
             .AddHelp<ThrowHelpProvider>()
@@ -90,7 +90,7 @@ public class HelpCommandTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddCommand<TypeCommand, TypeMetadataSettings>("types"))
+            .ConfigureCommands(commands => commands.AddCommand<TypeCommand, TypeMetadataParameters>("types"))
             .AddHelp<TypeHelpProvider>()
             .Build();
 
@@ -109,7 +109,7 @@ public class HelpCommandTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddCommand<OneOrMoreCommand, OneOrMoreSettings>("tags"))
+            .ConfigureCommands(commands => commands.AddCommand<OneOrMoreCommand, OneOrMoreParameters>("tags"))
             .AddHelp<TypeHelpProvider>()
             .Build();
 
@@ -126,7 +126,7 @@ public class HelpCommandTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddCommand<OptionMetadataCommand, OptionSettings>("opts"))
+            .ConfigureCommands(commands => commands.AddCommand<OptionMetadataCommand, OptionParameters>("opts"))
             .AddHelp<OptionHelpProvider>()
             .Build();
 
@@ -167,14 +167,14 @@ public class HelpCommandTests
                 .Select(line => line.TrimEnd()))
             .TrimEnd('\n');
 
-    private sealed class NoOpCommand : EmptyCommand
+    private sealed class NoOpCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context) => 0;
     }
 
-    private sealed class OptionMetadataCommand : ICommand<OptionSettings>
+    private sealed class OptionMetadataCommand : ICommand<OptionParameters>
     {
-        public int Execute(CommandContext context, OptionSettings settings) => 0;
+        public int Execute(CommandContext context, OptionParameters parameters) => 0;
     }
 
     private sealed class OptionHelpProvider : IHelpProvider
@@ -191,19 +191,19 @@ public class HelpCommandTests
                         $"{string.Join(",", option.Names)}:{option.IsRequired}:{option.TakesValue}")));
     }
 
-    private sealed class ThrowCommand : ICommand<ThrowSettings>
+    private sealed class ThrowCommand : ICommand<ThrowParameters>
     {
-        public int Execute(CommandContext context, ThrowSettings settings) => 0;
+        public int Execute(CommandContext context, ThrowParameters parameters) => 0;
     }
 
-    private sealed class TypeCommand : ICommand<TypeMetadataSettings>
+    private sealed class TypeCommand : ICommand<TypeMetadataParameters>
     {
-        public int Execute(CommandContext context, TypeMetadataSettings settings) => 0;
+        public int Execute(CommandContext context, TypeMetadataParameters parameters) => 0;
     }
 
-    private sealed class OneOrMoreCommand : ICommand<OneOrMoreSettings>
+    private sealed class OneOrMoreCommand : ICommand<OneOrMoreParameters>
     {
-        public int Execute(CommandContext context, OneOrMoreSettings settings) => 0;
+        public int Execute(CommandContext context, OneOrMoreParameters parameters) => 0;
     }
 
     private sealed class TypeHelpProvider : IHelpProvider
@@ -217,7 +217,7 @@ public class HelpCommandTests
                 string.Join(
                     ",",
                     context.Command.Arguments.Select(argument =>
-                        $"{argument.ArgumentType.Name}:{argument.Arity.Minimum}:{argument.Arity.Maximum}:" +
+                        $"{argument.DeclaredType.Name}:{argument.Arity.Minimum}:{argument.Arity.Maximum}:" +
                         $"{argument.IsRequired}:{argument.IsVariadic}")));
     }
 
@@ -291,13 +291,13 @@ public class HelpCommandTests
     }
 }
 
-public sealed partial class ThrowSettings
+public sealed partial class ThrowParameters
 {
     [Argument(0, Description = "Destination for HTTP traffic")]
     public string Upstream { get; set; } = "";
 }
 
-public sealed partial class TypeMetadataSettings
+public sealed partial class TypeMetadataParameters
 {
     [Argument(0)]
     public int Count { get; set; }

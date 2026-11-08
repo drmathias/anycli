@@ -94,7 +94,7 @@ public class SpectreConsoleAdapterTests
     }
 
     private static async Task<TestAppResult> Run<TCommand>(string commandName)
-        where TCommand : EmptyCommand, new()
+        where TCommand : NoParametersCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -104,7 +104,7 @@ public class SpectreConsoleAdapterTests
         return await TestAppHarness.RunAsync(app, [commandName]);
     }
 
-    private sealed class PropertyCommand : EmptyCommand
+    private sealed class PropertyCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {
@@ -114,7 +114,7 @@ public class SpectreConsoleAdapterTests
         }
     }
 
-    private sealed class CachingCommand : EmptyCommand
+    private sealed class CachingCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {
@@ -125,7 +125,7 @@ public class SpectreConsoleAdapterTests
         }
     }
 
-    private sealed class MixedCommand : EmptyCommand
+    private sealed class MixedCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {
@@ -135,7 +135,7 @@ public class SpectreConsoleAdapterTests
         }
     }
 
-    private sealed class ErrorCommand : EmptyCommand
+    private sealed class ErrorCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {

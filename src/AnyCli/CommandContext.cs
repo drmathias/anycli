@@ -17,7 +17,7 @@ public sealed class CommandContext
         CommandPath = commandPath;
         Name = commandPath[^1];
         Console = console;
-        GlobalOptions = globalOptions;
+        GlobalOptionValues = globalOptions;
     }
 
     /// <summary>
@@ -36,7 +36,7 @@ public sealed class CommandContext
     public IConsole Console { get; }
 
     /// <summary>
-    /// Gets the parsed options that apply to every command.
+    /// Gets the parsed global option values that apply to every command.
     /// </summary>
-    public CommandOptionValues GlobalOptions { get; }
+    public CommandOptionValues GlobalOptionValues { get; }
 }

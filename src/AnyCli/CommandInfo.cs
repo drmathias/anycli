@@ -17,9 +17,9 @@ public sealed record CommandInfo(string Name, string Description)
     public IReadOnlyList<string> Path { get; init; } = [];
 
     /// <summary>
-    /// Gets a value indicating whether this node is a non-executable command group.
+    /// Gets a value indicating whether this node has an executable command.
     /// </summary>
-    public bool IsGroup { get; init; }
+    public bool IsExecutable { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the command or group has subcommands.

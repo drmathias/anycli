@@ -102,7 +102,7 @@ public class DependencyInjectionTests
             context.Console.Output.Write(greeting.Greeting);
     }
 
-    private sealed class GreetCommand(GreetingService greeting) : EmptyCommand
+    private sealed class GreetCommand(GreetingService greeting) : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {
@@ -111,7 +111,7 @@ public class DependencyInjectionTests
         }
     }
 
-    private sealed class AsyncGreetCommand(GreetingService greeting) : EmptyAsyncCommand
+    private sealed class AsyncGreetCommand(GreetingService greeting) : NoParametersAsyncCommand
     {
         public override async Task<int> ExecuteAsync(CommandContext context)
         {

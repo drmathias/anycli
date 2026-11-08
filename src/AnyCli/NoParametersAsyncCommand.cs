@@ -5,9 +5,9 @@
 namespace AnyCli;
 
 /// <summary>
-/// Base class for asynchronous commands that do not use settings.
+/// Base class for asynchronous commands that do not use parameters.
 /// </summary>
-public abstract class EmptyAsyncCommand
+public abstract class NoParametersAsyncCommand
 {
     /// <summary>
     /// Executes the command.
@@ -18,10 +18,10 @@ public abstract class EmptyAsyncCommand
 }
 
 /// <summary>
-/// Base class for asynchronous commands that do not use settings and return a custom exit code enum.
+/// Base class for asynchronous commands that do not use parameters and return a custom exit code enum.
 /// </summary>
 /// <typeparam name="TExitCode">The enum type used as the exit code.</typeparam>
-public abstract class EmptyAsyncCommand<TExitCode>
+public abstract class NoParametersAsyncCommand<TExitCode>
     where TExitCode : struct, Enum
 {
     /// <summary>

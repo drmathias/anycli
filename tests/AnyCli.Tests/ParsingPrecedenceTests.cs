@@ -5,9 +5,9 @@
 using AnyCli;
 using AnyCli.Tests.Fixtures;
 
-[assembly: ArgumentParser<AnyCli.Tests.PrecedenceValue, AnyCli.Tests.AssemblyPrecedenceParser>]
-[assembly: ArgumentParser<AnyCli.Tests.SpanPrecedenceValue, AnyCli.Tests.AssemblySpanPrecedenceParser>]
-[assembly: ArgumentParser<AnyCli.Tests.PrecedenceMode, AnyCli.Tests.AssemblyEnumPrecedenceParser>]
+[assembly: ParameterValueParser<AnyCli.Tests.PrecedenceValue, AnyCli.Tests.AssemblyPrecedenceParser>]
+[assembly: ParameterValueParser<AnyCli.Tests.SpanPrecedenceValue, AnyCli.Tests.AssemblySpanPrecedenceParser>]
+[assembly: ParameterValueParser<AnyCli.Tests.PrecedenceMode, AnyCli.Tests.AssemblyEnumPrecedenceParser>]
 
 namespace AnyCli.Tests;
 
@@ -16,7 +16,7 @@ public class ParsingPrecedenceTests
     [Test]
     public async Task AssemblyRegistration_WinsOverBuiltInParsable()
     {
-        var app = CreateApp<AssemblyValueCommand, AssemblyValueSettings>("value");
+        var app = CreateApp<AssemblyValueCommand, AssemblyValueParameters>("value");
 
         var result = await TestAppHarness.RunAsync(app, ["value", "input"]);
 
@@ -26,7 +26,7 @@ public class ParsingPrecedenceTests
     [Test]
     public async Task AssemblyRegistration_WinsOverISpanParsable()
     {
-        var app = CreateApp<AssemblySpanValueCommand, AssemblySpanValueSettings>("value");
+        var app = CreateApp<AssemblySpanValueCommand, AssemblySpanValueParameters>("value");
 
         var result = await TestAppHarness.RunAsync(app, ["value", "input"]);
 
@@ -36,7 +36,7 @@ public class ParsingPrecedenceTests
     [Test]
     public async Task PropertyParser_WinsOverAssemblyRegistration()
     {
-        var app = CreateApp<PropertyValueCommand, PropertyValueSettings>("value");
+        var app = CreateApp<PropertyValueCommand, PropertyValueParameters>("value");
 
         var result = await TestAppHarness.RunAsync(app, ["value", "input"]);
 
@@ -46,7 +46,7 @@ public class ParsingPrecedenceTests
     [Test]
     public async Task AssemblyRegistration_WinsOverGlobalEnumParser()
     {
-        var app = CreateApp<AssemblyEnumCommand, AssemblyEnumSettings>("mode");
+        var app = CreateApp<AssemblyEnumCommand, AssemblyEnumParameters>("mode");
 
         var result = await TestAppHarness.RunAsync(app, ["mode", "whatever"]);
 
@@ -56,92 +56,92 @@ public class ParsingPrecedenceTests
     [Test]
     public async Task PropertyParser_WinsOverAssemblyEnumRegistration()
     {
-        var app = CreateApp<PropertyEnumCommand, PropertyEnumSettings>("mode");
+        var app = CreateApp<PropertyEnumCommand, PropertyEnumParameters>("mode");
 
         var result = await TestAppHarness.RunAsync(app, ["mode", "whatever"]);
 
         await Assert.That(result.Output).IsEqualTo("Property");
     }
 
-    private static ConsoleApp CreateApp<TCommand, TSettings>(string name)
-        where TCommand : class, ICommand<TSettings>
-        where TSettings : class, ICommandSettings<TSettings> =>
+    private static ConsoleApp CreateApp<TCommand, TParameters>(string name)
+        where TCommand : class, ICommand<TParameters>
+        where TParameters : class, ICommandParameters<TParameters> =>
         ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddCommand<TCommand, TSettings>(name))
+            .ConfigureCommands(commands => commands.AddCommand<TCommand, TParameters>(name))
             .Build();
 
-    private sealed class AssemblyValueCommand : ICommand<AssemblyValueSettings>
+    private sealed class AssemblyValueCommand : ICommand<AssemblyValueParameters>
     {
-        public int Execute(CommandContext context, AssemblyValueSettings settings)
+        public int Execute(CommandContext context, AssemblyValueParameters parameters)
         {
-            context.Console.Output.Write(settings.Value.Source);
+            context.Console.Output.Write(parameters.Value.Source);
             return 0;
         }
     }
 
-    private sealed class AssemblySpanValueCommand : ICommand<AssemblySpanValueSettings>
+    private sealed class AssemblySpanValueCommand : ICommand<AssemblySpanValueParameters>
     {
-        public int Execute(CommandContext context, AssemblySpanValueSettings settings)
+        public int Execute(CommandContext context, AssemblySpanValueParameters parameters)
         {
-            context.Console.Output.Write(settings.Value.Source);
+            context.Console.Output.Write(parameters.Value.Source);
             return 0;
         }
     }
 
-    private sealed class PropertyValueCommand : ICommand<PropertyValueSettings>
+    private sealed class PropertyValueCommand : ICommand<PropertyValueParameters>
     {
-        public int Execute(CommandContext context, PropertyValueSettings settings)
+        public int Execute(CommandContext context, PropertyValueParameters parameters)
         {
-            context.Console.Output.Write(settings.Value.Source);
+            context.Console.Output.Write(parameters.Value.Source);
             return 0;
         }
     }
 
-    private sealed class AssemblyEnumCommand : ICommand<AssemblyEnumSettings>
+    private sealed class AssemblyEnumCommand : ICommand<AssemblyEnumParameters>
     {
-        public int Execute(CommandContext context, AssemblyEnumSettings settings)
+        public int Execute(CommandContext context, AssemblyEnumParameters parameters)
         {
-            context.Console.Output.Write(settings.Mode.ToString());
+            context.Console.Output.Write(parameters.Mode.ToString());
             return 0;
         }
     }
 
-    private sealed class PropertyEnumCommand : ICommand<PropertyEnumSettings>
+    private sealed class PropertyEnumCommand : ICommand<PropertyEnumParameters>
     {
-        public int Execute(CommandContext context, PropertyEnumSettings settings)
+        public int Execute(CommandContext context, PropertyEnumParameters parameters)
         {
-            context.Console.Output.Write(settings.Mode.ToString());
+            context.Console.Output.Write(parameters.Mode.ToString());
             return 0;
         }
     }
 }
 
-public sealed partial class AssemblyValueSettings
+public sealed partial class AssemblyValueParameters
 {
     [Argument(0)]
     public PrecedenceValue Value { get; set; } = new(string.Empty);
 }
 
-public sealed partial class AssemblySpanValueSettings
+public sealed partial class AssemblySpanValueParameters
 {
     [Argument(0)]
     public SpanPrecedenceValue Value { get; set; } = new(string.Empty);
 }
 
-public sealed partial class PropertyValueSettings
+public sealed partial class PropertyValueParameters
 {
     [Argument(0, Parser = typeof(PropertyPrecedenceParser))]
     public PrecedenceValue Value { get; set; } = new(string.Empty);
 }
 
-public sealed partial class AssemblyEnumSettings
+public sealed partial class AssemblyEnumParameters
 {
     [Argument(0)]
     public PrecedenceMode Mode { get; set; }
 }
 
-public sealed partial class PropertyEnumSettings
+public sealed partial class PropertyEnumParameters
 {
     [Argument(0, Parser = typeof(PropertyEnumPrecedenceParser))]
     public PrecedenceMode Mode { get; set; }
@@ -186,7 +186,7 @@ public sealed record SpanPrecedenceValue(string Source) : ISpanParsable<SpanPrec
     }
 }
 
-public sealed class AssemblySpanPrecedenceParser : IArgumentParser<SpanPrecedenceValue>
+public sealed class AssemblySpanPrecedenceParser : IParameterParser<SpanPrecedenceValue>
 {
     public static bool TryParse(
         string value,
@@ -198,7 +198,7 @@ public sealed class AssemblySpanPrecedenceParser : IArgumentParser<SpanPrecedenc
     }
 }
 
-public sealed class AssemblyPrecedenceParser : IArgumentParser<PrecedenceValue>
+public sealed class AssemblyPrecedenceParser : IParameterParser<PrecedenceValue>
 {
     public static bool TryParse(
         string value,
@@ -210,7 +210,7 @@ public sealed class AssemblyPrecedenceParser : IArgumentParser<PrecedenceValue>
     }
 }
 
-public sealed class PropertyPrecedenceParser : IArgumentParser<PrecedenceValue>
+public sealed class PropertyPrecedenceParser : IParameterParser<PrecedenceValue>
 {
     public static bool TryParse(
         string value,
@@ -229,7 +229,7 @@ public enum PrecedenceMode
     Property,
 }
 
-public sealed class AssemblyEnumPrecedenceParser : IArgumentParser<PrecedenceMode>
+public sealed class AssemblyEnumPrecedenceParser : IParameterParser<PrecedenceMode>
 {
     public static bool TryParse(
         string value,
@@ -241,7 +241,7 @@ public sealed class AssemblyEnumPrecedenceParser : IArgumentParser<PrecedenceMod
     }
 }
 
-public sealed class PropertyEnumPrecedenceParser : IArgumentParser<PrecedenceMode>
+public sealed class PropertyEnumPrecedenceParser : IParameterParser<PrecedenceMode>
 {
     public static bool TryParse(
         string value,

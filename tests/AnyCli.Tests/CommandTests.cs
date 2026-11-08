@@ -74,7 +74,7 @@ public class CommandTests
     }
 
     private static async Task<TestAppResult> Run<TCommand>(string commandName)
-        where TCommand : EmptyCommand, new()
+        where TCommand : NoParametersCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -84,12 +84,12 @@ public class CommandTests
         return await TestAppHarness.RunAsync(app, [commandName]);
     }
 
-    private sealed class ReturnIntCommand : EmptyCommand
+    private sealed class ReturnIntCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context) => 42;
     }
 
-    private sealed class DescribeCommand : EmptyCommand
+    private sealed class DescribeCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {
@@ -98,7 +98,7 @@ public class CommandTests
         }
     }
 
-    private sealed class WriteErrorCommand : EmptyCommand
+    private sealed class WriteErrorCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {
@@ -107,7 +107,7 @@ public class CommandTests
         }
     }
 
-    private sealed class ReadInputCommand : EmptyCommand
+    private sealed class ReadInputCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {

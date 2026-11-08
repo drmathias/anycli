@@ -5,7 +5,7 @@
 namespace AnyCli;
 
 /// <summary>
-/// Marks a settings property as a command-line option.
+/// Marks a parameters property as a command-line option.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class OptionAttribute : Attribute
@@ -52,7 +52,7 @@ public sealed class OptionAttribute : Attribute
 
     /// <summary>
     /// Gets or sets a custom parser type implementing
-    /// <see cref="IArgumentParser{T}"/> for the option value type.
+    /// <see cref="IParameterParser{T}"/> for the option value type.
     /// </summary>
     public Type? Parser { get; set; }
 }

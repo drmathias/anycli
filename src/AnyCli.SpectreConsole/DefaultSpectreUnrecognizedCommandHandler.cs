@@ -16,11 +16,11 @@ public sealed class DefaultSpectreUnrecognizedCommandHandler : IUnrecognizedComm
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var message = string.IsNullOrEmpty(context.CommandName)
+        var message = string.IsNullOrEmpty(context.AttemptedCommandPath)
             ? "No command was specified."
             : context.IsMissingSubcommand
-                ? $"Command '{context.CommandName}' requires a subcommand."
-                : $"Unknown command '{context.CommandName}'.";
+                ? $"Command '{context.AttemptedCommandPath}' requires a subcommand."
+                : $"Unknown command '{context.AttemptedCommandPath}'.";
 
         context.AnsiConsole.Error.MarkupLineInterpolated($"[red]{Markup.Escape(message)}[/]");
     }

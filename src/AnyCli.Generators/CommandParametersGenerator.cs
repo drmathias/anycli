@@ -12,49 +12,49 @@ using Microsoft.CodeAnalysis.Text;
 namespace AnyCli.Generators;
 
 [Generator(LanguageNames.CSharp)]
-public sealed class CommandSettingsGenerator : IIncrementalGenerator
+public sealed class CommandParametersGenerator : IIncrementalGenerator
 {
     private const string ArgumentAttributeName = "AnyCli.ArgumentAttribute";
     private const string OptionAttributeName = "AnyCli.OptionAttribute";
     private const string VariadicArgumentAttributeName = "AnyCli.VariadicArgumentAttribute";
-    private const string SettingsInterfaceName = "ICommandSettings`1";
-    private const string ArgumentParserAttributeName = "ArgumentParserAttribute`2";
-    private const string EnumArgumentParserAttributeName = "EnumArgumentParserAttribute`1";
-    private const string ArgumentParserInterfaceName = "IArgumentParser`1";
+    private const string ParametersInterfaceName = "ICommandParameters`1";
+    private const string ParameterValueParserAttributeName = "ParameterValueParserAttribute`2";
+    private const string EnumParameterParserAttributeName = "EnumParameterParserAttribute`1";
+    private const string ParameterParserInterfaceName = "IParameterParser`1";
     private const string ParsableInterfaceName = "IParsable`1";
     private const string SpanParsableInterfaceName = "ISpanParsable`1";
 
-    private static readonly DiagnosticDescriptor UnsupportedArgumentTypeDiagnostic = new(
+    private static readonly DiagnosticDescriptor UnsupportedParameterTypeDiagnostic = new(
         id: "ANYCLI001",
-        title: "Unsupported argument type",
+        title: "Unsupported parameter type",
         messageFormat:
-            "Argument property '{0}' has unsupported type '{1}'; use a type that implements IParsable<T>, an enum, specify Parser = typeof(...), or register an ArgumentParserAttribute<{1}, TParser>",
+            "Parameter property '{0}' has unsupported type '{1}'; use a type that implements IParsable<T>, an enum, specify Parser = typeof(...), or register a ParameterValueParserAttribute<{1}, TParser>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor InvalidArgumentParserDiagnostic = new(
+    private static readonly DiagnosticDescriptor InvalidParameterParserDiagnostic = new(
         id: "ANYCLI002",
-        title: "Invalid argument parser",
+        title: "Invalid parameter parser",
         messageFormat:
-            "Parser '{1}' for argument property '{0}' must implement IArgumentParser<{2}>",
+            "Parser '{1}' for parameter property '{0}' must implement IParameterParser<{2}>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidVariadicArgumentDiagnostic = new(
         id: "ANYCLI003",
-        title: "Invalid variadic argument",
+        title: "Invalid variadic parameter",
         messageFormat:
-            "Variadic argument property '{0}' must be a supported collection type; actual type '{1}'",
+            "Variadic parameter property '{0}' must be a supported collection type; actual type '{1}'",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor DuplicateArgumentParserDiagnostic = new(
+    private static readonly DiagnosticDescriptor DuplicateParameterParserDiagnostic = new(
         id: "ANYCLI004",
-        title: "Duplicate argument parser registration",
-        messageFormat: "Multiple argument parsers are registered for type '{0}'",
+        title: "Duplicate parameter parser registration",
+        messageFormat: "Multiple parameter parsers are registered for type '{0}'",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -63,7 +63,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         id: "ANYCLI005",
         title: "Invalid variadic minimum count",
         messageFormat:
-            "Variadic argument property '{0}' has MinimumCount {1}; it must be non-negative",
+            "Variadic parameter property '{0}' has MinimumCount {1}; it must be non-negative",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -78,7 +78,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
 
         var registrations = context.CompilationProvider.Select(
             static (compilation, cancellationToken) =>
-                GetArgumentParserRegistrations(compilation, cancellationToken));
+                GetParameterParserRegistrations(compilation, cancellationToken));
 
         context.RegisterSourceOutput(
             models,
@@ -97,7 +97,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             .OfType<PropertyDeclarationSyntax>()
             .Any(property => property.AttributeLists.Count > 0);
 
-    private static SettingsModel? GetModel(
+    private static ParametersModel? GetModel(
         GeneratorSyntaxContext context,
         CancellationToken cancellationToken)
     {
@@ -113,7 +113,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             return null;
         }
 
-        var registrations = GetArgumentParserRegistrations(
+        var registrations = GetParameterParserRegistrations(
             context.SemanticModel.Compilation,
             cancellationToken);
         var arguments = new List<ArgumentModel>();
@@ -235,12 +235,12 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 {
                     diagnostics.Add(parserType is null
                         ? new DiagnosticModel(
-                            UnsupportedArgumentTypeDiagnostic,
+                            UnsupportedParameterTypeDiagnostic,
                             GetLocation(property),
                             property.Name,
                             argumentType.ToDisplayString())
                         : new DiagnosticModel(
-                            InvalidArgumentParserDiagnostic,
+                            InvalidParameterParserDiagnostic,
                             GetLocation(property),
                             property.Name,
                             parserType.ToDisplayString(),
@@ -265,14 +265,14 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
 
         return arguments.Count == 0 && options.Count == 0 && diagnostics.Count == 0
             ? null
-            : new SettingsModel(
+            : new ParametersModel(
                 type.ContainingNamespace.IsGlobalNamespace ? string.Empty : type.ContainingNamespace.ToDisplayString(),
                 type.Name,
                 type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 GetAccessibility(type.DeclaredAccessibility),
                 type.IsSealed,
                 type.IsRecord,
-                ImplementsSettingsInterface(type),
+                ImplementsParametersInterface(type),
                 [.. arguments.OrderBy(argument => argument.Position)],
                 [.. options],
                 [.. diagnostics]);
@@ -367,12 +367,12 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         {
             diagnostics.Add(parserType is null
                 ? new DiagnosticModel(
-                    UnsupportedArgumentTypeDiagnostic,
+                    UnsupportedParameterTypeDiagnostic,
                     GetLocation(property),
                     property.Name,
                     argumentType.ToDisplayString())
                 : new DiagnosticModel(
-                    InvalidArgumentParserDiagnostic,
+                    InvalidParameterParserDiagnostic,
                     GetLocation(property),
                     property.Name,
                     parserType.ToDisplayString(),
@@ -488,7 +488,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
     {
         if (parserType is not null)
         {
-            if (!IsValidArgumentParser(parserType, valueType))
+            if (!IsValidParameterParser(parserType, valueType))
             {
                 parsePlan = null!;
                 return false;
@@ -555,7 +555,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         return false;
     }
 
-    private static bool IsValidArgumentParser(ITypeSymbol parserType, ITypeSymbol valueType)
+    private static bool IsValidParameterParser(ITypeSymbol parserType, ITypeSymbol valueType)
     {
         if (parserType is not INamedTypeSymbol { IsStatic: false, IsUnboundGenericType: false } parser)
         {
@@ -564,7 +564,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
 
         return parser.AllInterfaces.Any(
             currentInterface =>
-                currentInterface.OriginalDefinition.MetadataName == ArgumentParserInterfaceName &&
+                currentInterface.OriginalDefinition.MetadataName == ParameterParserInterfaceName &&
                 currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli" &&
                 currentInterface.TypeArguments.Length == 1 &&
                 SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], valueType));
@@ -578,7 +578,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 currentInterface.TypeArguments.Length == 1 &&
                 SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], type));
 
-    private static RegistrationSet GetArgumentParserRegistrations(
+    private static RegistrationSet GetParameterParserRegistrations(
         Compilation compilation,
         CancellationToken cancellationToken)
     {
@@ -598,14 +598,14 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (attributeClass.OriginalDefinition.MetadataName == EnumArgumentParserAttributeName &&
+            if (attributeClass.OriginalDefinition.MetadataName == EnumParameterParserAttributeName &&
                 attributeClass.TypeArguments.Length == 1)
             {
                 enumParser = attributeClass.TypeArguments[0];
                 continue;
             }
 
-            if (attributeClass.OriginalDefinition.MetadataName != ArgumentParserAttributeName ||
+            if (attributeClass.OriginalDefinition.MetadataName != ParameterValueParserAttributeName ||
                 attributeClass.TypeArguments.Length != 2)
             {
                 continue;
@@ -616,7 +616,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             if (parsers.ContainsKey(valueType))
             {
                 diagnostics.Add(new DiagnosticModel(
-                    DuplicateArgumentParserDiagnostic,
+                    DuplicateParameterParserDiagnostic,
                     GetLocation(attribute, cancellationToken),
                     valueType.ToDisplayString()));
                 continue;
@@ -656,10 +656,10 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         return new string(characters);
     }
 
-    private static bool ImplementsSettingsInterface(INamedTypeSymbol type) =>
+    private static bool ImplementsParametersInterface(INamedTypeSymbol type) =>
         type.AllInterfaces.Any(
             currentInterface =>
-                currentInterface.OriginalDefinition.MetadataName == SettingsInterfaceName &&
+                currentInterface.OriginalDefinition.MetadataName == ParametersInterfaceName &&
                 currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli");
 
     private static string GetAccessibility(Accessibility accessibility) =>
@@ -673,7 +673,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             _ => "internal",
         };
 
-    private static void Emit(SourceProductionContext context, SettingsModel model)
+    private static void Emit(SourceProductionContext context, ParametersModel model)
     {
         if (model.Diagnostics.Count > 0)
         {
@@ -712,19 +712,19 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
 
         source.Append("partial ").Append(model.IsRecord ? "record" : "class").Append(' ').Append(model.TypeName);
 
-        if (!model.ImplementsSettingsInterface)
+        if (!model.ImplementsParametersInterface)
         {
-            source.Append(" : global::AnyCli.ICommandSettings<").Append(model.FullTypeName).Append('>');
+            source.Append(" : global::AnyCli.ICommandParameters<").Append(model.FullTypeName).Append('>');
         }
 
         source.AppendLine();
         source.Append(indent).AppendLine("{");
 
-        source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.CommandSettingsBuilder settings)");
+        source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.CommandParameterDefinitionBuilder parameters)");
         source.Append(indent).AppendLine("    {");
         foreach (var argument in model.Arguments)
         {
-            source.Append(indent).Append("        settings.Arguments.");
+            source.Append(indent).Append("        parameters.Arguments.");
             if (argument.Variadic)
             {
                 source.Append("AddVariadic<")
@@ -750,7 +750,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             if (argument.Description.Length > 0)
             {
                 source.Append(indent)
-                    .Append("        settings.Arguments.Describe(")
+                    .Append("        parameters.Arguments.Describe(")
                     .Append(SymbolDisplay.FormatLiteral(argument.Description, true))
                     .AppendLine(");");
             }
@@ -764,7 +764,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             source.Append(indent)
                 .Append("        var ")
                 .Append(local)
-                .Append(" = settings.Options.");
+                .Append(" = parameters.Options.");
 
             if (option.IsFlag)
             {
@@ -826,9 +826,9 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         source.Append(indent)
             .Append("    public static ")
             .Append(model.FullTypeName)
-            .AppendLine(" Bind(global::AnyCli.CommandArguments arguments)");
+            .AppendLine(" Bind(global::AnyCli.ParsedCommandParameters parameterValues)");
         source.Append(indent).AppendLine("    {");
-        source.Append(indent).Append("        var settings = new ").Append(model.FullTypeName).AppendLine("();");
+        source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
 
         var localIndex = 0;
         foreach (var argument in model.Arguments)
@@ -842,7 +842,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 source.Append(indent)
                     .Append("        var ")
                     .Append(rawLocal)
-                    .Append(" = arguments.GetVariadic(")
+                    .Append(" = parameterValues.Arguments.GetVariadic(")
                     .Append(literalName)
                     .AppendLine(");");
                 source.Append(indent)
@@ -877,7 +877,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     .AppendLine(";");
                 source.Append(indent).AppendLine("        }");
                 source.Append(indent)
-                    .Append("        settings.")
+                    .Append("        parameters.")
                     .Append(argument.PropertyName)
                     .Append(" = ")
                     .Append(GetCollectionExpression(
@@ -890,14 +890,14 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             {
                 var rawLocal = "__raw" + localIndex;
                 source.Append(indent)
-                    .Append("        if (arguments.TryGetOptional(")
+                    .Append("        if (parameterValues.Arguments.TryGetOptional(")
                     .Append(literalName)
                     .Append(", out var ")
                     .Append(rawLocal)
                     .AppendLine("))");
                 source.Append(indent).AppendLine("        {");
                 source.Append(indent)
-                    .Append("            settings.")
+                    .Append("            parameters.")
                     .Append(argument.PropertyName)
                     .Append(" = ")
                     .Append(GetParseExpression(argument.ParsePlan, rawLocal + "!", literalName))
@@ -907,12 +907,12 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             else
             {
                 source.Append(indent)
-                    .Append("        settings.")
+                    .Append("        parameters.")
                     .Append(argument.PropertyName)
                     .Append(" = ")
                     .Append(GetParseExpression(
                         argument.ParsePlan,
-                        "arguments.GetRequired(" + literalName + ")",
+                        "parameterValues.Arguments.GetRequired(" + literalName + ")",
                         literalName))
                     .AppendLine(";");
             }
@@ -932,7 +932,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 source.Append(indent)
                     .Append("        var ")
                     .Append(rawLocal)
-                    .Append(" = arguments.Options.GetValues(")
+                    .Append(" = parameterValues.Options.GetValues(")
                     .Append(literalName)
                     .AppendLine(");");
                 source.Append(indent)
@@ -967,7 +967,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     .AppendLine(";");
                 source.Append(indent).AppendLine("        }");
                 source.Append(indent)
-                    .Append("        settings.")
+                    .Append("        parameters.")
                     .Append(option.PropertyName)
                     .Append(" = ")
                     .Append(GetCollectionExpression(
@@ -979,14 +979,14 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             else
             {
                 source.Append(indent)
-                    .Append("        if (arguments.Options.TryGetValue(")
+                    .Append("        if (parameterValues.Options.TryGetValue(")
                     .Append(literalName)
                     .Append(", out var ")
                     .Append(rawLocal)
                     .AppendLine("))");
                 source.Append(indent).AppendLine("        {");
                 source.Append(indent)
-                    .Append("            settings.")
+                    .Append("            parameters.")
                     .Append(option.PropertyName)
                     .Append(" = ");
 
@@ -1011,7 +1011,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             localIndex++;
         }
 
-        source.Append(indent).AppendLine("        return settings;");
+        source.Append(indent).AppendLine("        return parameters;");
         source.Append(indent).AppendLine("    }");
         source.Append(indent).AppendLine("}");
 
@@ -1021,7 +1021,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         }
 
         context.AddSource(
-            model.FullTypeName.Replace("global::", string.Empty).Replace('.', '_') + ".CommandSettings.g.cs",
+            model.FullTypeName.Replace("global::", string.Empty).Replace('.', '_') + ".CommandParameters.g.cs",
             SourceText.From(source.ToString(), Encoding.UTF8));
     }
 
@@ -1061,19 +1061,19 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         {
             ParseKind.String => rawExpression,
             ParseKind.Enum =>
-                $"global::AnyCli.ArgumentParsing.ParseEnum<{parsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.ParameterValueParsing.ParseEnum<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, {literalName})",
             ParseKind.EnumCustom =>
-                $"global::AnyCli.ArgumentParsing.ParseEnumCustom<{parsePlan.ValueTypeFullName}, " +
+                $"global::AnyCli.ParameterValueParsing.ParseEnumCustom<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName})",
             ParseKind.SpanParsable =>
-                $"global::AnyCli.ArgumentParsing.ParseSpanParsable<{parsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.ParameterValueParsing.ParseSpanParsable<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             ParseKind.Parsable =>
-                $"global::AnyCli.ArgumentParsing.ParseParsable<{parsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.ParameterValueParsing.ParseParsable<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             ParseKind.Custom =>
-                $"global::AnyCli.ArgumentParsing.ParseCustom<{parsePlan.ValueTypeFullName}, " +
+                $"global::AnyCli.ParameterValueParsing.ParseCustom<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, " +
                 $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             _ => throw new InvalidOperationException("Unknown parse kind."),
@@ -1112,16 +1112,16 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         public ParsePlan ParsePlan { get; } = parsePlan;
     }
 
-    private sealed class SettingsModel
+    private sealed class ParametersModel
     {
-        public SettingsModel(
+        public ParametersModel(
             string @namespace,
             string typeName,
             string fullTypeName,
             string accessibility,
             bool isSealed,
             bool isRecord,
-            bool implementsSettingsInterface,
+            bool implementsParametersInterface,
             IReadOnlyList<ArgumentModel> arguments,
             IReadOnlyList<OptionModel> options,
             IReadOnlyList<DiagnosticModel> diagnostics)
@@ -1132,7 +1132,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             Accessibility = accessibility;
             IsSealed = isSealed;
             IsRecord = isRecord;
-            ImplementsSettingsInterface = implementsSettingsInterface;
+            ImplementsParametersInterface = implementsParametersInterface;
             Arguments = arguments;
             Options = options;
             Diagnostics = diagnostics;
@@ -1150,7 +1150,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
 
         public bool IsRecord { get; }
 
-        public bool ImplementsSettingsInterface { get; }
+        public bool ImplementsParametersInterface { get; }
 
         public IReadOnlyList<ArgumentModel> Arguments { get; }
 

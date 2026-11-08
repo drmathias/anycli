@@ -5,15 +5,15 @@
 namespace AnyCli;
 
 /// <summary>
-/// Registers a compile-time parser for all enum arguments.
+/// Registers a compile-time parser for all enum parameters.
 /// </summary>
 /// <typeparam name="TParser">The enum parser type.</typeparam>
 /// <remarks>
 /// Apply this attribute at the assembly level. The source generator uses the registration to
-/// emit direct calls to <typeparamref name="TParser"/> for enum arguments.
+/// emit direct calls to <typeparamref name="TParser"/> for enum parameters.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = false)]
-public sealed class EnumArgumentParserAttribute<TParser> : Attribute
-    where TParser : IEnumArgumentParser
+public sealed class EnumParameterParserAttribute<TParser> : Attribute
+    where TParser : IEnumParameterParser
 {
 }

@@ -11,7 +11,7 @@ public class CollectionTargetTests
     [Test]
     public async Task BindsIReadOnlyList()
     {
-        var app = CreateApp<ReadOnlyListCommand, ReadOnlyListSettings>("values");
+        var app = CreateApp<ReadOnlyListCommand, ReadOnlyListParameters>("values");
 
         var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
@@ -21,7 +21,7 @@ public class CollectionTargetTests
     [Test]
     public async Task BindsList()
     {
-        var app = CreateApp<ListCommand, ListSettings>("values");
+        var app = CreateApp<ListCommand, ListParameters>("values");
 
         var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
@@ -31,7 +31,7 @@ public class CollectionTargetTests
     [Test]
     public async Task BindsICollection()
     {
-        var app = CreateApp<CollectionCommand, CollectionSettings>("values");
+        var app = CreateApp<CollectionCommand, CollectionParameters>("values");
 
         var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
@@ -41,7 +41,7 @@ public class CollectionTargetTests
     [Test]
     public async Task BindsIEnumerable()
     {
-        var app = CreateApp<EnumerableCommand, EnumerableSettings>("values");
+        var app = CreateApp<EnumerableCommand, EnumerableParameters>("values");
 
         var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
@@ -51,7 +51,7 @@ public class CollectionTargetTests
     [Test]
     public async Task BindsHashSet()
     {
-        var app = CreateApp<HashSetCommand, HashSetSettings>("values");
+        var app = CreateApp<HashSetCommand, HashSetParameters>("values");
 
         var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "2", "3"]);
 
@@ -61,14 +61,14 @@ public class CollectionTargetTests
     [Test]
     public async Task GeneratedOneOrMore_RequiresAtLeastOneValue()
     {
-        var app = CreateApp<GeneratedOneOrMoreCommand, GeneratedOneOrMoreSettings>("values");
-        CommandArgumentException? exception = null;
+        var app = CreateApp<GeneratedOneOrMoreCommand, GeneratedOneOrMoreParameters>("values");
+        CommandParameterException? exception = null;
 
         try
         {
             _ = await TestAppHarness.RunAsync(app, ["values"]);
         }
-        catch (CommandArgumentException ex)
+        catch (CommandParameterException ex)
         {
             exception = ex;
         }
@@ -80,100 +80,100 @@ public class CollectionTargetTests
         await Assert.That(result.Output).IsEqualTo("1,2");
     }
 
-    private static ConsoleApp CreateApp<TCommand, TSettings>(string name)
-        where TCommand : class, ICommand<TSettings>
-        where TSettings : class, ICommandSettings<TSettings> =>
+    private static ConsoleApp CreateApp<TCommand, TParameters>(string name)
+        where TCommand : class, ICommand<TParameters>
+        where TParameters : class, ICommandParameters<TParameters> =>
         ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureCommands(commands => commands.AddCommand<TCommand, TSettings>(name))
+            .ConfigureCommands(commands => commands.AddCommand<TCommand, TParameters>(name))
             .Build();
 
-    private sealed class ReadOnlyListCommand : ICommand<ReadOnlyListSettings>
+    private sealed class ReadOnlyListCommand : ICommand<ReadOnlyListParameters>
     {
-        public int Execute(CommandContext context, ReadOnlyListSettings settings)
+        public int Execute(CommandContext context, ReadOnlyListParameters parameters)
         {
-            context.Console.Output.Write(string.Join(",", settings.Values));
+            context.Console.Output.Write(string.Join(",", parameters.Values));
             return 0;
         }
     }
 
-    private sealed class ListCommand : ICommand<ListSettings>
+    private sealed class ListCommand : ICommand<ListParameters>
     {
-        public int Execute(CommandContext context, ListSettings settings)
+        public int Execute(CommandContext context, ListParameters parameters)
         {
-            context.Console.Output.Write(string.Join(",", settings.Values));
+            context.Console.Output.Write(string.Join(",", parameters.Values));
             return 0;
         }
     }
 
-    private sealed class CollectionCommand : ICommand<CollectionSettings>
+    private sealed class CollectionCommand : ICommand<CollectionParameters>
     {
-        public int Execute(CommandContext context, CollectionSettings settings)
+        public int Execute(CommandContext context, CollectionParameters parameters)
         {
-            context.Console.Output.Write(string.Join(",", settings.Values));
+            context.Console.Output.Write(string.Join(",", parameters.Values));
             return 0;
         }
     }
 
-    private sealed class EnumerableCommand : ICommand<EnumerableSettings>
+    private sealed class EnumerableCommand : ICommand<EnumerableParameters>
     {
-        public int Execute(CommandContext context, EnumerableSettings settings)
+        public int Execute(CommandContext context, EnumerableParameters parameters)
         {
-            context.Console.Output.Write(string.Join(",", settings.Values));
+            context.Console.Output.Write(string.Join(",", parameters.Values));
             return 0;
         }
     }
 
-    private sealed class HashSetCommand : ICommand<HashSetSettings>
+    private sealed class HashSetCommand : ICommand<HashSetParameters>
     {
-        public int Execute(CommandContext context, HashSetSettings settings)
+        public int Execute(CommandContext context, HashSetParameters parameters)
         {
-            context.Console.Output.Write(string.Join(",", settings.Values.Order()));
+            context.Console.Output.Write(string.Join(",", parameters.Values.Order()));
             return 0;
         }
     }
 
-    private sealed class GeneratedOneOrMoreCommand : ICommand<GeneratedOneOrMoreSettings>
+    private sealed class GeneratedOneOrMoreCommand : ICommand<GeneratedOneOrMoreParameters>
     {
-        public int Execute(CommandContext context, GeneratedOneOrMoreSettings settings)
+        public int Execute(CommandContext context, GeneratedOneOrMoreParameters parameters)
         {
-            context.Console.Output.Write(string.Join(",", settings.Values));
+            context.Console.Output.Write(string.Join(",", parameters.Values));
             return 0;
         }
     }
 }
 
-public sealed partial class ReadOnlyListSettings
+public sealed partial class ReadOnlyListParameters
 {
     [VariadicArgument(0)]
     public IReadOnlyList<int> Values { get; set; } = [];
 }
 
-public sealed partial class ListSettings
+public sealed partial class ListParameters
 {
     [VariadicArgument(0)]
     public List<int> Values { get; set; } = [];
 }
 
-public sealed partial class CollectionSettings
+public sealed partial class CollectionParameters
 {
     [VariadicArgument(0)]
     public ICollection<int> Values { get; set; } = [];
 }
 
-public sealed partial class EnumerableSettings
+public sealed partial class EnumerableParameters
 {
     [VariadicArgument(0)]
     public IEnumerable<int> Values { get; set; } = [];
 }
 
-public sealed partial class HashSetSettings
+public sealed partial class HashSetParameters
 {
     [VariadicArgument(0)]
     public HashSet<int> Values { get; set; } = [];
 }
 
-public sealed partial class GeneratedOneOrMoreSettings
+public sealed partial class GeneratedOneOrMoreParameters
 {
     [VariadicArgument(0, MinimumCount = 1)]
     public int[] Values { get; set; } = [];

@@ -5,19 +5,19 @@
 namespace AnyCli;
 
 /// <summary>
-/// Parses command-line argument values for enum types.
+/// Parses command-line parameter values for enum types.
 /// </summary>
 /// <remarks>
-/// Register an implementation with <see cref="EnumArgumentParserAttribute{TParser}"/> to override
+/// Register an implementation with <see cref="EnumParameterParserAttribute{TParser}"/> to override
 /// the default enum parsing behavior for the application.
 /// </remarks>
-public interface IEnumArgumentParser
+public interface IEnumParameterParser
 {
     /// <summary>
-    /// Attempts to parse an enum argument value.
+    /// Attempts to parse an enum parameter value.
     /// </summary>
     /// <typeparam name="TEnum">The enum type.</typeparam>
-    /// <param name="value">The raw argument value.</param>
+    /// <param name="value">The raw parameter value.</param>
     /// <param name="provider">The culture used to parse the value.</param>
     /// <param name="result">The parsed enum value when parsing succeeds.</param>
     /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>

@@ -5,7 +5,7 @@
 namespace AnyCli;
 
 /// <summary>
-/// Marks a settings property as a positional command argument.
+/// Marks a parameters property as a positional command argument.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
 public sealed class ArgumentAttribute(int position) : Attribute
@@ -32,7 +32,7 @@ public sealed class ArgumentAttribute(int position) : Attribute
 
     /// <summary>
     /// Gets or sets a custom parser type implementing
-    /// <see cref="IArgumentParser{T}"/> for the argument value type.
+    /// <see cref="IParameterParser{T}"/> for the argument value type.
     /// </summary>
     public Type? Parser { get; set; }
 }

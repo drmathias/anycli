@@ -14,13 +14,13 @@ public class GeneratorDiagnosticTests
     private static readonly ImmutableArray<MetadataReference> References = CreateReferences();
 
     [Test]
-    public async Task ReportsUnsupportedArgumentType()
+    public async Task ReportsUnsupportedParameterType()
     {
         var result = RunGenerator(
             """
             using AnyCli;
 
-            public sealed partial class BadSettings
+            public sealed partial class BadParameters
             {
                 [Argument(0)]
                 public object Value { get; set; } = new();
@@ -41,7 +41,7 @@ public class GeneratorDiagnosticTests
             """
             using AnyCli;
 
-            public sealed partial class BadSettings
+            public sealed partial class BadParameters
             {
                 [Argument(0)]
                 public string Name { get; set; } = "";
@@ -59,7 +59,7 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task ReportsInvalidArgumentParser()
+    public async Task ReportsInvalidParameterParser()
     {
         var result = RunGenerator(
             """
@@ -69,7 +69,7 @@ public class GeneratorDiagnosticTests
             {
             }
 
-            public sealed partial class BadSettings
+            public sealed partial class BadParameters
             {
                 [Argument(0, Parser = typeof(NotAParser))]
                 public int Value { get; set; }
@@ -91,7 +91,7 @@ public class GeneratorDiagnosticTests
             """
             using AnyCli;
 
-            public sealed partial class BadSettings
+            public sealed partial class BadParameters
             {
                 [VariadicArgument(0)]
                 public string Value { get; set; } = "";
@@ -106,20 +106,20 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task UsesAssemblyLevelArgumentParserRegistration()
+    public async Task UsesAssemblyLevelParameterParserRegistration()
     {
         var result = RunGenerator(
             """
             using System;
             using AnyCli;
 
-            [assembly: ArgumentParser<Widget, WidgetParser>]
+            [assembly: ParameterValueParser<Widget, WidgetParser>]
 
             public sealed class Widget
             {
             }
 
-            public sealed class WidgetParser : IArgumentParser<Widget>
+            public sealed class WidgetParser : IParameterParser<Widget>
             {
                 public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
                 {
@@ -128,7 +128,7 @@ public class GeneratorDiagnosticTests
                 }
             }
 
-            public sealed partial class GoodSettings
+            public sealed partial class GoodParameters
             {
                 [Argument(0)]
                 public Widget Widget { get; set; } = new();
@@ -149,21 +149,21 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task ReportsDuplicateArgumentParserRegistrations()
+    public async Task ReportsDuplicateParameterParserRegistrations()
     {
         var result = RunGenerator(
             """
             using System;
             using AnyCli;
 
-            [assembly: ArgumentParser<Widget, WidgetParser1>]
-            [assembly: ArgumentParser<Widget, WidgetParser2>]
+            [assembly: ParameterValueParser<Widget, WidgetParser1>]
+            [assembly: ParameterValueParser<Widget, WidgetParser2>]
 
             public sealed class Widget
             {
             }
 
-            public sealed class WidgetParser1 : IArgumentParser<Widget>
+            public sealed class WidgetParser1 : IParameterParser<Widget>
             {
                 public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
                 {
@@ -172,7 +172,7 @@ public class GeneratorDiagnosticTests
                 }
             }
 
-            public sealed class WidgetParser2 : IArgumentParser<Widget>
+            public sealed class WidgetParser2 : IParameterParser<Widget>
             {
                 public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
                 {
@@ -189,14 +189,14 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task UsesAssemblyLevelEnumArgumentParserRegistration()
+    public async Task UsesAssemblyLevelEnumParameterParserRegistration()
     {
         var result = RunGenerator(
             """
             using System;
             using AnyCli;
 
-            [assembly: EnumArgumentParser<ModeParser>]
+            [assembly: EnumParameterParser<ModeParser>]
 
             public enum Mode
             {
@@ -204,7 +204,7 @@ public class GeneratorDiagnosticTests
                 Slow,
             }
 
-            public sealed class ModeParser : IEnumArgumentParser
+            public sealed class ModeParser : IEnumParameterParser
             {
                 public static bool TryParse<TEnum>(
                     string value,
@@ -214,7 +214,7 @@ public class GeneratorDiagnosticTests
                     Enum.TryParse(value, ignoreCase: false, out result);
             }
 
-            public sealed partial class GoodSettings
+            public sealed partial class GoodParameters
             {
                 [Argument(0)]
                 public Mode Mode { get; set; }
@@ -234,7 +234,7 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task GeneratesSettingsForCollectionTargets()
+    public async Task GeneratesParametersForCollectionTargets()
     {
         var result = RunGenerator(
             """
@@ -295,7 +295,7 @@ public class GeneratorDiagnosticTests
             """
             using AnyCli;
 
-            public sealed partial class BadSettings
+            public sealed partial class BadParameters
             {
                 [VariadicArgument(0, MinimumCount = -1)]
                 public string[] Values { get; set; } = [];
@@ -310,14 +310,14 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task GeneratesSettingsForOptions()
+    public async Task GeneratesParametersForOptions()
     {
         var result = RunGenerator(
             """
             using System.Collections.Generic;
             using AnyCli;
 
-            public sealed partial class GoodSettings
+            public sealed partial class GoodParameters
             {
                 [Option("--config", Required = true)]
                 public string Config { get; set; } = "";
@@ -347,7 +347,7 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task GeneratesSettingsForSupportedArgumentTypes()
+    public async Task GeneratesParametersForSupportedParameterTypes()
     {
         var result = RunGenerator(
             """
@@ -364,7 +364,7 @@ public class GeneratorDiagnosticTests
             {
             }
 
-            public sealed class WidgetParser : IArgumentParser<Widget>
+            public sealed class WidgetParser : IParameterParser<Widget>
             {
                 public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
                 {
@@ -373,7 +373,7 @@ public class GeneratorDiagnosticTests
                 }
             }
 
-            public sealed partial class GoodSettings
+            public sealed partial class GoodParameters
             {
                 [Argument(0)]
                 public int Count { get; set; }
@@ -412,7 +412,7 @@ public class GeneratorDiagnosticTests
             new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
                 nullableContextOptions: NullableContextOptions.Enable));
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CommandSettingsGenerator());
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CommandParametersGenerator());
         driver = driver.RunGeneratorsAndUpdateCompilation(
             compilation,
             out var outputCompilation,

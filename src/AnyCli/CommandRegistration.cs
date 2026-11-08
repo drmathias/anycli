@@ -5,11 +5,11 @@
 namespace AnyCli;
 
 internal sealed class CommandRegistration(
-    Func<IServiceProvider?, CommandContext, CommandArguments, Task<int>> execute,
+    Func<IServiceProvider?, CommandContext, ParsedCommandParameters, Task<int>> execute,
     IReadOnlyList<ArgumentDefinition> arguments,
     IReadOnlyList<OptionDefinition> options)
 {
-    public Func<IServiceProvider?, CommandContext, CommandArguments, Task<int>> Execute { get; } = execute;
+    public Func<IServiceProvider?, CommandContext, ParsedCommandParameters, Task<int>> Execute { get; } = execute;
 
     public IReadOnlyList<ArgumentDefinition> Arguments { get; } = arguments;
 

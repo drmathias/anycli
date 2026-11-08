@@ -7,7 +7,7 @@ namespace AnyCli;
 /// <summary>
 /// Defines the positional arguments and named options accepted by a command.
 /// </summary>
-public sealed class CommandSettingsBuilder
+public sealed class CommandParameterDefinitionBuilder
 {
     /// <summary>
     /// Gets the positional argument builder.

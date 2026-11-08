@@ -65,8 +65,8 @@ public class NestedCommandTests
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo(
-            "ping|False|Ping the service|\n" +
-            "remote|True|Manage remotes|add");
+            "ping|True|Ping the service|\n" +
+            "remote|False|Manage remotes|add");
     }
 
     [Test]
@@ -88,7 +88,7 @@ public class NestedCommandTests
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo(
-            "remote|True|Manage remotes|add,remove");
+            "remote|False|Manage remotes|add,remove");
     }
 
     [Test]
@@ -108,7 +108,7 @@ public class NestedCommandTests
         var result = await TestAppHarness.RunAsync(app, ["remote", "add", "--help"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("remote.add|False|Add a remote|");
+        await Assert.That(result.Output).IsEqualTo("remote.add|True|Add a remote|");
     }
 
     [Test]
@@ -217,7 +217,7 @@ public class NestedCommandTests
             .WithGlobalOptions(options => options.AddValue<string>("log-level"))
             .ConfigureCommands(commands =>
             {
-                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupSettings>(
+                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupParameters>(
                     "remote",
                     "Manage remotes",
                     group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
@@ -250,7 +250,7 @@ public class NestedCommandTests
         var app = ConsoleAppBuilder.Create()
             .ConfigureCommands(commands =>
             {
-                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupSettings>(
+                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupParameters>(
                     "remote",
                     "Manage remotes",
                     group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
@@ -261,7 +261,7 @@ public class NestedCommandTests
         var result = await TestAppHarness.RunAsync(app, ["remote", "--help"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("remote|False|True|1|add");
+        await Assert.That(result.Output).IsEqualTo("remote|True|True|1|add");
     }
 
     [Test]
@@ -274,7 +274,7 @@ public class NestedCommandTests
             _ = ConsoleAppBuilder.Create()
                 .ConfigureCommands(commands =>
                 {
-                    commands.AddCommand<ExecutableGroupWithArgumentCommand, ExecutableGroupWithArgumentSettings>(
+                    commands.AddCommand<ExecutableGroupWithArgumentCommand, ExecutableGroupWithArgumentParameters>(
                         "remote",
                         "Manage remotes",
                         group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
@@ -295,7 +295,7 @@ public class NestedCommandTests
         ConsoleAppBuilder.Create()
             .ConfigureCommands(commands =>
             {
-                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupSettings>(
+                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupParameters>(
                     "remote",
                     "Manage remotes",
                     group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
@@ -310,7 +310,7 @@ public class NestedCommandTests
             {
                 commands.AddGroup("remote", "Manage remotes", group =>
                 {
-                    group.AddCommand<NestedEchoCommand, NestedEchoSettings>("add", "Add a remote");
+                    group.AddCommand<NestedEchoCommand, NestedEchoParameters>("add", "Add a remote");
                     group.AddGroup("config", "Configure remotes", nested =>
                     {
                         nested.AddCommand<NestedPathCommand>("set", "Set a value");
@@ -319,20 +319,20 @@ public class NestedCommandTests
             })
             .Build();
 
-    private sealed class NestedEchoCommand : ICommand<NestedEchoSettings>
+    private sealed class NestedEchoCommand : ICommand<NestedEchoParameters>
     {
-        public int Execute(CommandContext context, NestedEchoSettings settings)
+        public int Execute(CommandContext context, NestedEchoParameters parameters)
         {
-            var logLevel = context.GlobalOptions.TryGetValue("log-level", out var value)
+            var logLevel = context.GlobalOptionValues.TryGetValue("log-level", out var value)
                 ? value
                 : "none";
             context.Console.Output.Write(
-                $"{string.Join(".", context.CommandPath)}|{settings.Value}|{settings.Loud}|{logLevel}");
+                $"{string.Join(".", context.CommandPath)}|{parameters.Value}|{parameters.Loud}|{logLevel}");
             return 0;
         }
     }
 
-    private sealed class NestedPathCommand : EmptyCommand
+    private sealed class NestedPathCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
         {
@@ -341,24 +341,24 @@ public class NestedCommandTests
         }
     }
 
-    private sealed class NestedEnumCommand : EmptyCommand<NestedExitCode>
+    private sealed class NestedEnumCommand : NoParametersCommand<NestedExitCode>
     {
         public override NestedExitCode Execute(CommandContext context) => NestedExitCode.Failed;
     }
 
-    private sealed class ExecutableGroupCommand : ICommand<ExecutableGroupSettings>
+    private sealed class ExecutableGroupCommand : ICommand<ExecutableGroupParameters>
     {
-        public int Execute(CommandContext context, ExecutableGroupSettings settings)
+        public int Execute(CommandContext context, ExecutableGroupParameters parameters)
         {
             context.Console.Output.Write(
-                $"{string.Join(".", context.CommandPath)}|{settings.Verbose}");
+                $"{string.Join(".", context.CommandPath)}|{parameters.Verbose}");
             return 0;
         }
     }
 
-    private sealed class ExecutableGroupWithArgumentCommand : ICommand<ExecutableGroupWithArgumentSettings>
+    private sealed class ExecutableGroupWithArgumentCommand : ICommand<ExecutableGroupWithArgumentParameters>
     {
-        public int Execute(CommandContext context, ExecutableGroupWithArgumentSettings settings) => 0;
+        public int Execute(CommandContext context, ExecutableGroupWithArgumentParameters parameters) => 0;
     }
 
     private sealed class ExecutableGroupHelpProvider : IHelpProvider
@@ -370,7 +370,7 @@ public class NestedCommandTests
         {
             var command = context.Command;
             context.Console.Output.Write(
-                $"{string.Join(".", command.Path)}|{command.IsGroup}|{command.HasSubcommands}|" +
+                $"{string.Join(".", command.Path)}|{command.IsExecutable}|{command.HasSubcommands}|" +
                 $"{command.Options.Count}|{string.Join(",", command.Children.Select(child => child.Name))}");
         }
     }
@@ -389,12 +389,12 @@ public class NestedCommandTests
             console.Output.Write(string.Join("\n", commands.Select(Describe)));
 
         private static string Describe(CommandInfo command) =>
-            $"{string.Join(".", command.Path)}|{command.IsGroup}|{command.Description}|" +
+            $"{string.Join(".", command.Path)}|{command.IsExecutable}|{command.Description}|" +
             $"{string.Join(",", command.Children.Select(child => child.Name))}";
     }
 }
 
-public sealed partial class NestedEchoSettings
+public sealed partial class NestedEchoParameters
 {
     [Argument(0)]
     public string Value { get; set; } = "";
@@ -403,13 +403,13 @@ public sealed partial class NestedEchoSettings
     public bool Loud { get; set; }
 }
 
-public sealed partial class ExecutableGroupSettings
+public sealed partial class ExecutableGroupParameters
 {
     [Option("verbose")]
     public bool Verbose { get; set; }
 }
 
-public sealed partial class ExecutableGroupWithArgumentSettings
+public sealed partial class ExecutableGroupWithArgumentParameters
 {
     [Argument(0)]
     public string Name { get; set; } = "";

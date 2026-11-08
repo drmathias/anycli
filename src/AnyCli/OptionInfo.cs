@@ -11,10 +11,10 @@ namespace AnyCli;
 /// <param name="Description">A short description of the option.</param>
 /// <param name="IsRequired">Whether the option must be supplied.</param>
 /// <param name="TakesValue">Whether the option consumes a value.</param>
-/// <param name="ValueType">The option value or collection type.</param>
+/// <param name="DeclaredType">The declared option value or collection type.</param>
 public sealed record OptionInfo(
     IReadOnlyList<string> Names,
     string Description,
     bool IsRequired = false,
     bool TakesValue = false,
-    Type? ValueType = null);
+    Type? DeclaredType = null);

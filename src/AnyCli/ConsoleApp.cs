@@ -82,7 +82,7 @@ public sealed class ConsoleApp
 
         var outputWriter = console.Output;
         var globalOptionValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
-        var commandIndex = CommandArgumentsParser.ParseLeadingGlobalOptions(
+        var commandIndex = CommandParameterParser.ParseLeadingGlobalOptions(
             _globalOptions,
             args,
             globalOptionValues,
@@ -161,7 +161,7 @@ public sealed class ConsoleApp
 
             if (child.Command is not null)
             {
-                var childRelativeIndex = CommandArgumentsParser.FindFirstNonGlobalOption(
+                var childRelativeIndex = CommandParameterParser.FindFirstNonGlobalOption(
                     _globalOptions,
                     args.AsSpan(index + 1),
                     globalOptionValues,
@@ -222,7 +222,7 @@ public sealed class ConsoleApp
                     globalOptionValues).ConfigureAwait(false);
             }
 
-            var relativeIndex = CommandArgumentsParser.ParseLeadingGlobalOptions(
+            var relativeIndex = CommandParameterParser.ParseLeadingGlobalOptions(
                 _globalOptions,
                 args.AsSpan(index + 1),
                 globalOptionValues,
@@ -266,7 +266,7 @@ public sealed class ConsoleApp
         Dictionary<string, OptionValue> globalOptionValues)
     {
         var command = node.Command!;
-        var arguments = CommandArgumentsParser.Parse(
+        var arguments = CommandParameterParser.Parse(
             command.Arguments,
             command.Options,
             _globalOptions,
@@ -314,7 +314,7 @@ public sealed class ConsoleApp
         return new CommandInfo(node.Name, node.Description)
         {
             Path = path,
-            IsGroup = command is null,
+            IsExecutable = command is not null,
             HasSubcommands = node.Children.Count > 0,
             Arguments = command is null
                 ? []
@@ -322,7 +322,7 @@ public sealed class ConsoleApp
                     .Select(argument => new ArgumentInfo(
                         argument.Name,
                         argument.Description,
-                        argument.ArgumentType,
+                        argument.DeclaredType,
                         argument.Arity))],
             Options = command is null
                 ? []
@@ -391,7 +391,7 @@ public sealed class ConsoleApp
         {
             if (option.Required && !globalOptionValues.ContainsKey(option.Name))
             {
-                throw new CommandArgumentException(
+                throw new CommandParameterException(
                     $"Missing required option '{option.Name}'.");
             }
         }

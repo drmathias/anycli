@@ -7,21 +7,21 @@ using System.Diagnostics.CodeAnalysis;
 namespace AnyCli;
 
 /// <summary>
-/// Registers commands inside a command group that returns a custom exit code enum.
+/// Registers commands that return standard integer exit codes.
 /// </summary>
-/// <typeparam name="TExitCode">The exit code enum type.</typeparam>
-public sealed class CommandGroupConfigurator<TExitCode>
-    where TExitCode : struct, Enum
+public sealed class CommandRegistrar
 {
-    private readonly CommandConfigurator<TExitCode> _commands;
+    private readonly ConsoleAppBuilder _builder;
+    private readonly CommandNode _target;
 
-    internal CommandGroupConfigurator(CommandConfigurator<TExitCode> commands)
+    internal CommandRegistrar(ConsoleAppBuilder builder, CommandNode target)
     {
-        _commands = commands;
+        _builder = builder;
+        _target = target;
     }
 
     /// <summary>
-    /// Registers a synchronous command that does not use settings.
+    /// Registers a synchronous command that does not use parameters.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
@@ -30,39 +30,39 @@ public sealed class CommandGroupConfigurator<TExitCode>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public CommandGroupConfigurator<TExitCode> AddCommand<
+    public CommandRegistrar AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
-        where TCommand : EmptyCommand<TExitCode>
+        where TCommand : NoParametersCommand
     {
-        _commands.AddCommand<TCommand>(name, description);
+        _builder.AddNoParametersCommand<TCommand>(_target, name, description);
         return this;
     }
 
     /// <summary>
-    /// Registers a synchronous command that uses typed settings.
+    /// Registers a synchronous command that uses typed parameters.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
-    /// <typeparam name="TSettings">The settings type.</typeparam>
+    /// <typeparam name="TParameters">The parameters type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current configurator.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public CommandGroupConfigurator<TExitCode> AddCommand<
+    public CommandRegistrar AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TSettings>(string name, string description = "")
-        where TCommand : class, ICommand<TSettings, TExitCode>
-        where TSettings : class, ICommandSettings<TSettings>
+        TParameters>(string name, string description = "")
+        where TCommand : class, ICommand<TParameters>
+        where TParameters : class, ICommandParameters<TParameters>
     {
-        _commands.AddCommand<TCommand, TSettings>(name, description);
+        _builder.AddCommand<TCommand, TParameters>(_target, name, description);
         return this;
     }
 
     /// <summary>
-    /// Registers an asynchronous command that does not use settings.
+    /// Registers an asynchronous command that does not use parameters.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
@@ -71,121 +71,145 @@ public sealed class CommandGroupConfigurator<TExitCode>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public CommandGroupConfigurator<TExitCode> AddAsyncCommand<
+    public CommandRegistrar AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
-        where TCommand : EmptyAsyncCommand<TExitCode>
+        where TCommand : NoParametersAsyncCommand
     {
-        _commands.AddAsyncCommand<TCommand>(name, description);
+        _builder.AddNoParametersAsyncCommand<TCommand>(_target, name, description);
         return this;
     }
 
     /// <summary>
-    /// Registers an asynchronous command that uses typed settings.
+    /// Registers an asynchronous command that uses typed parameters.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
-    /// <typeparam name="TSettings">The settings type.</typeparam>
+    /// <typeparam name="TParameters">The parameters type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current configurator.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public CommandGroupConfigurator<TExitCode> AddAsyncCommand<
+    public CommandRegistrar AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TSettings>(string name, string description = "")
-        where TCommand : class, IAsyncCommand<TSettings, TExitCode>
-        where TSettings : class, ICommandSettings<TSettings>
+        TParameters>(string name, string description = "")
+        where TCommand : class, IAsyncCommand<TParameters>
+        where TParameters : class, ICommandParameters<TParameters>
     {
-        _commands.AddAsyncCommand<TCommand, TSettings>(name, description);
+        _builder.AddAsyncCommand<TCommand, TParameters>(_target, name, description);
         return this;
     }
 
     /// <summary>
-    /// Registers a synchronous command without settings that also has subcommands.
+    /// Registers a synchronous command without parameters that also has subcommands.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <param name="configureChildren">The subcommand configuration callback.</param>
     /// <returns>The current configurator.</returns>
-    public CommandGroupConfigurator<TExitCode> AddCommand<
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configureChildren"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandRegistrar AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description,
-        Action<CommandGroupConfigurator<TExitCode>> configureChildren)
-        where TCommand : EmptyCommand<TExitCode>
+        Action<CommandGroupRegistrar> configureChildren)
+        where TCommand : NoParametersCommand
     {
-        _commands.AddCommand<TCommand>(name, description, configureChildren);
-        return this;
+        var command = _builder.AddNoParametersCommand<TCommand>(_target, name, description);
+        return ConfigureChildren(command, configureChildren);
     }
 
     /// <summary>
-    /// Registers a synchronous command with typed settings that also has subcommands.
+    /// Registers a synchronous command with typed parameters that also has subcommands.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
-    /// <typeparam name="TSettings">The settings type.</typeparam>
+    /// <typeparam name="TParameters">The parameters type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <param name="configureChildren">The subcommand configuration callback.</param>
     /// <returns>The current configurator.</returns>
-    public CommandGroupConfigurator<TExitCode> AddCommand<
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configureChildren"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandRegistrar AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TSettings>(
+        TParameters>(
         string name,
         string description,
-        Action<CommandGroupConfigurator<TExitCode>> configureChildren)
-        where TCommand : class, ICommand<TSettings, TExitCode>
-        where TSettings : class, ICommandSettings<TSettings>
+        Action<CommandGroupRegistrar> configureChildren)
+        where TCommand : class, ICommand<TParameters>
+        where TParameters : class, ICommandParameters<TParameters>
     {
-        _commands.AddCommand<TCommand, TSettings>(name, description, configureChildren);
-        return this;
+        var command = _builder.AddCommand<TCommand, TParameters>(_target, name, description);
+        return ConfigureChildren(command, configureChildren);
     }
 
     /// <summary>
-    /// Registers an asynchronous command without settings that also has subcommands.
+    /// Registers an asynchronous command without parameters that also has subcommands.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <param name="configureChildren">The subcommand configuration callback.</param>
     /// <returns>The current configurator.</returns>
-    public CommandGroupConfigurator<TExitCode> AddAsyncCommand<
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configureChildren"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandRegistrar AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description,
-        Action<CommandGroupConfigurator<TExitCode>> configureChildren)
-        where TCommand : EmptyAsyncCommand<TExitCode>
+        Action<CommandGroupRegistrar> configureChildren)
+        where TCommand : NoParametersAsyncCommand
     {
-        _commands.AddAsyncCommand<TCommand>(name, description, configureChildren);
-        return this;
+        var command = _builder.AddNoParametersAsyncCommand<TCommand>(_target, name, description);
+        return ConfigureChildren(command, configureChildren);
     }
 
     /// <summary>
-    /// Registers an asynchronous command with typed settings that also has subcommands.
+    /// Registers an asynchronous command with typed parameters that also has subcommands.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
-    /// <typeparam name="TSettings">The settings type.</typeparam>
+    /// <typeparam name="TParameters">The parameters type.</typeparam>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <param name="configureChildren">The subcommand configuration callback.</param>
     /// <returns>The current configurator.</returns>
-    public CommandGroupConfigurator<TExitCode> AddAsyncCommand<
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configureChildren"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandRegistrar AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TSettings>(
+        TParameters>(
         string name,
         string description,
-        Action<CommandGroupConfigurator<TExitCode>> configureChildren)
-        where TCommand : class, IAsyncCommand<TSettings, TExitCode>
-        where TSettings : class, ICommandSettings<TSettings>
+        Action<CommandGroupRegistrar> configureChildren)
+        where TCommand : class, IAsyncCommand<TParameters>
+        where TParameters : class, ICommandParameters<TParameters>
     {
-        _commands.AddAsyncCommand<TCommand, TSettings>(name, description, configureChildren);
-        return this;
+        var command = _builder.AddAsyncCommand<TCommand, TParameters>(_target, name, description);
+        return ConfigureChildren(command, configureChildren);
     }
 
     /// <summary>
-    /// Registers a nested command group.
+    /// Registers a command group.
     /// </summary>
     /// <param name="name">The group name.</param>
     /// <param name="description">A short description shown in help output.</param>
@@ -197,12 +221,25 @@ public sealed class CommandGroupConfigurator<TExitCode>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="configure"/> is <see langword="null"/>.
     /// </exception>
-    public CommandGroupConfigurator<TExitCode> AddGroup(
+    public CommandRegistrar AddGroup(
         string name,
         string description,
-        Action<CommandGroupConfigurator<TExitCode>> configure)
+        Action<CommandGroupRegistrar> configure)
     {
-        _commands.AddGroup(name, description, configure);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        var group = _builder.AddGroup(_target, name, description);
+        configure(new CommandGroupRegistrar(new CommandRegistrar(_builder, group)));
+        return this;
+    }
+
+    private CommandRegistrar ConfigureChildren(
+        CommandNode command,
+        Action<CommandGroupRegistrar> configureChildren)
+    {
+        ArgumentNullException.ThrowIfNull(configureChildren);
+        ConsoleAppBuilder.EnsureCanHaveSubcommands(command);
+        configureChildren(new CommandGroupRegistrar(new CommandRegistrar(_builder, command)));
         return this;
     }
 }

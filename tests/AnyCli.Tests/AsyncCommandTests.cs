@@ -25,7 +25,7 @@ public class AsyncCommandTests
     }
 
     private static async Task<TestAppResult> RunAsync<TCommand>(string commandName)
-        where TCommand : EmptyAsyncCommand, new()
+        where TCommand : NoParametersAsyncCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -35,7 +35,7 @@ public class AsyncCommandTests
         return await TestAppHarness.RunAsync(app, [commandName]);
     }
 
-    private sealed class ReturnIntAsyncCommand : EmptyAsyncCommand
+    private sealed class ReturnIntAsyncCommand : NoParametersAsyncCommand
     {
         public override async Task<int> ExecuteAsync(CommandContext context)
         {
@@ -44,7 +44,7 @@ public class AsyncCommandTests
         }
     }
 
-    private sealed class DelayedCommand : EmptyAsyncCommand
+    private sealed class DelayedCommand : NoParametersAsyncCommand
     {
         public override async Task<int> ExecuteAsync(CommandContext context)
         {
