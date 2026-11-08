@@ -108,7 +108,7 @@ public class InterceptorTests
         var app = ConsoleAppBuilder.Create()
             .ConfigureCommands<InterceptorExitCode>(commands =>
                 commands.AddCommand<EnumFailCommand>("fail"))
-            .AddInterceptor<EnumInterceptor, InterceptorExitCode>()
+            .AddInterceptor<EnumInterceptor>()
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["fail"]);

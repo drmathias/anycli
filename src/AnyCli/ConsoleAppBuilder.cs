@@ -420,29 +420,6 @@ public sealed class ConsoleAppBuilder
     }
 
     /// <summary>
-    /// Registers a command execution interceptor for a custom exit code enum.
-    /// </summary>
-    /// <typeparam name="TInterceptor">The interceptor type.</typeparam>
-    /// <typeparam name="TCommandExitCode">The exit code enum type.</typeparam>
-    /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// Interceptors run in registration order before the command and in reverse order after it.
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the interceptor is
-    /// resolved from it; otherwise, it is created with its public parameterless constructor.
-    /// </remarks>
-    public ConsoleAppBuilder AddInterceptor<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor,
-        TCommandExitCode>()
-        where TInterceptor : class, ICommandInterceptor<TCommandExitCode>
-        where TCommandExitCode : struct, Enum
-    {
-        _interceptorFactories.Add(
-            serviceProvider => new CommandInterceptorAdapter<TCommandExitCode>(
-                ResolveInterceptor<TInterceptor>(serviceProvider)));
-        return this;
-    }
-
-    /// <summary>
     /// Registers the help provider used by <c>-h</c> and <c>--help</c>.
     /// </summary>
     /// <typeparam name="THelpProvider">The help provider type.</typeparam>
