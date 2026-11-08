@@ -95,7 +95,11 @@ public class DependencyInjectionTests
 
     private sealed class InjectedHelpProvider(GreetingService greeting) : IHelpProvider
     {
-        public void WriteHelp(HelpContext context) => context.Console.Output.Write(greeting.Greeting);
+        public void WriteRootHelp(RootHelpContext context) =>
+            context.Console.Output.Write(greeting.Greeting);
+
+        public void WriteCommandHelp(CommandHelpContext context) =>
+            context.Console.Output.Write(greeting.Greeting);
     }
 
     private sealed class GreetCommand(GreetingService greeting) : EmptyCommand

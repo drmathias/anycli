@@ -240,8 +240,8 @@ public sealed class OneOrMoreSettings : ICommandSettings<OneOrMoreSettings>
 {
     public string[] Tags { get; set; } = [];
 
-    public static void Configure(CommandArgumentBuilder arguments) =>
-        arguments.AddVariadic<string>("tags", ArgumentArity.OneOrMore);
+    public static void Configure(CommandSettingsBuilder settings) =>
+        settings.Arguments.AddVariadic<string>("tags", ArgumentArity.OneOrMore);
 
     public static OneOrMoreSettings Bind(CommandArguments arguments) =>
         new() { Tags = [.. arguments.GetVariadic("tags")] };

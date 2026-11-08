@@ -15,6 +15,7 @@ namespace AnyCli.Generators;
 public sealed class CommandSettingsGenerator : IIncrementalGenerator
 {
     private const string ArgumentAttributeName = "AnyCli.ArgumentAttribute";
+    private const string OptionAttributeName = "AnyCli.OptionAttribute";
     private const string VariadicArgumentAttributeName = "AnyCli.VariadicArgumentAttribute";
     private const string SettingsInterfaceName = "ICommandSettings`1";
     private const string ArgumentParserAttributeName = "ArgumentParserAttribute`2";
@@ -116,6 +117,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             context.SemanticModel.Compilation,
             cancellationToken);
         var arguments = new List<ArgumentModel>();
+        var options = new List<OptionModel>();
         var diagnostics = new List<DiagnosticModel>();
         foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
         {
@@ -127,6 +129,17 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             foreach (var attribute in property.GetAttributes())
             {
                 var attributeName = attribute.AttributeClass?.ToDisplayString();
+                if (attributeName == OptionAttributeName)
+                {
+                    var option = CreateOptionModel(property, attribute, registrations, diagnostics);
+                    if (option is not null)
+                    {
+                        options.Add(option);
+                    }
+
+                    continue;
+                }
+
                 var isVariadic = attributeName == VariadicArgumentAttributeName;
                 if (!isVariadic && attributeName != ArgumentAttributeName)
                 {
@@ -250,7 +263,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             }
         }
 
-        return arguments.Count == 0 && diagnostics.Count == 0
+        return arguments.Count == 0 && options.Count == 0 && diagnostics.Count == 0
             ? null
             : new SettingsModel(
                 type.ContainingNamespace.IsGlobalNamespace ? string.Empty : type.ContainingNamespace.ToDisplayString(),
@@ -261,7 +274,154 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                 type.IsRecord,
                 ImplementsSettingsInterface(type),
                 [.. arguments.OrderBy(argument => argument.Position)],
+                [.. options],
                 [.. diagnostics]);
+    }
+
+    private static OptionModel? CreateOptionModel(
+        IPropertySymbol property,
+        AttributeData attribute,
+        RegistrationSet registrations,
+        List<DiagnosticModel> diagnostics)
+    {
+        var name = "--" + ToKebabCase(property.Name);
+        var aliases = new List<string>();
+        if (attribute.ConstructorArguments.Length > 0 &&
+            attribute.ConstructorArguments[0].Value is string explicitName)
+        {
+            name = NormalizeOptionName(explicitName);
+        }
+
+        for (var argumentIndex = 1; argumentIndex < attribute.ConstructorArguments.Length; argumentIndex++)
+        {
+            var argument = attribute.ConstructorArguments[argumentIndex];
+            if (argument.Kind == TypedConstantKind.Array)
+            {
+                foreach (var aliasValue in argument.Values)
+                {
+                    if (aliasValue.Value is string alias)
+                    {
+                        aliases.Add(NormalizeOptionName(alias));
+                    }
+                }
+            }
+            else if (argument.Value is string alias)
+            {
+                aliases.Add(NormalizeOptionName(alias));
+            }
+        }
+
+        var description = string.Empty;
+        var required = false;
+        ITypeSymbol? parserType = null;
+        foreach (var namedArgument in attribute.NamedArguments)
+        {
+            if (namedArgument.Key == "Description" &&
+                namedArgument.Value.Value is string customDescription)
+            {
+                description = customDescription;
+            }
+            else if (namedArgument.Key == "Required" &&
+                     namedArgument.Value.Value is bool isRequired)
+            {
+                required = isRequired;
+            }
+            else if (namedArgument.Key == "Parser" &&
+                     namedArgument.Value.Value is ITypeSymbol customParserType)
+            {
+                parserType = customParserType;
+            }
+        }
+
+        var isCollection = TryGetVariadicCollection(
+            property.Type,
+            out var elementType,
+            out var collectionKind);
+        ITypeSymbol argumentType;
+        ITypeSymbol valueType;
+        string elementTypeFullName;
+        string collectionTypeFullName;
+        bool isFlag;
+
+        if (isCollection)
+        {
+            argumentType = elementType;
+            valueType = UnwrapNullable(elementType);
+            elementTypeFullName = GetTypeName(elementType);
+            collectionTypeFullName = GetTypeName(property.Type);
+            isFlag = false;
+        }
+        else
+        {
+            argumentType = property.Type;
+            valueType = UnwrapNullable(property.Type);
+            elementTypeFullName = GetTypeName(property.Type);
+            collectionTypeFullName = elementTypeFullName;
+            isFlag = valueType.SpecialType == SpecialType.System_Boolean;
+        }
+
+        if (!TryCreateParsePlan(
+                argumentType,
+                valueType,
+                parserType,
+                registrations.Parsers,
+                registrations.EnumParser,
+                out var parsePlan))
+        {
+            diagnostics.Add(parserType is null
+                ? new DiagnosticModel(
+                    UnsupportedArgumentTypeDiagnostic,
+                    GetLocation(property),
+                    property.Name,
+                    argumentType.ToDisplayString())
+                : new DiagnosticModel(
+                    InvalidArgumentParserDiagnostic,
+                    GetLocation(property),
+                    property.Name,
+                    parserType.ToDisplayString(),
+                    valueType.ToDisplayString()));
+            return null;
+        }
+
+        return new OptionModel(
+            name,
+            aliases,
+            description,
+            property.Name,
+            required,
+            isFlag,
+            isCollection,
+            elementTypeFullName,
+            collectionTypeFullName,
+            collectionKind,
+            parsePlan);
+    }
+
+    private static string NormalizeOptionName(string name)
+    {
+        if (name.Length == 0 || name[0] == '-')
+        {
+            return name;
+        }
+
+        return name.Length == 1 ? "-" + name : "--" + name;
+    }
+
+    private static string ToKebabCase(string value)
+    {
+        var builder = new StringBuilder(value.Length + 4);
+        for (var index = 0; index < value.Length; index++)
+        {
+            var character = value[index];
+            if (index > 0 && char.IsUpper(character))
+            {
+                builder.Append('-');
+            }
+
+            builder.Append(char.ToLowerInvariant(character));
+        }
+
+        return builder.ToString();
     }
 
     private static Location GetLocation(IPropertySymbol property) =>
@@ -564,11 +724,11 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         source.AppendLine();
         source.Append(indent).AppendLine("{");
 
-        source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.CommandArgumentBuilder arguments)");
+        source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.CommandSettingsBuilder settings)");
         source.Append(indent).AppendLine("    {");
         foreach (var argument in model.Arguments)
         {
-            source.Append(indent).Append("        arguments.");
+            source.Append(indent).Append("        settings.Arguments.");
             if (argument.Variadic)
             {
                 source.Append("AddVariadic<")
@@ -594,10 +754,32 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             if (argument.Description.Length > 0)
             {
                 source.Append(indent)
-                    .Append("        arguments.Describe(")
+                    .Append("        settings.Arguments.Describe(")
                     .Append(SymbolDisplay.FormatLiteral(argument.Description, true))
                     .AppendLine(");");
             }
+        }
+
+        foreach (var option in model.Options)
+        {
+            source.Append(indent)
+                .Append("        settings.Options.Add<")
+                .Append(option.ElementTypeFullName)
+                .Append(">(")
+                .Append(SymbolDisplay.FormatLiteral(option.Name, true))
+                .Append(", ")
+                .Append(GetStringArrayExpression(option.Aliases))
+                .Append(", ")
+                .Append(SymbolDisplay.FormatLiteral(option.Description, true))
+                .Append(", required: ")
+                .Append(option.Required ? "true" : "false")
+                .Append(", takesValue: ")
+                .Append(option.IsFlag ? "false" : "true")
+                .Append(", isCollection: ")
+                .Append(option.IsCollection ? "true" : "false")
+                .Append(", collectionType: typeof(")
+                .Append(option.CollectionTypeFullName)
+                .AppendLine("));");
         }
 
         source.Append(indent).AppendLine("    }");
@@ -651,7 +833,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     .Append(indexLocal)
                     .Append("] = ")
                     .Append(GetParseExpression(
-                        argument,
+                        argument.ParsePlan,
                         rawLocal + "[" + indexLocal + "]",
                         literalName))
                     .AppendLine(";");
@@ -660,7 +842,10 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     .Append("        settings.")
                     .Append(argument.PropertyName)
                     .Append(" = ")
-                    .Append(GetCollectionExpression(argument, valuesLocal))
+                    .Append(GetCollectionExpression(
+                        argument.CollectionKind,
+                        argument.ElementTypeFullName,
+                        valuesLocal))
                     .AppendLine(";");
             }
             else if (argument.Optional)
@@ -677,7 +862,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     .Append("            settings.")
                     .Append(argument.PropertyName)
                     .Append(" = ")
-                    .Append(GetParseExpression(argument, rawLocal + "!", literalName))
+                    .Append(GetParseExpression(argument.ParsePlan, rawLocal + "!", literalName))
                     .AppendLine(";");
                 source.Append(indent).AppendLine("        }");
             }
@@ -688,10 +873,101 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
                     .Append(argument.PropertyName)
                     .Append(" = ")
                     .Append(GetParseExpression(
-                        argument,
+                        argument.ParsePlan,
                         "arguments.GetRequired(" + literalName + ")",
                         literalName))
                     .AppendLine(";");
+            }
+
+            localIndex++;
+        }
+
+        foreach (var option in model.Options)
+        {
+            var literalName = SymbolDisplay.FormatLiteral(option.Name, true);
+            var rawLocal = "__raw" + localIndex;
+
+            if (option.IsCollection)
+            {
+                var valuesLocal = "__values" + localIndex;
+                var indexLocal = "__i" + localIndex;
+                source.Append(indent)
+                    .Append("        var ")
+                    .Append(rawLocal)
+                    .Append(" = arguments.Options.GetValues(")
+                    .Append(literalName)
+                    .AppendLine(");");
+                source.Append(indent)
+                    .Append("        var ")
+                    .Append(valuesLocal)
+                    .Append(" = new ")
+                    .Append(option.ElementTypeFullName)
+                    .Append('[')
+                    .Append(rawLocal)
+                    .AppendLine(".Count];");
+                source.Append(indent)
+                    .Append("        for (var ")
+                    .Append(indexLocal)
+                    .Append(" = 0; ")
+                    .Append(indexLocal)
+                    .Append(" < ")
+                    .Append(rawLocal)
+                    .Append(".Count; ")
+                    .Append(indexLocal)
+                    .AppendLine("++)");
+                source.Append(indent).AppendLine("        {");
+                source.Append(indent)
+                    .Append("            ")
+                    .Append(valuesLocal)
+                    .Append('[')
+                    .Append(indexLocal)
+                    .Append("] = ")
+                    .Append(GetParseExpression(
+                        option.ParsePlan,
+                        rawLocal + "[" + indexLocal + "]",
+                        literalName))
+                    .AppendLine(";");
+                source.Append(indent).AppendLine("        }");
+                source.Append(indent)
+                    .Append("        settings.")
+                    .Append(option.PropertyName)
+                    .Append(" = ")
+                    .Append(GetCollectionExpression(
+                        option.CollectionKind,
+                        option.ElementTypeFullName,
+                        valuesLocal))
+                    .AppendLine(";");
+            }
+            else
+            {
+                source.Append(indent)
+                    .Append("        if (arguments.Options.TryGetValue(")
+                    .Append(literalName)
+                    .Append(", out var ")
+                    .Append(rawLocal)
+                    .AppendLine("))");
+                source.Append(indent).AppendLine("        {");
+                source.Append(indent)
+                    .Append("            settings.")
+                    .Append(option.PropertyName)
+                    .Append(" = ");
+
+                if (option.IsFlag)
+                {
+                    source.Append(rawLocal)
+                        .AppendLine(" is null");
+                    source.Append(indent).AppendLine("                ? true");
+                    source.Append(indent).Append("                : ")
+                        .Append(GetParseExpression(option.ParsePlan, rawLocal, literalName))
+                        .AppendLine(";");
+                }
+                else
+                {
+                    source.Append(GetParseExpression(option.ParsePlan, rawLocal + "!", literalName))
+                        .AppendLine(";");
+                }
+
+                source.Append(indent).AppendLine("        }");
             }
 
             localIndex++;
@@ -711,6 +987,13 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             SourceText.From(source.ToString(), Encoding.UTF8));
     }
 
+    private static string GetStringArrayExpression(IReadOnlyList<string> values) =>
+        values.Count == 0
+            ? "global::System.Array.Empty<string>()"
+            : "new string[] { " +
+              string.Join(", ", values.Select(value => SymbolDisplay.FormatLiteral(value, true))) +
+              " }";
+
     private static string GetVariadicArityExpression(int minimumCount) =>
         minimumCount switch
         {
@@ -720,42 +1003,79 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         };
 
     private static string GetCollectionExpression(
-        ArgumentModel argument,
+        VariadicCollectionKind collectionKind,
+        string elementTypeFullName,
         string valuesExpression) =>
-        argument.CollectionKind switch
+        collectionKind switch
         {
             VariadicCollectionKind.Array => valuesExpression,
             VariadicCollectionKind.HashSet =>
-                $"new global::System.Collections.Generic.HashSet<{argument.ElementTypeFullName}>({valuesExpression})",
+                $"new global::System.Collections.Generic.HashSet<{elementTypeFullName}>({valuesExpression})",
             _ =>
-                $"new global::System.Collections.Generic.List<{argument.ElementTypeFullName}>({valuesExpression})",
+                $"new global::System.Collections.Generic.List<{elementTypeFullName}>({valuesExpression})",
         };
 
     private static string GetParseExpression(
-        ArgumentModel argument,
+        ParsePlan parsePlan,
         string rawExpression,
         string literalName) =>
-        argument.ParsePlan.Kind switch
+        parsePlan.Kind switch
         {
             ParseKind.String => rawExpression,
             ParseKind.Enum =>
-                $"global::AnyCli.ArgumentParsing.ParseEnum<{argument.ParsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.ArgumentParsing.ParseEnum<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, {literalName})",
             ParseKind.EnumCustom =>
-                $"global::AnyCli.ArgumentParsing.ParseEnumCustom<{argument.ParsePlan.ValueTypeFullName}, " +
-                $"{argument.ParsePlan.ParserTypeFullName}>({rawExpression}, {literalName})",
+                $"global::AnyCli.ArgumentParsing.ParseEnumCustom<{parsePlan.ValueTypeFullName}, " +
+                $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName})",
             ParseKind.SpanParsable =>
-                $"global::AnyCli.ArgumentParsing.ParseSpanParsable<{argument.ParsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.ArgumentParsing.ParseSpanParsable<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             ParseKind.Parsable =>
-                $"global::AnyCli.ArgumentParsing.ParseParsable<{argument.ParsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.ArgumentParsing.ParseParsable<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             ParseKind.Custom =>
-                $"global::AnyCli.ArgumentParsing.ParseCustom<{argument.ParsePlan.ValueTypeFullName}, " +
-                $"{argument.ParsePlan.ParserTypeFullName}>({rawExpression}, " +
+                $"global::AnyCli.ArgumentParsing.ParseCustom<{parsePlan.ValueTypeFullName}, " +
+                $"{parsePlan.ParserTypeFullName}>({rawExpression}, " +
                 $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             _ => throw new InvalidOperationException("Unknown parse kind."),
         };
+
+    private sealed class OptionModel(
+        string name,
+        IReadOnlyList<string> aliases,
+        string description,
+        string propertyName,
+        bool required,
+        bool isFlag,
+        bool isCollection,
+        string elementTypeFullName,
+        string collectionTypeFullName,
+        VariadicCollectionKind collectionKind,
+        ParsePlan parsePlan)
+    {
+        public string Name { get; } = name;
+
+        public IReadOnlyList<string> Aliases { get; } = aliases;
+
+        public string Description { get; } = description;
+
+        public string PropertyName { get; } = propertyName;
+
+        public bool Required { get; } = required;
+
+        public bool IsFlag { get; } = isFlag;
+
+        public bool IsCollection { get; } = isCollection;
+
+        public string ElementTypeFullName { get; } = elementTypeFullName;
+
+        public string CollectionTypeFullName { get; } = collectionTypeFullName;
+
+        public VariadicCollectionKind CollectionKind { get; } = collectionKind;
+
+        public ParsePlan ParsePlan { get; } = parsePlan;
+    }
 
     private sealed class SettingsModel
     {
@@ -768,6 +1088,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             bool isRecord,
             bool implementsSettingsInterface,
             IReadOnlyList<ArgumentModel> arguments,
+            IReadOnlyList<OptionModel> options,
             IReadOnlyList<DiagnosticModel> diagnostics)
         {
             Namespace = @namespace;
@@ -778,6 +1099,7 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             IsRecord = isRecord;
             ImplementsSettingsInterface = implementsSettingsInterface;
             Arguments = arguments;
+            Options = options;
             Diagnostics = diagnostics;
         }
 
@@ -796,6 +1118,8 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         public bool ImplementsSettingsInterface { get; }
 
         public IReadOnlyList<ArgumentModel> Arguments { get; }
+
+        public IReadOnlyList<OptionModel> Options { get; }
 
         public IReadOnlyList<DiagnosticModel> Diagnostics { get; }
     }

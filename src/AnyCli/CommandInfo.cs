@@ -15,4 +15,9 @@ public sealed record CommandInfo(string Name, string Description)
     /// Gets the command's positional arguments.
     /// </summary>
     public IReadOnlyList<ArgumentInfo> Arguments { get; init; } = [];
+
+    /// <summary>
+    /// Gets the command's named options.
+    /// </summary>
+    public IReadOnlyList<OptionInfo> Options { get; init; } = [];
 }

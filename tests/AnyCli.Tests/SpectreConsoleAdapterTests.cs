@@ -146,9 +146,10 @@ public class SpectreConsoleAdapterTests
 
     private sealed class AnsiHelpProvider : IHelpProvider
     {
-        public void WriteHelp(HelpContext context)
-        {
+        public void WriteRootHelp(RootHelpContext context) =>
             context.AnsiConsole.Output.Markup("help");
-        }
+
+        public void WriteCommandHelp(CommandHelpContext context) =>
+            context.AnsiConsole.Output.Markup("help");
     }
 }

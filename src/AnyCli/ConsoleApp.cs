@@ -90,19 +90,27 @@ public sealed class ConsoleApp
 
         if (_helpProviderFactory is not null && IsHelpRequest(args))
         {
-            var commandName = args.Length == 2 ? args[0] : null;
-            var commandInfo = commandName is null
-                ? null
-                : _commandInfos.FirstOrDefault(info => info.Name == commandName);
+            var helpProvider = _helpProviderFactory(_serviceProvider);
+            if (args.Length == 1)
+            {
+                helpProvider.WriteRootHelp(
+                    new RootHelpContext(
+                        _name ?? string.Empty,
+                        console,
+                        GetOptions(),
+                        _commandInfos));
+            }
+            else
+            {
+                var helpCommand = _commandInfos.First(info => info.Name == args[0]);
+                helpProvider.WriteCommandHelp(
+                    new CommandHelpContext(
+                        _name ?? string.Empty,
+                        console,
+                        GetOptions(),
+                        helpCommand));
+            }
 
-            _helpProviderFactory(_serviceProvider).WriteHelp(
-                new HelpContext(
-                    _name ?? string.Empty,
-                    console,
-                    commandName,
-                    commandInfo?.Arguments ?? [],
-                    _commandInfos,
-                    GetOptions()));
             return 0;
         }
 
@@ -110,6 +118,7 @@ public sealed class ConsoleApp
         {
             var arguments = CommandArgumentsParser.Parse(
                 command.Arguments,
+                command.Options,
                 args.AsSpan(1));
             return await command.Execute
                 .Invoke(_serviceProvider, new CommandContext(args[0], console), arguments)

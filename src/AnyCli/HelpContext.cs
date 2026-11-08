@@ -5,24 +5,24 @@
 namespace AnyCli;
 
 /// <summary>
-/// Provides the data needed to render help output.
+/// Provides the data shared by root and command help output.
 /// </summary>
-public sealed class HelpContext
+public abstract class HelpContext
 {
-    internal HelpContext(
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HelpContext"/> class.
+    /// </summary>
+    /// <param name="appName">The application name.</param>
+    /// <param name="console">The console writer.</param>
+    /// <param name="globalOptions">The application-wide options.</param>
+    protected HelpContext(
         string appName,
         IConsoleWriter console,
-        string? commandName,
-        IReadOnlyList<ArgumentInfo> arguments,
-        IReadOnlyList<CommandInfo> commands,
-        IReadOnlyList<OptionInfo> options)
+        IReadOnlyList<OptionInfo> globalOptions)
     {
         AppName = appName;
         Console = console;
-        CommandName = commandName;
-        Arguments = arguments;
-        Commands = commands;
-        Options = options;
+        GlobalOptions = globalOptions;
     }
 
     /// <summary>
@@ -36,22 +36,7 @@ public sealed class HelpContext
     public IConsoleWriter Console { get; }
 
     /// <summary>
-    /// Gets the command name being described, or <see langword="null"/> for root help.
+    /// Gets the application-wide options, such as <c>--help</c> and <c>--version</c>.
     /// </summary>
-    public string? CommandName { get; }
-
-    /// <summary>
-    /// Gets the arguments for the command being described, or an empty list for root help.
-    /// </summary>
-    public IReadOnlyList<ArgumentInfo> Arguments { get; }
-
-    /// <summary>
-    /// Gets the registered commands.
-    /// </summary>
-    public IReadOnlyList<CommandInfo> Commands { get; }
-
-    /// <summary>
-    /// Gets the available application options.
-    /// </summary>
-    public IReadOnlyList<OptionInfo> Options { get; }
+    public IReadOnlyList<OptionInfo> GlobalOptions { get; }
 }

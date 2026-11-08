@@ -107,8 +107,9 @@ public sealed class ConsoleAppBuilder
         _commands[name] = new CommandRegistration(
             (serviceProvider, context, _) =>
                 Task.FromResult(ResolveCommand<TCommand>(serviceProvider).Execute(context)),
+            [],
             []);
-        _commandInfos[name] = CreateCommandInfo(name, description, []);
+        _commandInfos[name] = CreateCommandInfo(name, description, [], []);
         return this;
     }
 
@@ -136,8 +137,9 @@ public sealed class ConsoleAppBuilder
 
         _commands[name] = new CommandRegistration(
             (serviceProvider, context, _) => ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context),
+            [],
             []);
-        _commandInfos[name] = CreateCommandInfo(name, description, []);
+        _commandInfos[name] = CreateCommandInfo(name, description, [], []);
         return this;
     }
 
@@ -165,8 +167,9 @@ public sealed class ConsoleAppBuilder
                 Convert.ToInt32(
                     ResolveCommand<TCommand>(serviceProvider).Execute(context),
                     CultureInfo.InvariantCulture)),
+            [],
             []);
-        _commandInfos[name] = CreateCommandInfo(name, description, []);
+        _commandInfos[name] = CreateCommandInfo(name, description, [], []);
         return this;
     }
 
@@ -192,8 +195,9 @@ public sealed class ConsoleAppBuilder
         _commands[name] = new CommandRegistration(
             (serviceProvider, context, _) => ConvertExitCodeAsync(
                 ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context)),
+            [],
             []);
-        _commandInfos[name] = CreateCommandInfo(name, description, []);
+        _commandInfos[name] = CreateCommandInfo(name, description, [], []);
         return this;
     }
 
@@ -216,7 +220,7 @@ public sealed class ConsoleAppBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var arguments = BuildSettingsArguments<TSettings>();
+        var definitions = BuildSettingsDefinitions<TSettings>();
         _commands[name] = new CommandRegistration(
             (serviceProvider, context, commandArguments) =>
             {
@@ -224,8 +228,13 @@ public sealed class ConsoleAppBuilder
                 return Task.FromResult(
                     ResolveCommand<TCommand>(serviceProvider).Execute(context, settings));
             },
-            arguments);
-        _commandInfos[name] = CreateCommandInfo(name, description, arguments);
+            definitions.Arguments,
+            definitions.Options);
+        _commandInfos[name] = CreateCommandInfo(
+            name,
+            description,
+            definitions.Arguments,
+            definitions.Options);
         return this;
     }
 
@@ -251,7 +260,7 @@ public sealed class ConsoleAppBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var arguments = BuildSettingsArguments<TSettings>();
+        var definitions = BuildSettingsDefinitions<TSettings>();
         _commands[name] = new CommandRegistration(
             (serviceProvider, context, commandArguments) =>
             {
@@ -259,8 +268,13 @@ public sealed class ConsoleAppBuilder
                 var exitCode = ResolveCommand<TCommand>(serviceProvider).Execute(context, settings);
                 return Task.FromResult(Convert.ToInt32(exitCode, CultureInfo.InvariantCulture));
             },
-            arguments);
-        _commandInfos[name] = CreateCommandInfo(name, description, arguments);
+            definitions.Arguments,
+            definitions.Options);
+        _commandInfos[name] = CreateCommandInfo(
+            name,
+            description,
+            definitions.Arguments,
+            definitions.Options);
         return this;
     }
 
@@ -283,15 +297,20 @@ public sealed class ConsoleAppBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var arguments = BuildSettingsArguments<TSettings>();
+        var definitions = BuildSettingsDefinitions<TSettings>();
         _commands[name] = new CommandRegistration(
             (serviceProvider, context, commandArguments) =>
             {
                 var settings = TSettings.Bind(commandArguments);
                 return ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, settings);
             },
-            arguments);
-        _commandInfos[name] = CreateCommandInfo(name, description, arguments);
+            definitions.Arguments,
+            definitions.Options);
+        _commandInfos[name] = CreateCommandInfo(
+            name,
+            description,
+            definitions.Arguments,
+            definitions.Options);
         return this;
     }
 
@@ -317,7 +336,7 @@ public sealed class ConsoleAppBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var arguments = BuildSettingsArguments<TSettings>();
+        var definitions = BuildSettingsDefinitions<TSettings>();
         _commands[name] = new CommandRegistration(
             (serviceProvider, context, commandArguments) =>
             {
@@ -325,8 +344,13 @@ public sealed class ConsoleAppBuilder
                 return ConvertExitCodeAsync(
                     ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, settings));
             },
-            arguments);
-        _commandInfos[name] = CreateCommandInfo(name, description, arguments);
+            definitions.Arguments,
+            definitions.Options);
+        _commandInfos[name] = CreateCommandInfo(
+            name,
+            description,
+            definitions.Arguments,
+            definitions.Options);
         return this;
     }
 
@@ -407,18 +431,19 @@ public sealed class ConsoleAppBuilder
             _unrecognizedCommandHandlerFactory,
             _unrecognizedCommandExitCode);
 
-    private static IReadOnlyList<ArgumentDefinition> BuildSettingsArguments<TSettings>()
+    private static SettingsDefinitions BuildSettingsDefinitions<TSettings>()
         where TSettings : class, ICommandSettings<TSettings>
     {
-        var builder = new CommandArgumentBuilder();
+        var builder = new CommandSettingsBuilder();
         TSettings.Configure(builder);
-        return builder.Build();
+        return new SettingsDefinitions(builder.Arguments.Build(), builder.Options.Build());
     }
 
     private static CommandInfo CreateCommandInfo(
         string name,
         string description,
-        IReadOnlyList<ArgumentDefinition> arguments) =>
+        IReadOnlyList<ArgumentDefinition> arguments,
+        IReadOnlyList<OptionDefinition> options) =>
         new(name, description)
         {
             Arguments = [.. arguments
@@ -427,7 +452,18 @@ public sealed class ConsoleAppBuilder
                     argument.Description,
                     argument.ArgumentType,
                     argument.Arity))],
+            Options = [.. options
+                .Select(option => new OptionInfo(
+                    option.Names,
+                    option.Description,
+                    option.Required,
+                    option.TakesValue,
+                    option.DeclaredType))],
         };
+
+    private sealed record SettingsDefinitions(
+        IReadOnlyList<ArgumentDefinition> Arguments,
+        IReadOnlyList<OptionDefinition> Options);
 
     private static async Task<int> ConvertExitCodeAsync<TExitCode>(Task<TExitCode> exitCode)
         where TExitCode : struct, Enum =>

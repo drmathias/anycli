@@ -121,6 +121,24 @@ public class HelpCommandTests
         await Assert.That(result.Error).IsEmpty();
     }
 
+    [Test]
+    public async Task CommandHelp_ExposesCommandOptions()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureCommands(commands => commands.AddCommand<OptionMetadataCommand, OptionSettings>("opts"))
+            .AddHelp<OptionHelpProvider>()
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, "opts", "--help");
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo(
+            "--config:True:True|--output,-o:False:True|--verbose,-v:False:False|" +
+            "--quiet,-q:False:False|--tag:False:True|--count:False:True|--dry-run:False:False");
+        await Assert.That(result.Error).IsEmpty();
+    }
+
     private static async Task<TestAppResult> Run(string[] args)
     {
         var app = ConsoleAppBuilder.Create()
@@ -154,6 +172,25 @@ public class HelpCommandTests
         public override int Execute(CommandContext context) => 0;
     }
 
+    private sealed class OptionMetadataCommand : ICommand<OptionSettings>
+    {
+        public int Execute(CommandContext context, OptionSettings settings) => 0;
+    }
+
+    private sealed class OptionHelpProvider : IHelpProvider
+    {
+        public void WriteRootHelp(RootHelpContext context)
+        {
+        }
+
+        public void WriteCommandHelp(CommandHelpContext context) =>
+            context.Console.Output.Write(
+                string.Join(
+                    "|",
+                    context.Command.Options.Select(option =>
+                        $"{string.Join(",", option.Names)}:{option.IsRequired}:{option.TakesValue}")));
+    }
+
     private sealed class ThrowCommand : ICommand<ThrowSettings>
     {
         public int Execute(CommandContext context, ThrowSettings settings) => 0;
@@ -171,20 +208,28 @@ public class HelpCommandTests
 
     private sealed class TypeHelpProvider : IHelpProvider
     {
-        public void WriteHelp(HelpContext context) =>
+        public void WriteRootHelp(RootHelpContext context)
+        {
+        }
+
+        public void WriteCommandHelp(CommandHelpContext context) =>
             context.Console.Output.Write(
                 string.Join(
                     ",",
-                    context.Arguments.Select(argument =>
+                    context.Command.Arguments.Select(argument =>
                         $"{argument.ArgumentType.Name}:{argument.Arity.Minimum}:{argument.Arity.Maximum}:" +
                         $"{argument.IsRequired}:{argument.IsVariadic}")));
     }
 
     private sealed class ThrowHelpProvider : IHelpProvider
     {
-        public void WriteHelp(HelpContext context)
+        public void WriteRootHelp(RootHelpContext context)
         {
-            var command = context.Commands.Single(command => command.Name == context.CommandName);
+        }
+
+        public void WriteCommandHelp(CommandHelpContext context)
+        {
+            var command = context.Command;
             var output = context.Console.Output;
 
             output.WriteLine("Description:");
@@ -194,14 +239,14 @@ public class HelpCommandTests
 
             var arguments = string.Join(
                 " ",
-                context.Arguments.Select(argument => argument.IsVariadic
+                command.Arguments.Select(argument => argument.IsVariadic
                     ? $"<{argument.Name}>..."
                     : $"<{argument.Name}>"));
-            output.WriteLine($"    {context.AppName} {context.CommandName} {arguments} [OPTIONS]");
+            output.WriteLine($"    {context.AppName} {command.Name} {arguments} [OPTIONS]");
             output.WriteLine();
             output.WriteLine("Arguments:");
 
-            foreach (var argument in context.Arguments)
+            foreach (var argument in command.Arguments)
             {
                 output.WriteLine($"    <{argument.Name}>  {argument.Description}");
             }
@@ -209,7 +254,7 @@ public class HelpCommandTests
             output.WriteLine();
             output.WriteLine("Options:");
 
-            foreach (var option in context.Options)
+            foreach (var option in context.GlobalOptions)
             {
                 var names = string.Join(", ", option.Names);
                 output.WriteLine($"    {names,-36}{option.Description}");
@@ -219,20 +264,13 @@ public class HelpCommandTests
 
     private sealed class StubHelpProvider : IHelpProvider
     {
-        public void WriteHelp(HelpContext context)
+        public void WriteRootHelp(RootHelpContext context)
         {
-            if (context.CommandName is not null)
-            {
-                var command = context.Commands.Single(command => command.Name == context.CommandName);
-                context.Console.Output.Write($"{command.Name}: {command.Description}");
-                return;
-            }
-
             context.Console.Output.WriteLine("Usage:");
             context.Console.Output.WriteLine($"    {context.AppName} [OPTIONS] <COMMAND>");
             context.Console.Output.WriteLine();
             context.Console.Output.WriteLine("Options:");
-            foreach (var option in context.Options)
+            foreach (var option in context.GlobalOptions)
             {
                 var names = string.Join(", ", option.Names);
                 context.Console.Output.WriteLine($"    {names,-15}{option.Description}");
@@ -247,6 +285,9 @@ public class HelpCommandTests
                 context.Console.Output.WriteLine($"    {command.Name.PadRight(nameWidth)}  {command.Description}");
             }
         }
+
+        public void WriteCommandHelp(CommandHelpContext context) =>
+            context.Console.Output.Write($"{context.Command.Name}: {context.Command.Description}");
     }
 }
 

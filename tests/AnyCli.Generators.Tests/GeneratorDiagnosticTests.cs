@@ -310,6 +310,43 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task GeneratesSettingsForOptions()
+    {
+        var result = RunGenerator(
+            """
+            using System.Collections.Generic;
+            using AnyCli;
+
+            public sealed partial class GoodSettings
+            {
+                [Option("--config", Required = true)]
+                public string Config { get; set; } = "";
+
+                [Option("--output", "-o", Description = "Output path")]
+                public string Output { get; set; } = "";
+
+                [Option("--verbose", "-v")]
+                public bool Verbose { get; set; }
+
+                [Option("--tag")]
+                public List<int> Tags { get; set; } = [];
+
+                [Option]
+                public bool DryRun { get; set; }
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(errors.Length).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task GeneratesSettingsForSupportedArgumentTypes()
     {
         var result = RunGenerator(

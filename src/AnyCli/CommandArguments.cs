@@ -16,12 +16,19 @@ public sealed class CommandArguments
     internal CommandArguments(
         IReadOnlyDictionary<string, ArgumentArity> arities,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string> supplied)
+        IReadOnlySet<string> supplied,
+        CommandOptionValues options)
     {
         _arities = arities;
         _values = values;
         _supplied = supplied;
+        Options = options;
     }
+
+    /// <summary>
+    /// Gets the parsed named option values.
+    /// </summary>
+    public CommandOptionValues Options { get; }
 
     /// <summary>
     /// Gets the value of a required argument.
