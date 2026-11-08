@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 
@@ -122,7 +123,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             .CreateSyntaxProvider(
                 static (node, _) => IsCandidate(node),
                 static (syntaxContext, cancellationToken) => GetModel(syntaxContext, cancellationToken))
-            .Where(static model => model is not null);
+            .Where(static model => model is not null)
+            .Collect()
+            .SelectMany(static (models, _) => Deduplicate(models));
 
         var registrations = context.CompilationProvider.Select(
             static (compilation, cancellationToken) =>
@@ -138,12 +141,26 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 ReportRegistrationDiagnostics(productionContext, registrationSet));
     }
 
+    private static IEnumerable<ParametersModel> Deduplicate(
+        ImmutableArray<ParametersModel?> models)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var model in models)
+        {
+            if (model is not null && seen.Add(model.FullTypeName))
+            {
+                yield return model;
+            }
+        }
+    }
+
     private static bool IsCandidate(SyntaxNode node) =>
         node is ClassDeclarationSyntax declaration &&
         declaration.Modifiers.Any(SyntaxKind.PartialKeyword) &&
-        declaration.Members
-            .OfType<PropertyDeclarationSyntax>()
-            .Any(property => property.AttributeLists.Count > 0);
+        (declaration.BaseList is not null ||
+         declaration.Members
+             .OfType<PropertyDeclarationSyntax>()
+             .Any(property => property.AttributeLists.Count > 0));
 
     private static ParametersModel? GetModel(
         GeneratorSyntaxContext context,
@@ -161,20 +178,21 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             return null;
         }
 
+        var compilation = context.SemanticModel.Compilation;
         var registrations = GetParameterParserRegistrations(
-            context.SemanticModel.Compilation,
+            compilation,
             cancellationToken);
         var arguments = new List<ArgumentModel>();
         var options = new List<OptionModel>();
         var diagnostics = new List<DiagnosticModel>();
-        foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
+        foreach (var property in GetParameterProperties(type, compilation))
         {
             if (property.SetMethod is null || property.SetMethod.IsInitOnly)
             {
                 return null;
             }
 
-            foreach (var attribute in property.GetAttributes())
+            foreach (var attribute in GetParameterAttributes(property))
             {
                 var attributeName = attribute.AttributeClass?.ToDisplayString();
                 if (attributeName == OptionAttributeName ||
@@ -185,7 +203,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         attribute,
                         attributeName == RequiredOptionAttributeName,
                         registrations,
-                        context.SemanticModel.Compilation,
+                        compilation,
                         diagnostics);
                     if (option is not null)
                     {
@@ -286,7 +304,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         elementType: null,
                         isVariadic: false,
                         minimumCount: 0,
-                        context.SemanticModel.Compilation,
+                        compilation,
                         diagnostics,
                         out defaultExpression))
                 {
@@ -308,7 +326,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                             defaultElementType,
                             isVariadic: true,
                             minimumCount,
-                            context.SemanticModel.Compilation,
+                            compilation,
                             diagnostics,
                             out defaultExpression))
                     {
@@ -368,6 +386,74 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 [.. arguments.OrderBy(argument => argument.Position)],
                 [.. options],
                 [.. diagnostics]);
+    }
+
+    private static IReadOnlyList<AttributeData> GetParameterAttributes(IPropertySymbol property)
+    {
+        for (var current = property; current is not null; current = current.OverriddenProperty)
+        {
+            var attributes = current.GetAttributes()
+                .Where(attribute => IsParameterAttribute(attribute.AttributeClass))
+                .ToArray();
+            if (attributes.Length > 0)
+            {
+                return attributes;
+            }
+        }
+
+        return [];
+    }
+
+    private static bool IsParameterAttribute(INamedTypeSymbol? attributeClass)
+    {
+        var attributeName = attributeClass?.ToDisplayString();
+        return attributeName == OptionAttributeName ||
+               attributeName == RequiredOptionAttributeName ||
+               attributeName == ArgumentAttributeName ||
+               attributeName == OptionalArgumentAttributeName ||
+               attributeName == VariadicArgumentAttributeName;
+    }
+
+    private static IEnumerable<IPropertySymbol> GetParameterProperties(
+        INamedTypeSymbol type,
+        Compilation compilation)
+    {
+        var hierarchy = new Stack<INamedTypeSymbol>();
+        for (var current = type;
+             current is not null && current.SpecialType != SpecialType.System_Object;
+             current = current.BaseType)
+        {
+            hierarchy.Push(current);
+        }
+
+        var properties = new List<IPropertySymbol>();
+        var propertyIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var current in hierarchy)
+        {
+            foreach (var property in current.GetMembers().OfType<IPropertySymbol>())
+            {
+                if (property.IsStatic ||
+                    property.IsIndexer ||
+                    property.SetMethod is null ||
+                    !compilation.IsSymbolAccessibleWithin(property, type, type) ||
+                    !compilation.IsSymbolAccessibleWithin(property.SetMethod, type, type))
+                {
+                    continue;
+                }
+
+                if (propertyIndexes.TryGetValue(property.Name, out var existingIndex))
+                {
+                    properties[existingIndex] = property;
+                }
+                else
+                {
+                    propertyIndexes.Add(property.Name, properties.Count);
+                    properties.Add(property);
+                }
+            }
+        }
+
+        return properties;
     }
 
     private static OptionModel? CreateOptionModel(
@@ -947,7 +1033,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         type.AllInterfaces.Any(
             currentInterface =>
                 currentInterface.OriginalDefinition.MetadataName == ParametersInterfaceName &&
-                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli");
+                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli" &&
+                currentInterface.TypeArguments.Length == 1 &&
+                SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], type));
 
     private static string GetAccessibility(Accessibility accessibility) =>
         accessibility switch
