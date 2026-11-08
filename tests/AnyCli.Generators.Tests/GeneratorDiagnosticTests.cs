@@ -289,6 +289,127 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task ReportsIncompatibleDefaultValueType()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Option("--count", DefaultValue = "not-an-int")]
+                public int Count { get; set; }
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI006");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Count");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsInvalidCollectionDefaultValue()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Option("--tag", DefaultValue = 5)]
+                public string[] Tags { get; set; } = [];
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI010");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Tags");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsInvalidCollectionDefaultValueElementType()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Option("--count", DefaultValue = new[] { "not-an-int" })]
+                public int[] Counts { get; set; } = [];
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI011");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Counts");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsDefaultValueOnRequiredVariadicParameter()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [VariadicArgument(0, MinimumCount = 1, DefaultValue = new[] { "a" })]
+                public string[] Values { get; set; } = [];
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI012");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Values");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task GeneratesTypedDefaults()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public enum Mode
+            {
+                Fast,
+                Slow,
+            }
+
+            public sealed partial class GoodParameters
+            {
+                [Option("--mode", DefaultValue = Mode.Fast)]
+                public Mode Mode { get; set; }
+
+                [Option("--verbose", DefaultValue = true)]
+                public bool Verbose { get; set; }
+
+                [OptionalArgument(0, DefaultValue = 8080)]
+                public int Port { get; set; }
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(result.GeneratedSourceTexts.Single().Contains("SetDefaultValue")).IsTrue();
+        await Assert.That(errors.Length).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task ReportsInvalidVariadicMinimumCount()
     {
         var result = RunGenerator(
@@ -319,7 +440,7 @@ public class GeneratorDiagnosticTests
 
             public sealed partial class GoodParameters
             {
-                [Option("--config", Required = true)]
+                [RequiredOption("--config")]
                 public string Config { get; set; } = "";
 
                 [Option("--output", "-o", Description = "Output path")]
@@ -381,7 +502,7 @@ public class GeneratorDiagnosticTests
                 [Argument(1)]
                 public Mode Mode { get; set; }
 
-                [Argument(2, Optional = true)]
+                [OptionalArgument(2)]
                 public string? Name { get; set; }
 
                 [VariadicArgument(3)]

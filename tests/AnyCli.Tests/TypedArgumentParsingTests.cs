@@ -288,7 +288,7 @@ public sealed partial class ScalarParameters
     [Argument(4)]
     public ParseMode Mode { get; set; }
 
-    [Argument(5, Optional = true)]
+    [OptionalArgument(5)]
     public int? Retries { get; set; }
 }
 

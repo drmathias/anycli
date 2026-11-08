@@ -302,7 +302,7 @@ public sealed partial class TypeMetadataParameters
     [Argument(0)]
     public int Count { get; set; }
 
-    [Argument(1, Optional = true)]
+    [OptionalArgument(1)]
     public int? Retries { get; set; }
 
     [VariadicArgument(2)]

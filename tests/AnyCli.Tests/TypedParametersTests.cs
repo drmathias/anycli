@@ -120,10 +120,10 @@ public sealed partial class CopyParameters
     [Argument(0)]
     public string Source { get; set; } = "";
 
-    [Argument(1, Optional = true)]
+    [OptionalArgument(1)]
     public string? Destination { get; set; }
 
-    [Argument(2, Optional = true)]
+    [OptionalArgument(2)]
     public string Label { get; set; } = "default";
 
     [VariadicArgument(3)]
@@ -132,7 +132,7 @@ public sealed partial class CopyParameters
 
 public sealed partial class ComputedParameters
 {
-    [Argument(0, Optional = true)]
+    [OptionalArgument(0)]
     public string Label { get; set; } = CreateDefaultLabel();
 
     private static string CreateDefaultLabel() => "computed";

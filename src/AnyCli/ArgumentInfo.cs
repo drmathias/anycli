@@ -26,4 +26,14 @@ public sealed record ArgumentInfo(
     /// Gets a value indicating whether the argument accepts more than one value.
     /// </summary>
     public bool IsVariadic => Arity.IsVariadic;
+
+    /// <summary>
+    /// Gets the configured default value, when one is defined.
+    /// </summary>
+    public object? DefaultValue { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the argument has a configured default value.
+    /// </summary>
+    public bool HasDefaultValue { get; init; }
 }

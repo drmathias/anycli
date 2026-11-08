@@ -210,6 +210,65 @@ public sealed class CommandArgumentBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sets the default value of the most recently added optional argument.
+    /// </summary>
+    /// <typeparam name="T">The argument value type.</typeparam>
+    /// <param name="value">The default value.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// No argument has been added, the argument is required, or the argument is variadic.
+    /// </exception>
+    public CommandArgumentBuilder SetDefaultValue<T>(T value)
+    {
+        if (_arguments.Count == 0)
+        {
+            throw new InvalidOperationException("No argument has been added.");
+        }
+
+        var argument = _arguments[^1];
+        if (argument.Arity.IsRequired || argument.Arity.IsVariadic)
+        {
+            throw new InvalidOperationException(
+                "Only non-variadic optional arguments can have a default value.");
+        }
+
+        argument.SetDefaultValue(value);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the default values of the most recently added zero-or-more variadic argument.
+    /// </summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="values">The default values.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="values"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// No argument has been added, the argument is not variadic, or the argument requires values.
+    /// </exception>
+    public CommandArgumentBuilder SetDefaultValues<T>(IReadOnlyCollection<T> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+
+        if (_arguments.Count == 0)
+        {
+            throw new InvalidOperationException("No argument has been added.");
+        }
+
+        var argument = _arguments[^1];
+        if (!argument.Arity.IsVariadic || argument.Arity.IsRequired)
+        {
+            throw new InvalidOperationException(
+                "Only zero-or-more variadic arguments can have default values.");
+        }
+
+        argument.SetDefaultValue(values.ToArray());
+        return this;
+    }
+
     internal IReadOnlyList<ArgumentDefinition> Build()
     {
         Validate();

@@ -5,34 +5,16 @@
 namespace AnyCli;
 
 /// <summary>
-/// Marks a parameters property as a positional command argument.
+/// Marks a parameters property as a required positional command argument.
 /// </summary>
-[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
-public sealed class ArgumentAttribute(int position) : Attribute
+public class ArgumentAttribute : ArgumentAttributeBase
 {
     /// <summary>
-    /// Gets the zero-based position of the argument.
+    /// Initializes a new instance of the <see cref="ArgumentAttribute"/> class.
     /// </summary>
-    public int Position { get; } = position;
-
-    /// <summary>
-    /// Gets or sets whether the argument is optional.
-    /// </summary>
-    public bool Optional { get; set; }
-
-    /// <summary>
-    /// Gets or sets the argument name. Defaults to the property name when not set.
-    /// </summary>
-    public string? Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the argument description shown in help output.
-    /// </summary>
-    public string? Description { get; set; }
-
-    /// <summary>
-    /// Gets or sets a custom parser type implementing
-    /// <see cref="IParameterParser{T}"/> for the argument value type.
-    /// </summary>
-    public Type? Parser { get; set; }
+    /// <param name="position">The zero-based position of the argument.</param>
+    public ArgumentAttribute(int position)
+        : base(position)
+    {
+    }
 }

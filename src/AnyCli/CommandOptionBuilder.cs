@@ -21,8 +21,8 @@ public sealed class CommandOptionBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
     /// option name.
     /// </exception>
-    public OptionBuilder AddValue<T>(string name) =>
-        Add(name, typeof(T), typeof(T), takesValue: true, isCollection: false);
+    public OptionBuilder<T> AddValue<T>(string name) =>
+        Add<T>(name, typeof(T), typeof(T), takesValue: true, isCollection: false);
 
     /// <summary>
     /// Adds an option that does not consume a value.
@@ -33,8 +33,8 @@ public sealed class CommandOptionBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
     /// option name.
     /// </exception>
-    public OptionBuilder AddFlag(string name) =>
-        Add(name, typeof(bool), typeof(bool), takesValue: false, isCollection: false);
+    public OptionBuilder<bool> AddFlag(string name) =>
+        Add<bool>(name, typeof(bool), typeof(bool), takesValue: false, isCollection: false);
 
     /// <summary>
     /// Adds an option that can be repeated into a collection.
@@ -46,28 +46,23 @@ public sealed class CommandOptionBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
     /// option name.
     /// </exception>
-    public OptionBuilder AddCollection<T>(string name) =>
-        Add(name, typeof(T), typeof(T[]), takesValue: true, isCollection: true);
+    public OptionBuilder<T[]> AddCollection<T>(string name) =>
+        Add<T[]>(name, typeof(T), typeof(T[]), takesValue: true, isCollection: true);
 
     internal IReadOnlyList<OptionDefinition> Build()
     {
         Validate();
-        return _options.ToArray();
+        return [.. _options];
     }
 
     internal static string NormalizeName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        if (name[0] == '-')
-        {
-            return name;
-        }
-
-        return name.Length == 1 ? "-" + name : "--" + name;
+        return name[0] == '-' ? name : name.Length == 1 ? "-" + name : "--" + name;
     }
 
-    private OptionBuilder Add(
+    private OptionBuilder<TValue> Add<TValue>(
         string name,
         Type valueType,
         Type declaredType,
@@ -84,7 +79,7 @@ public sealed class CommandOptionBuilder
             takesValue,
             isCollection);
         _options.Add(option);
-        return new OptionBuilder(option);
+        return new OptionBuilder<TValue>(option);
     }
 
     private void Validate()

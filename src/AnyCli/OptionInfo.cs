@@ -17,4 +17,15 @@ public sealed record OptionInfo(
     string Description,
     bool IsRequired = false,
     bool TakesValue = false,
-    Type? DeclaredType = null);
+    Type? DeclaredType = null)
+{
+    /// <summary>
+    /// Gets the configured default value, when one is defined.
+    /// </summary>
+    public object? DefaultValue { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the option has a configured default value.
+    /// </summary>
+    public bool HasDefaultValue { get; init; }
+}

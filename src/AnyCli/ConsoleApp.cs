@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections;
+using System.Globalization;
+
 namespace AnyCli;
 
 /// <summary>
@@ -297,7 +300,7 @@ public sealed class ConsoleApp
         var context = new CommandContext(
             path,
             console,
-            new CommandOptionValues(globalOptionValues));
+            CreateGlobalOptionValues(globalOptionValues));
 
         return await ExecuteWithInterceptorsAsync(
                 context,
@@ -352,7 +355,11 @@ public sealed class ConsoleApp
                         argument.Name,
                         argument.Description,
                         argument.DeclaredType,
-                        argument.Arity))],
+                        argument.Arity)
+                    {
+                        DefaultValue = argument.DefaultValue,
+                        HasDefaultValue = argument.HasDefaultValue,
+                    })],
             Options = command is null
                 ? []
                 : [.. command.Options
@@ -361,7 +368,11 @@ public sealed class ConsoleApp
                         option.Description,
                         option.Required,
                         option.TakesValue,
-                        option.DeclaredType))],
+                        option.DeclaredType)
+                    {
+                        DefaultValue = option.DefaultValue,
+                        HasDefaultValue = option.HasDefaultValue,
+                    })],
             Children = [.. node.Children.Select(child => CreateCommandInfo(child, path))],
         };
     }
@@ -413,6 +424,55 @@ public sealed class ConsoleApp
                 CreateCommandInfo(command, [.. commandPath.Take(commandPath.Count - 1)])));
     }
 
+    private CommandOptionValues CreateGlobalOptionValues(
+        IReadOnlyDictionary<string, OptionValue> globalOptionValues)
+    {
+        var defaults = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
+        foreach (var option in _globalOptions)
+        {
+            if (!option.HasDefaultValue || globalOptionValues.ContainsKey(option.Name))
+            {
+                continue;
+            }
+
+            var defaultValue = new OptionValue();
+            AddDefaultValues(defaultValue, option.DefaultValue);
+            defaults[option.Name] = defaultValue;
+        }
+
+        return new CommandOptionValues(globalOptionValues, defaults);
+    }
+
+    private static void AddDefaultValues(OptionValue optionValue, object? value)
+    {
+        if (value is null)
+        {
+            return;
+        }
+
+        if (value is string stringValue)
+        {
+            optionValue.Values.Add(stringValue);
+            return;
+        }
+
+        if (value is IEnumerable enumerable)
+        {
+            foreach (var item in enumerable)
+            {
+                AddDefaultValues(optionValue, item);
+            }
+
+            return;
+        }
+
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture);
+        if (text is not null)
+        {
+            optionValue.Values.Add(text);
+        }
+    }
+
     private void ValidateRequiredGlobalOptions(
         IReadOnlyDictionary<string, OptionValue> globalOptionValues)
     {
@@ -437,7 +497,11 @@ public sealed class ConsoleApp
                 option.Description,
                 option.Required,
                 option.TakesValue,
-                option.DeclaredType));
+                option.DeclaredType)
+            {
+                DefaultValue = option.DefaultValue,
+                HasDefaultValue = option.HasDefaultValue,
+            });
         }
 
         if (_helpProviderFactory is not null) options.Add(new OptionInfo(["-h", "--help"], "Prints help information"));

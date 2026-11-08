@@ -190,7 +190,7 @@ public class OptionParsingTests
 
 public sealed partial class OptionParameters
 {
-    [Option("--config", Required = true)]
+    [RequiredOption("--config")]
     public string Config { get; set; } = "";
 
     [Option("--output", "-o")]

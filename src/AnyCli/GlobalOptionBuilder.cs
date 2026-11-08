@@ -21,7 +21,7 @@ public sealed class GlobalOptionBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
     /// option name.
     /// </exception>
-    public OptionBuilder AddValue<T>(string name) => _options.AddValue<T>(name);
+    public OptionBuilder<T> AddValue<T>(string name) => _options.AddValue<T>(name);
 
     /// <summary>
     /// Adds a global option that does not consume a value.
@@ -32,7 +32,7 @@ public sealed class GlobalOptionBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
     /// option name.
     /// </exception>
-    public OptionBuilder AddFlag(string name) => _options.AddFlag(name);
+    public OptionBuilder<bool> AddFlag(string name) => _options.AddFlag(name);
 
     /// <summary>
     /// Adds a global option that can be repeated into a collection.
@@ -44,7 +44,7 @@ public sealed class GlobalOptionBuilder
     /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
     /// option name.
     /// </exception>
-    public OptionBuilder AddCollection<T>(string name) => _options.AddCollection<T>(name);
+    public OptionBuilder<T[]> AddCollection<T>(string name) => _options.AddCollection<T>(name);
 
     internal IReadOnlyList<OptionDefinition> Build() => _options.Build();
 }

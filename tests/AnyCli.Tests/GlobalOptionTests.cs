@@ -109,6 +109,51 @@ public class GlobalOptionTests
     }
 
     [Test]
+    public async Task GlobalCollectionOptionDefault_IsAvailableOnContext()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithGlobalOptions(options =>
+                options.AddCollection<string>("tag").SetDefaultValue(new[] { "a", "b" }))
+            .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["run"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("none|a,b");
+    }
+
+    [Test]
+    public async Task GlobalOptionDefault_IsAvailableOnContext()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithGlobalOptions(options =>
+                options.AddValue<string>("log-level").SetDefaultValue("information"))
+            .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["run"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("information|");
+    }
+
+    [Test]
+    public async Task ExplicitGlobalOption_OverridesDefault()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithGlobalOptions(options =>
+                options.AddValue<string>("log-level").SetDefaultValue("information"))
+            .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["--log-level", "debug", "run"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("debug|");
+    }
+
+    [Test]
     public async Task RequiredGlobalOption_IsEnforced()
     {
         var app = ConsoleAppBuilder.Create()

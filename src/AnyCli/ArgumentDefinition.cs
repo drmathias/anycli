@@ -19,4 +19,14 @@ internal sealed class ArgumentDefinition(
     public Func<string?> DefaultFactory { get; } = defaultFactory;
 
     public string Description { get; set; } = string.Empty;
+
+    public object? DefaultValue { get; private set; }
+
+    public bool HasDefaultValue { get; private set; }
+
+    public void SetDefaultValue(object? value)
+    {
+        DefaultValue = value;
+        HasDefaultValue = true;
+    }
 }

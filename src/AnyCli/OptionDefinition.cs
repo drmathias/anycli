@@ -32,6 +32,16 @@ internal sealed class OptionDefinition(
 
     public bool IsCollection { get; } = isCollection;
 
+    public object? DefaultValue { get; private set; }
+
+    public bool HasDefaultValue { get; private set; }
+
+    public void SetDefaultValue(object? value)
+    {
+        DefaultValue = value;
+        HasDefaultValue = true;
+    }
+
     public void SetAliases(IReadOnlyList<string> aliases)
     {
         Aliases = aliases;

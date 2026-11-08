@@ -9,8 +9,8 @@ namespace AnyCli;
 /// </summary>
 /// <typeparam name="T">The parsed value type.</typeparam>
 /// <remarks>
-/// Specify an implementation with <see cref="ArgumentAttribute.Parser"/>,
-/// <see cref="VariadicArgumentAttribute.Parser"/>, or <see cref="OptionAttribute.Parser"/>.
+/// Specify an implementation with <see cref="ArgumentAttributeBase.Parser"/> or
+/// <see cref="OptionAttributeBase.Parser"/>.
 /// </remarks>
 public interface IParameterParser<T>
 {
