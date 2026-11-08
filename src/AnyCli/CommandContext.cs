@@ -9,10 +9,14 @@ namespace AnyCli;
 /// </summary>
 public sealed class CommandContext
 {
-    internal CommandContext(string name, IConsole console)
+    internal CommandContext(
+        string name,
+        IConsole console,
+        CommandOptionValues globalOptions)
     {
         Name = name;
         Console = console;
+        GlobalOptions = globalOptions;
     }
 
     /// <summary>
@@ -24,4 +28,9 @@ public sealed class CommandContext
     /// Gets the console used by the command.
     /// </summary>
     public IConsole Console { get; }
+
+    /// <summary>
+    /// Gets the parsed options that apply to every command.
+    /// </summary>
+    public CommandOptionValues GlobalOptions { get; }
 }

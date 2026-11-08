@@ -6,23 +6,90 @@ namespace AnyCli;
 
 internal static class CommandArgumentsParser
 {
-    public static CommandArguments Parse(
-        IReadOnlyList<ArgumentDefinition> definitions,
-        IReadOnlyList<OptionDefinition> optionDefinitions,
-        ReadOnlySpan<string> tokens)
+    public static int ParseLeadingGlobalOptions(
+        IReadOnlyList<OptionDefinition> globalOptionDefinitions,
+        ReadOnlySpan<string> tokens,
+        IDictionary<string, OptionValue> globalValues,
+        bool hasHelp,
+        bool hasVersion,
+        out bool helpRequested,
+        out bool versionRequested)
     {
-        var optionLookup = new Dictionary<string, OptionDefinition>(StringComparer.Ordinal);
-        foreach (var option in optionDefinitions)
+        var optionLookup = CreateOptionLookup([], globalOptionDefinitions);
+        var commandValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
+
+        helpRequested = false;
+        versionRequested = false;
+
+        for (var index = 0; index < tokens.Length; index++)
         {
-            foreach (var name in option.Names)
+            var token = tokens[index];
+
+            if (token == "--")
             {
-                optionLookup[name] = option;
+                return index + 1 < tokens.Length ? index + 1 : -1;
             }
+
+            if (hasHelp && IsHelpFlag(token))
+            {
+                helpRequested = true;
+                continue;
+            }
+
+            if (hasVersion && IsVersionFlag(token))
+            {
+                versionRequested = true;
+                continue;
+            }
+
+            if (token.Length > 1 && token[0] == '-' && token[1] != '-')
+            {
+                index = ParseShortOption(
+                    token,
+                    tokens,
+                    index,
+                    optionLookup,
+                    commandValues,
+                    globalValues);
+                continue;
+            }
+
+            if (token.Length > 2 && token[0] == '-' && token[1] == '-')
+            {
+                ParseLongOption(
+                    token,
+                    tokens,
+                    ref index,
+                    optionLookup,
+                    commandValues,
+                    globalValues);
+                continue;
+            }
+
+            return index;
         }
 
-        var optionValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
+        return -1;
+    }
+
+    public static CommandArguments? Parse(
+        IReadOnlyList<ArgumentDefinition> definitions,
+        IReadOnlyList<OptionDefinition> optionDefinitions,
+        IReadOnlyList<OptionDefinition> globalOptionDefinitions,
+        ReadOnlySpan<string> tokens,
+        IDictionary<string, OptionValue> globalValues,
+        bool hasHelp,
+        bool hasVersion,
+        out bool helpRequested,
+        out bool versionRequested)
+    {
+        var optionLookup = CreateOptionLookup(optionDefinitions, globalOptionDefinitions);
+        var commandOptionValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
         var positionalValues = new List<string>();
         var endOfOptions = false;
+
+        helpRequested = false;
+        versionRequested = false;
 
         for (var index = 0; index < tokens.Length; index++)
         {
@@ -40,6 +107,18 @@ internal static class CommandArgumentsParser
                 continue;
             }
 
+            if (hasHelp && IsHelpFlag(token))
+            {
+                helpRequested = true;
+                return null;
+            }
+
+            if (hasVersion && IsVersionFlag(token))
+            {
+                versionRequested = true;
+                return null;
+            }
+
             if (token.Length > 1 && token[0] == '-' && token[1] != '-')
             {
                 index = ParseShortOption(
@@ -47,13 +126,20 @@ internal static class CommandArgumentsParser
                     tokens,
                     index,
                     optionLookup,
-                    optionValues);
+                    commandOptionValues,
+                    globalValues);
                 continue;
             }
 
             if (token.Length > 2 && token[0] == '-' && token[1] == '-')
             {
-                ParseLongOption(token, tokens, ref index, optionLookup, optionValues);
+                ParseLongOption(
+                    token,
+                    tokens,
+                    ref index,
+                    optionLookup,
+                    commandOptionValues,
+                    globalValues);
                 continue;
             }
 
@@ -62,7 +148,7 @@ internal static class CommandArgumentsParser
 
         foreach (var option in optionDefinitions)
         {
-            if (option.Required && !optionValues.ContainsKey(option.Name))
+            if (option.Required && !commandOptionValues.ContainsKey(option.Name))
             {
                 throw new CommandArgumentException($"Missing required option '{option.Name}'.");
             }
@@ -122,15 +208,44 @@ internal static class CommandArgumentsParser
             arities,
             values,
             supplied,
-            new CommandOptionValues(optionValues));
+            new CommandOptionValues(commandOptionValues));
     }
+
+    private static Dictionary<string, OptionBinding> CreateOptionLookup(
+        IReadOnlyList<OptionDefinition> optionDefinitions,
+        IReadOnlyList<OptionDefinition> globalOptionDefinitions)
+    {
+        var optionLookup = new Dictionary<string, OptionBinding>(StringComparer.Ordinal);
+        foreach (var option in globalOptionDefinitions)
+        {
+            foreach (var name in option.Names)
+            {
+                optionLookup[name] = new OptionBinding(option, IsGlobal: true);
+            }
+        }
+
+        foreach (var option in optionDefinitions)
+        {
+            foreach (var name in option.Names)
+            {
+                optionLookup[name] = new OptionBinding(option, IsGlobal: false);
+            }
+        }
+
+        return optionLookup;
+    }
+
+    private static bool IsHelpFlag(string token) => token is "-h" or "--help";
+
+    private static bool IsVersionFlag(string token) => token is "-v" or "--version";
 
     private static int ParseShortOption(
         string token,
         ReadOnlySpan<string> tokens,
         int index,
-        IReadOnlyDictionary<string, OptionDefinition> optionLookup,
-        IDictionary<string, OptionValue> optionValues)
+        IReadOnlyDictionary<string, OptionBinding> optionLookup,
+        IDictionary<string, OptionValue> commandValues,
+        IDictionary<string, OptionValue> globalValues)
     {
         var equalsIndex = token.IndexOf('=');
         if (equalsIndex >= 0)
@@ -141,23 +256,27 @@ internal static class CommandArgumentsParser
                 throw new CommandArgumentException($"Invalid option '{name}'.");
             }
 
-            if (!optionLookup.TryGetValue(name, out var option))
+            if (!optionLookup.TryGetValue(name, out var binding))
             {
                 throw new CommandArgumentException($"Unknown option '{name}'.");
             }
 
-            AddOptionValue(optionValues, option, token[(equalsIndex + 1)..]);
+            AddOptionValue(
+                commandValues,
+                globalValues,
+                binding,
+                token[(equalsIndex + 1)..]);
             return index;
         }
 
         if (token.Length == 2)
         {
-            if (!optionLookup.TryGetValue(token, out var option))
+            if (!optionLookup.TryGetValue(token, out var binding))
             {
                 throw new CommandArgumentException($"Unknown option '{token}'.");
             }
 
-            if (option.TakesValue)
+            if (binding.Definition.TakesValue)
             {
                 if (index + 1 >= tokens.Length || tokens[index + 1] == "--")
                 {
@@ -165,11 +284,11 @@ internal static class CommandArgumentsParser
                         $"Missing value for option '{token}'.");
                 }
 
-                AddOptionValue(optionValues, option, tokens[++index]);
+                AddOptionValue(commandValues, globalValues, binding, tokens[++index]);
             }
             else
             {
-                AddOptionValue(optionValues, option, null);
+                AddOptionValue(commandValues, globalValues, binding, null);
             }
 
             return index;
@@ -178,18 +297,18 @@ internal static class CommandArgumentsParser
         for (var characterIndex = 1; characterIndex < token.Length; characterIndex++)
         {
             var name = "-" + token[characterIndex];
-            if (!optionLookup.TryGetValue(name, out var option))
+            if (!optionLookup.TryGetValue(name, out var binding))
             {
                 throw new CommandArgumentException($"Unknown option '{name}'.");
             }
 
-            if (option.TakesValue)
+            if (binding.Definition.TakesValue)
             {
                 throw new CommandArgumentException(
                     $"Option '{name}' requires a separate value; use '{name} value' or '{name}=value'.");
             }
 
-            AddOptionValue(optionValues, option, null);
+            AddOptionValue(commandValues, globalValues, binding, null);
         }
 
         return index;
@@ -199,21 +318,26 @@ internal static class CommandArgumentsParser
         string token,
         ReadOnlySpan<string> tokens,
         ref int index,
-        IReadOnlyDictionary<string, OptionDefinition> optionLookup,
-        IDictionary<string, OptionValue> optionValues)
+        IReadOnlyDictionary<string, OptionBinding> optionLookup,
+        IDictionary<string, OptionValue> commandValues,
+        IDictionary<string, OptionValue> globalValues)
     {
         var equalsIndex = token.IndexOf('=');
         var name = equalsIndex >= 0 ? token[..equalsIndex] : token;
-        if (!optionLookup.TryGetValue(name, out var option))
+        if (!optionLookup.TryGetValue(name, out var binding))
         {
             throw new CommandArgumentException($"Unknown option '{name}'.");
         }
 
-        if (option.TakesValue)
+        if (binding.Definition.TakesValue)
         {
             if (equalsIndex >= 0)
             {
-                AddOptionValue(optionValues, option, token[(equalsIndex + 1)..]);
+                AddOptionValue(
+                    commandValues,
+                    globalValues,
+                    binding,
+                    token[(equalsIndex + 1)..]);
                 return;
             }
 
@@ -223,25 +347,28 @@ internal static class CommandArgumentsParser
                     $"Missing value for option '{name}'.");
             }
 
-            AddOptionValue(optionValues, option, tokens[++index]);
+            AddOptionValue(commandValues, globalValues, binding, tokens[++index]);
             return;
         }
 
         AddOptionValue(
-            optionValues,
-            option,
+            commandValues,
+            globalValues,
+            binding,
             equalsIndex >= 0 ? token[(equalsIndex + 1)..] : null);
     }
 
     private static void AddOptionValue(
-        IDictionary<string, OptionValue> optionValues,
-        OptionDefinition option,
+        IDictionary<string, OptionValue> commandValues,
+        IDictionary<string, OptionValue> globalValues,
+        OptionBinding binding,
         string? value)
     {
-        if (!optionValues.TryGetValue(option.Name, out var optionValue))
+        var optionValues = binding.IsGlobal ? globalValues : commandValues;
+        if (!optionValues.TryGetValue(binding.Definition.Name, out var optionValue))
         {
             optionValue = new OptionValue();
-            optionValues[option.Name] = optionValue;
+            optionValues[binding.Definition.Name] = optionValue;
         }
 
         if (value is not null)
@@ -249,4 +376,6 @@ internal static class CommandArgumentsParser
             optionValue.Values.Add(value);
         }
     }
+
+    private readonly record struct OptionBinding(OptionDefinition Definition, bool IsGlobal);
 }

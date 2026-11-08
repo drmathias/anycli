@@ -12,73 +12,42 @@ public sealed class CommandOptionBuilder
     private readonly List<OptionDefinition> _options = [];
 
     /// <summary>
-    /// Adds an option.
+    /// Adds an option that consumes a value.
     /// </summary>
-    /// <typeparam name="T">The option value or collection element type.</typeparam>
+    /// <typeparam name="T">The option value type.</typeparam>
     /// <param name="name">The primary option name.</param>
-    /// <param name="aliases">Additional option names.</param>
-    /// <param name="description">A short description shown in help output.</param>
-    /// <param name="required">Whether the option must be supplied.</param>
-    /// <param name="takesValue">Whether the option consumes a value.</param>
-    /// <param name="isCollection">Whether the option can be repeated into a collection.</param>
-    /// <param name="collectionType">The declared collection type.</param>
-    /// <returns>The current builder.</returns>
+    /// <returns>The option builder.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
     /// option name.
     /// </exception>
-    public CommandOptionBuilder Add<T>(
-        string name,
-        string[]? aliases = null,
-        string description = "",
-        bool required = false,
-        bool takesValue = true,
-        bool isCollection = false,
-        Type? collectionType = null)
-    {
-        var normalizedName = NormalizeName(name);
-        var normalizedAliases = (aliases ?? [])
-            .Select(NormalizeName)
-            .ToArray();
-        var declaredType = isCollection
-            ? collectionType ?? typeof(T[])
-            : typeof(T);
-
-        _options.Add(new OptionDefinition(
-            normalizedName,
-            normalizedAliases,
-            description,
-            typeof(T),
-            declaredType,
-            required,
-            takesValue,
-            isCollection));
-        return this;
-    }
+    public OptionBuilder AddValue<T>(string name) =>
+        Add(name, typeof(T), typeof(T), takesValue: true, isCollection: false);
 
     /// <summary>
-    /// Sets the description of the most recently added option.
+    /// Adds an option that does not consume a value.
     /// </summary>
-    /// <param name="description">The option description.</param>
-    /// <returns>The current builder.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="description"/> is <see langword="null"/>.
+    /// <param name="name">The primary option name.</param>
+    /// <returns>The option builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
+    /// option name.
     /// </exception>
-    /// <exception cref="InvalidOperationException">
-    /// No option has been added.
+    public OptionBuilder AddFlag(string name) =>
+        Add(name, typeof(bool), typeof(bool), takesValue: false, isCollection: false);
+
+    /// <summary>
+    /// Adds an option that can be repeated into a collection.
+    /// </summary>
+    /// <typeparam name="T">The collection element type.</typeparam>
+    /// <param name="name">The primary option name.</param>
+    /// <returns>The option builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, whitespace, or not a valid
+    /// option name.
     /// </exception>
-    public CommandOptionBuilder Describe(string description)
-    {
-        ArgumentNullException.ThrowIfNull(description);
-
-        if (_options.Count == 0)
-        {
-            throw new InvalidOperationException("No option has been added.");
-        }
-
-        _options[^1].Description = description;
-        return this;
-    }
+    public OptionBuilder AddCollection<T>(string name) =>
+        Add(name, typeof(T), typeof(T[]), takesValue: true, isCollection: true);
 
     internal IReadOnlyList<OptionDefinition> Build()
     {
@@ -86,7 +55,7 @@ public sealed class CommandOptionBuilder
         return _options.ToArray();
     }
 
-    private static string NormalizeName(string name)
+    internal static string NormalizeName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
@@ -96,6 +65,26 @@ public sealed class CommandOptionBuilder
         }
 
         return name.Length == 1 ? "-" + name : "--" + name;
+    }
+
+    private OptionBuilder Add(
+        string name,
+        Type valueType,
+        Type declaredType,
+        bool takesValue,
+        bool isCollection)
+    {
+        var option = new OptionDefinition(
+            NormalizeName(name),
+            [],
+            string.Empty,
+            valueType,
+            declaredType,
+            required: false,
+            takesValue,
+            isCollection);
+        _options.Add(option);
+        return new OptionBuilder(option);
     }
 
     private void Validate()

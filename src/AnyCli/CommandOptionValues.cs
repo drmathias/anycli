@@ -23,8 +23,7 @@ public sealed class CommandOptionValues
     /// <returns><see langword="true"/> when the option was supplied; otherwise, <see langword="false"/>.</returns>
     public bool Has(string name)
     {
-        ArgumentNullException.ThrowIfNull(name);
-        return _values.ContainsKey(name);
+        return _values.ContainsKey(NormalizeName(name));
     }
 
     /// <summary>
@@ -38,9 +37,7 @@ public sealed class CommandOptionValues
     /// <returns><see langword="true"/> when the option was supplied; otherwise, <see langword="false"/>.</returns>
     public bool TryGetValue(string name, out string? value)
     {
-        ArgumentNullException.ThrowIfNull(name);
-
-        if (!_values.TryGetValue(name, out var option))
+        if (!_values.TryGetValue(NormalizeName(name), out var option))
         {
             value = null;
             return false;
@@ -57,7 +54,17 @@ public sealed class CommandOptionValues
     /// <returns>The supplied values, or an empty list when the option was not supplied.</returns>
     public IReadOnlyList<string> GetValues(string name)
     {
+        return _values.TryGetValue(NormalizeName(name), out var option) ? option.Values : [];
+    }
+
+    private static string NormalizeName(string name)
+    {
         ArgumentNullException.ThrowIfNull(name);
-        return _values.TryGetValue(name, out var option) ? option.Values : [];
+
+        return name.Length == 0 || name[0] == '-'
+            ? name
+            : name.Length == 1
+                ? "-" + name
+                : "--" + name;
     }
 }

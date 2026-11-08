@@ -15,6 +15,7 @@ public sealed class ConsoleAppBuilder
     private readonly Dictionary<string, CommandRegistration> _commands = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, CommandInfo> _commandInfos = new(StringComparer.Ordinal);
+    private readonly GlobalOptionBuilder _globalOptions = new();
     private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private IServiceProvider? _serviceProvider;
     private Func<IServiceProvider?, IUnrecognizedCommandHandler> _unrecognizedCommandHandlerFactory =
@@ -60,6 +61,21 @@ public sealed class ConsoleAppBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
         _version = version;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures options that apply to every command.
+    /// </summary>
+    /// <param name="configure">The global option configuration callback.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configure"/> is <see langword="null"/>.
+    /// </exception>
+    public ConsoleAppBuilder WithGlobalOptions(Action<GlobalOptionBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure.Invoke(_globalOptions);
         return this;
     }
 
@@ -420,16 +436,66 @@ public sealed class ConsoleAppBuilder
     /// Creates the configured application.
     /// </summary>
     /// <returns>A new <see cref="ConsoleApp"/> instance.</returns>
-    public ConsoleApp Build() =>
-        new(
+    public ConsoleApp Build()
+    {
+        var globalOptions = _globalOptions.Build();
+        ValidateGlobalOptions(globalOptions);
+
+        return new ConsoleApp(
             _name,
             _version,
             new Dictionary<string, CommandRegistration>(_commands, StringComparer.Ordinal),
             [.. _commandInfos.Values],
+            globalOptions,
             _serviceProvider,
             _helpProviderFactory,
             _unrecognizedCommandHandlerFactory,
             _unrecognizedCommandExitCode);
+    }
+
+    private void ValidateGlobalOptions(IReadOnlyList<OptionDefinition> globalOptions)
+    {
+        if (globalOptions.Count == 0)
+        {
+            return;
+        }
+
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var option in globalOptions)
+        {
+            foreach (var name in option.Names)
+            {
+                names.Add(name);
+
+                if (_helpProviderFactory is not null && (name is "-h" or "--help"))
+                {
+                    throw new InvalidOperationException(
+                        $"Global option '{name}' conflicts with a built-in help option.");
+                }
+
+                if (_version is not null && (name is "-v" or "--version"))
+                {
+                    throw new InvalidOperationException(
+                        $"Global option '{name}' conflicts with a built-in version option.");
+                }
+            }
+        }
+
+        foreach (var command in _commands)
+        {
+            foreach (var option in command.Value.Options)
+            {
+                foreach (var name in option.Names)
+                {
+                    if (names.Contains(name))
+                    {
+                        throw new InvalidOperationException(
+                            $"Global option '{name}' conflicts with an option on command '{command.Key}'.");
+                    }
+                }
+            }
+        }
+    }
 
     private static SettingsDefinitions BuildSettingsDefinitions<TSettings>()
         where TSettings : class, ICommandSettings<TSettings>

@@ -14,6 +14,7 @@ public sealed class ConsoleApp
 {
     private readonly Dictionary<string, CommandRegistration> _commands;
     private readonly IReadOnlyList<CommandInfo> _commandInfos;
+    private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private readonly string? _name;
     private readonly IServiceProvider? _serviceProvider;
@@ -26,6 +27,7 @@ public sealed class ConsoleApp
         string? version,
         Dictionary<string, CommandRegistration> commands,
         IReadOnlyList<CommandInfo> commandInfos,
+        IReadOnlyList<OptionDefinition> globalOptions,
         IServiceProvider? serviceProvider,
         Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
         Func<IServiceProvider?, IUnrecognizedCommandHandler> unrecognizedCommandHandlerFactory,
@@ -35,6 +37,7 @@ public sealed class ConsoleApp
         _version = version;
         _commands = commands;
         _commandInfos = commandInfos;
+        _globalOptions = globalOptions;
         _serviceProvider = serviceProvider;
         _helpProviderFactory = helpProviderFactory;
         _unrecognizedCommandHandlerFactory = unrecognizedCommandHandlerFactory;
@@ -81,53 +84,73 @@ public sealed class ConsoleApp
         ArgumentNullException.ThrowIfNull(console);
 
         var outputWriter = console.Output;
+        var globalOptionValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
+        var commandIndex = CommandArgumentsParser.ParseLeadingGlobalOptions(
+            _globalOptions,
+            args,
+            globalOptionValues,
+            _helpProviderFactory is not null,
+            _version is not null,
+            out var leadingHelpRequested,
+            out var leadingVersionRequested);
 
-        if (IsVersionRequest(args))
+        if (leadingVersionRequested)
         {
             outputWriter.WriteLine(_version);
             return 0;
         }
 
-        if (_helpProviderFactory is not null && IsHelpRequest(args))
+        if (leadingHelpRequested)
         {
-            var helpProvider = _helpProviderFactory(_serviceProvider);
-            if (args.Length == 1)
-            {
-                helpProvider.WriteRootHelp(
-                    new RootHelpContext(
-                        _name ?? string.Empty,
-                        console,
-                        GetOptions(),
-                        _commandInfos));
-            }
-            else
-            {
-                var helpCommand = _commandInfos.First(info => info.Name == args[0]);
-                helpProvider.WriteCommandHelp(
-                    new CommandHelpContext(
-                        _name ?? string.Empty,
-                        console,
-                        GetOptions(),
-                        helpCommand));
-            }
-
+            WriteRootHelp(console);
             return 0;
         }
 
-        if (args.Length >= 1 && _commands.TryGetValue(args[0], out var command))
+        var commandName = commandIndex >= 0 && commandIndex < args.Length
+            ? args[commandIndex]
+            : string.Empty;
+
+        if (commandIndex >= 0 && _commands.TryGetValue(args[commandIndex], out var command))
         {
             var arguments = CommandArgumentsParser.Parse(
                 command.Arguments,
                 command.Options,
-                args.AsSpan(1));
+                _globalOptions,
+                args.AsSpan(commandIndex + 1),
+                globalOptionValues,
+                _helpProviderFactory is not null,
+                _version is not null,
+                out var helpRequested,
+                out var versionRequested);
+
+            if (versionRequested)
+            {
+                outputWriter.WriteLine(_version);
+                return 0;
+            }
+
+            if (helpRequested)
+            {
+                WriteCommandHelp(console, commandName);
+                return 0;
+            }
+
+            ValidateRequiredGlobalOptions(globalOptionValues);
+
             return await command.Execute
-                .Invoke(_serviceProvider, new CommandContext(args[0], console), arguments)
+                .Invoke(
+                    _serviceProvider,
+                    new CommandContext(
+                        commandName,
+                        console,
+                        new CommandOptionValues(globalOptionValues)),
+                    arguments!)
                 .ConfigureAwait(false);
         }
 
         var context = new UnrecognizedCommandContext(
             _name,
-            args.Length >= 1 ? args[0] : string.Empty,
+            commandName,
             [.. _commandInfos.Select(info => info.Name)],
             console);
 
@@ -135,18 +158,53 @@ public sealed class ConsoleApp
         return _unrecognizedCommandExitCode;
     }
 
-    private static bool IsVersionRequest(string[] args) =>
-        args.Length == 1 && args[0] is "--version" or "-v";
+    private void WriteRootHelp(IConsole console)
+    {
+        _helpProviderFactory!(_serviceProvider).WriteRootHelp(
+            new RootHelpContext(
+                _name ?? string.Empty,
+                console,
+                GetOptions(),
+                _commandInfos));
+    }
 
-    private bool IsHelpRequest(string[] args) =>
-        (args.Length == 1 && IsHelpFlag(args[0])) ||
-        (args.Length == 2 && _commands.ContainsKey(args[0]) && IsHelpFlag(args[1]));
+    private void WriteCommandHelp(IConsole console, string commandName)
+    {
+        var command = _commandInfos.First(info => info.Name == commandName);
+        _helpProviderFactory!(_serviceProvider).WriteCommandHelp(
+            new CommandHelpContext(
+                _name ?? string.Empty,
+                console,
+                GetOptions(),
+                command));
+    }
 
-    private static bool IsHelpFlag(string arg) => arg is "-h" or "--help";
+    private void ValidateRequiredGlobalOptions(
+        IReadOnlyDictionary<string, OptionValue> globalOptionValues)
+    {
+        foreach (var option in _globalOptions)
+        {
+            if (option.Required && !globalOptionValues.ContainsKey(option.Name))
+            {
+                throw new CommandArgumentException(
+                    $"Missing required option '{option.Name}'.");
+            }
+        }
+    }
 
     private List<OptionInfo> GetOptions()
     {
-        var options = new List<OptionInfo>(2);
+        var options = new List<OptionInfo>(_globalOptions.Count + 2);
+
+        foreach (var option in _globalOptions)
+        {
+            options.Add(new OptionInfo(
+                option.Names,
+                option.Description,
+                option.Required,
+                option.TakesValue,
+                option.DeclaredType));
+        }
 
         if (_helpProviderFactory is not null) options.Add(new OptionInfo(["-h", "--help"], "Prints help information"));
         if (_version is not null) options.Add(new OptionInfo(["-v", "--version"], "Prints version information"));

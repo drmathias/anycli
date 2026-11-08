@@ -340,7 +340,6 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         ITypeSymbol argumentType;
         ITypeSymbol valueType;
         string elementTypeFullName;
-        string collectionTypeFullName;
         bool isFlag;
 
         if (isCollection)
@@ -348,7 +347,6 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             argumentType = elementType;
             valueType = UnwrapNullable(elementType);
             elementTypeFullName = GetTypeName(elementType);
-            collectionTypeFullName = GetTypeName(property.Type);
             isFlag = false;
         }
         else
@@ -356,7 +354,6 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             argumentType = property.Type;
             valueType = UnwrapNullable(property.Type);
             elementTypeFullName = GetTypeName(property.Type);
-            collectionTypeFullName = elementTypeFullName;
             isFlag = valueType.SpecialType == SpecialType.System_Boolean;
         }
 
@@ -392,7 +389,6 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             isFlag,
             isCollection,
             elementTypeFullName,
-            collectionTypeFullName,
             collectionKind,
             parsePlan);
     }
@@ -760,26 +756,68 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
             }
         }
 
+        var optionIndex = 0;
         foreach (var option in model.Options)
         {
+            var local = "__option" + optionIndex++;
+
             source.Append(indent)
-                .Append("        settings.Options.Add<")
-                .Append(option.ElementTypeFullName)
-                .Append(">(")
-                .Append(SymbolDisplay.FormatLiteral(option.Name, true))
-                .Append(", ")
-                .Append(GetStringArrayExpression(option.Aliases))
-                .Append(", ")
-                .Append(SymbolDisplay.FormatLiteral(option.Description, true))
-                .Append(", required: ")
-                .Append(option.Required ? "true" : "false")
-                .Append(", takesValue: ")
-                .Append(option.IsFlag ? "false" : "true")
-                .Append(", isCollection: ")
-                .Append(option.IsCollection ? "true" : "false")
-                .Append(", collectionType: typeof(")
-                .Append(option.CollectionTypeFullName)
-                .AppendLine("));");
+                .Append("        var ")
+                .Append(local)
+                .Append(" = settings.Options.");
+
+            if (option.IsFlag)
+            {
+                source.Append("AddFlag(")
+                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
+                    .Append(')');
+            }
+            else if (option.IsCollection)
+            {
+                source.Append("AddCollection<")
+                    .Append(option.ElementTypeFullName)
+                    .Append(">(")
+                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
+                    .Append(')');
+            }
+            else
+            {
+                source.Append("AddValue<")
+                    .Append(option.ElementTypeFullName)
+                    .Append(">(")
+                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
+                    .Append(')');
+            }
+
+            source.AppendLine(";");
+
+            if (option.Aliases.Count > 0)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .Append(".SetAliases(")
+                    .Append(GetStringArrayExpression(option.Aliases))
+                    .AppendLine(");");
+            }
+
+            if (option.Description.Length > 0)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .Append(".SetDescription(")
+                    .Append(SymbolDisplay.FormatLiteral(option.Description, true))
+                    .AppendLine(");");
+            }
+
+            if (option.Required)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .AppendLine(".SetRequired();");
+            }
         }
 
         source.Append(indent).AppendLine("    }");
@@ -1050,7 +1088,6 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         bool isFlag,
         bool isCollection,
         string elementTypeFullName,
-        string collectionTypeFullName,
         VariadicCollectionKind collectionKind,
         ParsePlan parsePlan)
     {
@@ -1069,8 +1106,6 @@ public sealed class CommandSettingsGenerator : IIncrementalGenerator
         public bool IsCollection { get; } = isCollection;
 
         public string ElementTypeFullName { get; } = elementTypeFullName;
-
-        public string CollectionTypeFullName { get; } = collectionTypeFullName;
 
         public VariadicCollectionKind CollectionKind { get; } = collectionKind;
 

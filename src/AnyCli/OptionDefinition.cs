@@ -16,9 +16,9 @@ internal sealed class OptionDefinition(
 {
     public string Name { get; } = name;
 
-    public IReadOnlyList<string> Aliases { get; } = aliases;
+    public IReadOnlyList<string> Aliases { get; private set; } = aliases;
 
-    public IReadOnlyList<string> Names { get; } = [name, .. aliases];
+    public IReadOnlyList<string> Names { get; private set; } = [name, .. aliases];
 
     public string Description { get; set; } = description;
 
@@ -26,9 +26,15 @@ internal sealed class OptionDefinition(
 
     public Type DeclaredType { get; } = declaredType;
 
-    public bool Required { get; } = required;
+    public bool Required { get; set; } = required;
 
     public bool TakesValue { get; } = takesValue;
 
     public bool IsCollection { get; } = isCollection;
+
+    public void SetAliases(IReadOnlyList<string> aliases)
+    {
+        Aliases = aliases;
+        Names = [Name, .. aliases];
+    }
 }
