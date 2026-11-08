@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-using AnyCli;
 using AnyCli.Tests.Fixtures;
 
 [assembly: EnumParameterParser<AnyCli.Tests.TestEnumParameterParser>]

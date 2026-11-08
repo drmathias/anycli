@@ -18,7 +18,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -39,7 +41,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -63,7 +67,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed class NotAParser
             {
@@ -89,7 +95,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -111,7 +119,9 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System;
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             [assembly: ParameterValueParser<Widget, WidgetParser>]
 
@@ -154,7 +164,9 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System;
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             [assembly: ParameterValueParser<Widget, WidgetParser1>]
             [assembly: ParameterValueParser<Widget, WidgetParser2>]
@@ -194,7 +206,9 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System;
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             [assembly: EnumParameterParser<ModeParser>]
 
@@ -239,7 +253,9 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System.Collections.Generic;
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class A
             {
@@ -293,7 +309,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -314,7 +332,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -335,7 +355,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -356,7 +378,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -377,7 +401,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -399,7 +425,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -424,7 +452,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -449,7 +479,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -471,7 +503,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -493,7 +527,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -515,7 +551,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -537,7 +575,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -562,7 +602,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public enum Mode
             {
@@ -599,7 +641,9 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class BadParameters
             {
@@ -621,7 +665,9 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System.Collections.Generic;
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public sealed partial class GoodParameters
             {
@@ -658,7 +704,9 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System;
-            using AnyCli;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
 
             public enum Mode
             {

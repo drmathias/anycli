@@ -4,7 +4,6 @@
 
 using System.Globalization;
 
-using AnyCli;
 using AnyCli.Tests.Fixtures;
 
 [assembly: ParameterValueParser<AnyCli.Tests.RegisteredWidget, AnyCli.Tests.RegisteredWidgetParser>]

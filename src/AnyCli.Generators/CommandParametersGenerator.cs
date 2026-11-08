@@ -16,11 +16,11 @@ namespace AnyCli.Generators;
 [Generator(LanguageNames.CSharp)]
 public sealed class CommandParametersGenerator : IIncrementalGenerator
 {
-    private const string ArgumentAttributeName = "AnyCli.ArgumentAttribute";
-    private const string OptionalArgumentAttributeName = "AnyCli.OptionalArgumentAttribute";
-    private const string VariadicArgumentAttributeName = "AnyCli.VariadicArgumentAttribute";
-    private const string OptionAttributeName = "AnyCli.OptionAttribute";
-    private const string RequiredOptionAttributeName = "AnyCli.RequiredOptionAttribute";
+    private const string ArgumentAttributeName = "AnyCli.Parameters.Arguments.ArgumentAttribute";
+    private const string OptionalArgumentAttributeName = "AnyCli.Parameters.Arguments.OptionalArgumentAttribute";
+    private const string VariadicArgumentAttributeName = "AnyCli.Parameters.Arguments.VariadicArgumentAttribute";
+    private const string OptionAttributeName = "AnyCli.Parameters.Options.OptionAttribute";
+    private const string RequiredOptionAttributeName = "AnyCli.Parameters.Options.RequiredOptionAttribute";
     private const string ParametersInterfaceName = "ICommandParameters`1";
     private const string ParameterValueParserAttributeName = "ParameterValueParserAttribute`2";
     private const string EnumParameterParserAttributeName = "EnumParameterParserAttribute`1";
@@ -1124,7 +1124,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         return parser.AllInterfaces.Any(
             currentInterface =>
                 currentInterface.OriginalDefinition.MetadataName == ParameterParserInterfaceName &&
-                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli" &&
+                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli.Parameters.Parsing" &&
                 currentInterface.TypeArguments.Length == 1 &&
                 SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], valueType));
     }
@@ -1152,7 +1152,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             var attributeClass = attribute.AttributeClass;
             if (attributeClass is null ||
                 !attributeClass.IsGenericType ||
-                attributeClass.OriginalDefinition.ContainingNamespace.ToDisplayString() != "AnyCli")
+                attributeClass.OriginalDefinition.ContainingNamespace.ToDisplayString() != "AnyCli.Parameters.Parsing")
             {
                 continue;
             }
@@ -1219,7 +1219,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         type.AllInterfaces.Any(
             currentInterface =>
                 currentInterface.OriginalDefinition.MetadataName == ParametersInterfaceName &&
-                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli" &&
+                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli.Parameters.Binding" &&
                 currentInterface.TypeArguments.Length == 1 &&
                 SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], type));
 
@@ -1275,13 +1275,13 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         if (!model.ImplementsParametersInterface)
         {
-            source.Append(" : global::AnyCli.ICommandParameters<").Append(model.FullTypeName).Append('>');
+            source.Append(" : global::AnyCli.Parameters.Binding.ICommandParameters<").Append(model.FullTypeName).Append('>');
         }
 
         source.AppendLine();
         source.Append(indent).AppendLine("{");
 
-        source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.CommandParameterDefinitionBuilder parameters)");
+        source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.Parameters.Binding.CommandParameterDefinitionBuilder parameters)");
         source.Append(indent).AppendLine("    {");
         foreach (var argument in model.Arguments)
         {
@@ -1407,7 +1407,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         source.Append(indent)
             .Append("    public static ")
             .Append(model.FullTypeName)
-            .AppendLine(" Bind(global::AnyCli.ParsedCommandParameters parameterValues)");
+            .AppendLine(" Bind(global::AnyCli.Parameters.Binding.ParsedCommandParameters parameterValues)");
         source.Append(indent).AppendLine("    {");
         source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
 
@@ -1696,9 +1696,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private static string GetVariadicArityExpression(int minimumCount) =>
         minimumCount switch
         {
-            0 => "global::AnyCli.ArgumentArity.ZeroOrMore",
-            1 => "global::AnyCli.ArgumentArity.OneOrMore",
-            _ => $"new global::AnyCli.ArgumentArity({minimumCount}, global::System.Int32.MaxValue)",
+            0 => "global::AnyCli.Parameters.Arguments.ArgumentArity.ZeroOrMore",
+            1 => "global::AnyCli.Parameters.Arguments.ArgumentArity.OneOrMore",
+            _ => $"new global::AnyCli.Parameters.Arguments.ArgumentArity({minimumCount}, global::System.Int32.MaxValue)",
         };
 
     private static string GetCollectionExpression(
@@ -1722,19 +1722,19 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         {
             ParseKind.String => rawExpression,
             ParseKind.Enum =>
-                $"global::AnyCli.ParameterValueParsing.ParseEnum<{parsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseEnum<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, {literalName})",
             ParseKind.EnumCustom =>
-                $"global::AnyCli.ParameterValueParsing.ParseEnumCustom<{parsePlan.ValueTypeFullName}, " +
+                $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseEnumCustom<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName})",
             ParseKind.SpanParsable =>
-                $"global::AnyCli.ParameterValueParsing.ParseSpanParsable<{parsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseSpanParsable<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             ParseKind.Parsable =>
-                $"global::AnyCli.ParameterValueParsing.ParseParsable<{parsePlan.ValueTypeFullName}>(" +
+                $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseParsable<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             ParseKind.Custom =>
-                $"global::AnyCli.ParameterValueParsing.ParseCustom<{parsePlan.ValueTypeFullName}, " +
+                $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseCustom<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, " +
                 $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
             _ => throw new InvalidOperationException("Unknown parse kind."),
