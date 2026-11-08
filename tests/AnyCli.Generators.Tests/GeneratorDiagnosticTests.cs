@@ -373,6 +373,191 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task ReportsNegativeArgumentPosition()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Argument(-1)]
+                public string Value { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI007");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Value");
+        await Assert.That(diagnostic.GetMessage()).Contains("-1");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsDuplicateArgumentPositions()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Argument(0)]
+                public string First { get; set; } = "";
+
+                [Argument(0)]
+                public string Second { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI007");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Second");
+        await Assert.That(diagnostic.GetMessage()).Contains("0");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsNonContiguousArgumentPositions()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Argument(0)]
+                public string First { get; set; } = "";
+
+                [Argument(2)]
+                public string Third { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI007");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Third");
+        await Assert.That(diagnostic.GetMessage()).Contains("2");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsInvalidOptionName()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Option("--bad name")]
+                public string Output { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI009");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Output");
+        await Assert.That(diagnostic.GetMessage()).Contains("--bad name");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsInvalidShortOptionName()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Option("-output")]
+                public string Output { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI009");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Output");
+        await Assert.That(diagnostic.GetMessage()).Contains("-output");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsInvalidOptionAlias()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Option("--output", "-o", "bad alias")]
+                public string Output { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI013");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Output");
+        await Assert.That(diagnostic.GetMessage()).Contains("bad alias");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsDuplicateOptionNames()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Option("--output", "-o", "-o")]
+                public string Output { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI014");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Output");
+        await Assert.That(diagnostic.GetMessage()).Contains("-o");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsDuplicateOptionNamesAcrossProperties()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli;
+
+            public sealed partial class BadParameters
+            {
+                [Option("--output")]
+                public string Output { get; set; } = "";
+
+                [Option("-o", "--output")]
+                public string SecondOutput { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI014");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("SecondOutput");
+        await Assert.That(diagnostic.GetMessage()).Contains("--output");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task GeneratesTypedDefaults()
     {
         var result = RunGenerator(

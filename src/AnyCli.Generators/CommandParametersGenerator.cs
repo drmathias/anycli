@@ -81,6 +81,42 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor InvalidOptionNameDiagnostic = new(
+        id: "ANYCLI009",
+        title: "Invalid option name",
+        messageFormat:
+            "Option property '{0}' has invalid option name '{1}'; use a short name such as '-o' or a long name such as '--output'",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidArgumentPositionDiagnostic = new(
+        id: "ANYCLI007",
+        title: "Invalid argument position",
+        messageFormat:
+            "Argument property '{0}' has invalid position {1}; argument positions must be unique, non-negative, and contiguous starting at 0",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidOptionAliasDiagnostic = new(
+        id: "ANYCLI013",
+        title: "Invalid option alias",
+        messageFormat:
+            "Option property '{0}' has invalid alias '{1}'; use a short name such as '-o' or a long name such as '--output'",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateOptionNameDiagnostic = new(
+        id: "ANYCLI014",
+        title: "Duplicate option name",
+        messageFormat:
+            "Option property '{0}' uses option name or alias '{1}' more than once",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     private static readonly DiagnosticDescriptor InvalidCollectionDefaultValueDiagnostic = new(
         id: "ANYCLI010",
         title: "Invalid collection default value",
@@ -183,7 +219,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             compilation,
             cancellationToken);
         var arguments = new List<ArgumentModel>();
+        var argumentPositions = new List<(int Position, Location Location, string PropertyName)>();
         var options = new List<OptionModel>();
+        var optionNames = new HashSet<string>(StringComparer.Ordinal);
         var diagnostics = new List<DiagnosticModel>();
         foreach (var property in GetParameterProperties(type, compilation))
         {
@@ -208,6 +246,17 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     if (option is not null)
                     {
                         options.Add(option);
+                        foreach (var optionName in option.Names)
+                        {
+                            if (!optionNames.Add(optionName))
+                            {
+                                diagnostics.Add(new DiagnosticModel(
+                                    DuplicateOptionNameDiagnostic,
+                                    GetLocation(property),
+                                    property.Name,
+                                    optionName));
+                            }
+                        }
                     }
 
                     continue;
@@ -225,6 +274,20 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 {
                     return null;
                 }
+
+                var location = GetLocation(property);
+                if (position < 0 ||
+                    argumentPositions.Any(existing => existing.Position == position))
+                {
+                    diagnostics.Add(new DiagnosticModel(
+                        InvalidArgumentPositionDiagnostic,
+                        location,
+                        property.Name,
+                        position));
+                    continue;
+                }
+
+                argumentPositions.Add((position, location, property.Name));
 
                 var name = ToCamelCase(property.Name);
                 var description = string.Empty;
@@ -373,6 +436,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             }
         }
 
+        ValidateArgumentPositions(argumentPositions, diagnostics);
+
         return arguments.Count == 0 && options.Count == 0 && diagnostics.Count == 0
             ? null
             : new ParametersModel(
@@ -386,6 +451,27 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 [.. arguments.OrderBy(argument => argument.Position)],
                 [.. options],
                 [.. diagnostics]);
+    }
+
+    private static void ValidateArgumentPositions(
+        IReadOnlyList<(int Position, Location Location, string PropertyName)> positions,
+        List<DiagnosticModel> diagnostics)
+    {
+        var expectedPosition = 0;
+        foreach (var (position, location, propertyName) in positions.OrderBy(item => item.Position))
+        {
+            if (position != expectedPosition)
+            {
+                diagnostics.Add(new DiagnosticModel(
+                    InvalidArgumentPositionDiagnostic,
+                    location,
+                    propertyName,
+                    position));
+                return;
+            }
+
+            expectedPosition++;
+        }
     }
 
     private static IReadOnlyList<AttributeData> GetParameterAttributes(IPropertySymbol property)
@@ -465,30 +551,75 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         List<DiagnosticModel> diagnostics)
     {
         var name = "--" + ToKebabCase(property.Name);
-        var aliases = new List<string>();
-        if (attribute.ConstructorArguments.Length > 0 &&
-            attribute.ConstructorArguments[0].Value is string explicitName)
+        if (attribute.ConstructorArguments.Length > 0)
         {
-            name = NormalizeOptionName(explicitName);
+            var explicitName = attribute.ConstructorArguments[0].Value as string;
+            if (!TryNormalizeOptionName(explicitName, out name))
+            {
+                diagnostics.Add(new DiagnosticModel(
+                    InvalidOptionNameDiagnostic,
+                    GetLocation(property),
+                    property.Name,
+                    explicitName ?? "<null>"));
+                return null;
+            }
         }
 
+        var aliases = new List<string>();
+        var hasInvalidAlias = false;
         for (var argumentIndex = 1; argumentIndex < attribute.ConstructorArguments.Length; argumentIndex++)
         {
             var argument = attribute.ConstructorArguments[argumentIndex];
             if (argument.Kind == TypedConstantKind.Array)
             {
+                if (argument.IsNull)
+                {
+                    diagnostics.Add(new DiagnosticModel(
+                        InvalidOptionAliasDiagnostic,
+                        GetLocation(property),
+                        property.Name,
+                        "<null>"));
+                    hasInvalidAlias = true;
+                    continue;
+                }
+
                 foreach (var aliasValue in argument.Values)
                 {
-                    if (aliasValue.Value is string alias)
+                    if (aliasValue.Value is string alias &&
+                        TryNormalizeOptionName(alias, out var normalizedAlias))
                     {
-                        aliases.Add(NormalizeOptionName(alias));
+                        aliases.Add(normalizedAlias);
+                    }
+                    else
+                    {
+                        diagnostics.Add(new DiagnosticModel(
+                            InvalidOptionAliasDiagnostic,
+                            GetLocation(property),
+                            property.Name,
+                            aliasValue.Value as string ?? "<null>"));
+                        hasInvalidAlias = true;
                     }
                 }
             }
-            else if (argument.Value is string alias)
+            else if (argument.Value is string alias &&
+                     TryNormalizeOptionName(alias, out var normalizedAlias))
             {
-                aliases.Add(NormalizeOptionName(alias));
+                aliases.Add(normalizedAlias);
             }
+            else
+            {
+                diagnostics.Add(new DiagnosticModel(
+                    InvalidOptionAliasDiagnostic,
+                    GetLocation(property),
+                    property.Name,
+                    argument.Value as string ?? "<null>"));
+                hasInvalidAlias = true;
+            }
+        }
+
+        if (hasInvalidAlias)
+        {
+            return null;
         }
 
         var description = string.Empty;
@@ -766,14 +897,69 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             useHexadecimalNumbers: false);
     }
 
-    private static string NormalizeOptionName(string name)
+    private static bool TryNormalizeOptionName(string? name, out string normalizedName)
     {
-        if (name.Length == 0 || name[0] == '-')
+        normalizedName = string.Empty;
+        if (name is null ||
+            string.IsNullOrWhiteSpace(name) ||
+            !string.Equals(name, name.Trim(), StringComparison.Ordinal))
         {
-            return name;
+            return false;
         }
 
-        return name.Length == 1 ? "-" + name : "--" + name;
+        normalizedName = name[0] == '-'
+            ? name
+            : name.Length == 1
+                ? "-" + name
+                : "--" + name;
+
+        if (normalizedName.Length < 2)
+        {
+            return false;
+        }
+
+        if (normalizedName[1] == '-')
+        {
+            return normalizedName.Length > 2 &&
+                   IsValidLongOptionBody(normalizedName.Substring(2));
+        }
+
+        return normalizedName.Length == 2 &&
+               char.IsLetterOrDigit(normalizedName[1]);
+    }
+
+    private static bool IsValidLongOptionBody(string body)
+    {
+        if (body.Length == 0 ||
+            body[0] == '-' ||
+            body[body.Length - 1] == '-')
+        {
+            return false;
+        }
+
+        var previousWasHyphen = false;
+        foreach (var character in body)
+        {
+            if (character == '-')
+            {
+                if (previousWasHyphen)
+                {
+                    return false;
+                }
+
+                previousWasHyphen = true;
+                continue;
+            }
+
+            if (!char.IsLetterOrDigit(character) && character != '_')
+            {
+                return false;
+            }
+
+            previousWasHyphen = false;
+        }
+
+        return true;
     }
 
     private static string ToKebabCase(string value)
@@ -1570,6 +1756,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         public string Name { get; } = name;
 
         public IReadOnlyList<string> Aliases { get; } = aliases;
+
+        public IReadOnlyList<string> Names { get; } = [name, .. aliases];
 
         public string Description { get; } = description;
 
