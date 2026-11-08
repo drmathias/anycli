@@ -10,11 +10,12 @@ namespace AnyCli;
 public sealed class CommandContext
 {
     internal CommandContext(
-        string name,
+        IReadOnlyList<string> commandPath,
         IConsole console,
         CommandOptionValues globalOptions)
     {
-        Name = name;
+        CommandPath = commandPath;
+        Name = commandPath[^1];
         Console = console;
         GlobalOptions = globalOptions;
     }
@@ -23,6 +24,11 @@ public sealed class CommandContext
     /// Gets the name the command was registered under.
     /// </summary>
     public string Name { get; }
+
+    /// <summary>
+    /// Gets the full command path, starting at the root command.
+    /// </summary>
+    public IReadOnlyList<string> CommandPath { get; }
 
     /// <summary>
     /// Gets the console used by the command.

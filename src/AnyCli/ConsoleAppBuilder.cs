@@ -12,9 +12,6 @@ namespace AnyCli;
 /// </summary>
 public sealed class ConsoleAppBuilder
 {
-    private readonly Dictionary<string, CommandRegistration> _commands = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, CommandInfo> _commandInfos = new(StringComparer.Ordinal);
     private readonly GlobalOptionBuilder _globalOptions = new();
     private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private IServiceProvider? _serviceProvider;
@@ -102,6 +99,7 @@ public sealed class ConsoleAppBuilder
     /// Registers a synchronous command that does not use settings.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <param name="parent">The parent command group.</param>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
@@ -112,27 +110,29 @@ public sealed class ConsoleAppBuilder
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddEmptyCommand<
+    internal CommandNode AddEmptyCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
-        string name,
+        CommandNode parent, string name,
         string description = "")
         where TCommand : EmptyCommand
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        _commands[name] = new CommandRegistration(
+        var registration = new CommandRegistration(
             (serviceProvider, context, _) =>
                 Task.FromResult(ResolveCommand<TCommand>(serviceProvider).Execute(context)),
             [],
             []);
-        _commandInfos[name] = CreateCommandInfo(name, description, [], []);
-        return this;
+        var command = new CommandNode(name, description) { Command = registration };
+        parent.AddChild(command);
+        return command;
     }
 
     /// <summary>
     /// Registers an asynchronous command that does not use settings.
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
+    /// <param name="parent">The parent command group.</param>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
@@ -143,20 +143,21 @@ public sealed class ConsoleAppBuilder
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddEmptyAsyncCommand<
+    internal CommandNode AddEmptyAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
-        string name,
+        CommandNode parent, string name,
         string description = "")
         where TCommand : EmptyAsyncCommand
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        _commands[name] = new CommandRegistration(
+        var registration = new CommandRegistration(
             (serviceProvider, context, _) => ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context),
             [],
             []);
-        _commandInfos[name] = CreateCommandInfo(name, description, [], []);
-        return this;
+        var command = new CommandNode(name, description) { Command = registration };
+        parent.AddChild(command);
+        return command;
     }
 
     /// <summary>
@@ -164,29 +165,31 @@ public sealed class ConsoleAppBuilder
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
+    /// <param name="parent">The parent command group.</param>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddEmptyExitCodeCommand<
+    internal CommandNode AddEmptyExitCodeCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TExitCode>(string name, string description = "")
+        TExitCode>(CommandNode parent, string name, string description = "")
         where TCommand : EmptyCommand<TExitCode>
         where TExitCode : struct, Enum
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        _commands[name] = new CommandRegistration(
+        var registration = new CommandRegistration(
             (serviceProvider, context, _) => Task.FromResult(
                 Convert.ToInt32(
                     ResolveCommand<TCommand>(serviceProvider).Execute(context),
                     CultureInfo.InvariantCulture)),
             [],
             []);
-        _commandInfos[name] = CreateCommandInfo(name, description, [], []);
-        return this;
+        var command = new CommandNode(name, description) { Command = registration };
+        parent.AddChild(command);
+        return command;
     }
 
     /// <summary>
@@ -194,27 +197,29 @@ public sealed class ConsoleAppBuilder
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
+    /// <param name="parent">The parent command group.</param>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddEmptyExitCodeAsyncCommand<
+    internal CommandNode AddEmptyExitCodeAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TExitCode>(string name, string description = "")
+        TExitCode>(CommandNode parent, string name, string description = "")
         where TCommand : EmptyAsyncCommand<TExitCode>
         where TExitCode : struct, Enum
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        _commands[name] = new CommandRegistration(
+        var registration = new CommandRegistration(
             (serviceProvider, context, _) => ConvertExitCodeAsync(
                 ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context)),
             [],
             []);
-        _commandInfos[name] = CreateCommandInfo(name, description, [], []);
-        return this;
+        var command = new CommandNode(name, description) { Command = registration };
+        parent.AddChild(command);
+        return command;
     }
 
     /// <summary>
@@ -222,22 +227,23 @@ public sealed class ConsoleAppBuilder
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <typeparam name="TSettings">The settings type.</typeparam>
+    /// <param name="parent">The parent command group.</param>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddCommand<
+    internal CommandNode AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TSettings>(string name, string description = "")
+        TSettings>(CommandNode parent, string name, string description = "")
         where TCommand : class, ICommand<TSettings>
         where TSettings : class, ICommandSettings<TSettings>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var definitions = BuildSettingsDefinitions<TSettings>();
-        _commands[name] = new CommandRegistration(
+        var registration = new CommandRegistration(
             (serviceProvider, context, commandArguments) =>
             {
                 var settings = TSettings.Bind(commandArguments);
@@ -246,12 +252,9 @@ public sealed class ConsoleAppBuilder
             },
             definitions.Arguments,
             definitions.Options);
-        _commandInfos[name] = CreateCommandInfo(
-            name,
-            description,
-            definitions.Arguments,
-            definitions.Options);
-        return this;
+        var command = new CommandNode(name, description) { Command = registration };
+        parent.AddChild(command);
+        return command;
     }
 
     /// <summary>
@@ -260,16 +263,17 @@ public sealed class ConsoleAppBuilder
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <typeparam name="TSettings">The settings type.</typeparam>
     /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
+    /// <param name="parent">The parent command group.</param>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddExitCodeCommand<
+    internal CommandNode AddExitCodeCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TSettings,
-        TExitCode>(string name, string description = "")
+        TExitCode>(CommandNode parent, string name, string description = "")
         where TCommand : class, ICommand<TSettings, TExitCode>
         where TSettings : class, ICommandSettings<TSettings>
         where TExitCode : struct, Enum
@@ -277,7 +281,7 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var definitions = BuildSettingsDefinitions<TSettings>();
-        _commands[name] = new CommandRegistration(
+        var registration = new CommandRegistration(
             (serviceProvider, context, commandArguments) =>
             {
                 var settings = TSettings.Bind(commandArguments);
@@ -286,12 +290,9 @@ public sealed class ConsoleAppBuilder
             },
             definitions.Arguments,
             definitions.Options);
-        _commandInfos[name] = CreateCommandInfo(
-            name,
-            description,
-            definitions.Arguments,
-            definitions.Options);
-        return this;
+        var command = new CommandNode(name, description) { Command = registration };
+        parent.AddChild(command);
+        return command;
     }
 
     /// <summary>
@@ -299,22 +300,23 @@ public sealed class ConsoleAppBuilder
     /// </summary>
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <typeparam name="TSettings">The settings type.</typeparam>
+    /// <param name="parent">The parent command group.</param>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddAsyncCommand<
+    internal CommandNode AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TSettings>(string name, string description = "")
+        TSettings>(CommandNode parent, string name, string description = "")
         where TCommand : class, IAsyncCommand<TSettings>
         where TSettings : class, ICommandSettings<TSettings>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var definitions = BuildSettingsDefinitions<TSettings>();
-        _commands[name] = new CommandRegistration(
+        var registration = new CommandRegistration(
             (serviceProvider, context, commandArguments) =>
             {
                 var settings = TSettings.Bind(commandArguments);
@@ -322,12 +324,9 @@ public sealed class ConsoleAppBuilder
             },
             definitions.Arguments,
             definitions.Options);
-        _commandInfos[name] = CreateCommandInfo(
-            name,
-            description,
-            definitions.Arguments,
-            definitions.Options);
-        return this;
+        var command = new CommandNode(name, description) { Command = registration };
+        parent.AddChild(command);
+        return command;
     }
 
     /// <summary>
@@ -336,16 +335,17 @@ public sealed class ConsoleAppBuilder
     /// <typeparam name="TCommand">The command type.</typeparam>
     /// <typeparam name="TSettings">The settings type.</typeparam>
     /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
+    /// <param name="parent">The parent command group.</param>
     /// <param name="name">The command name.</param>
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    internal ConsoleAppBuilder AddExitCodeAsyncCommand<
+    internal CommandNode AddExitCodeAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TSettings,
-        TExitCode>(string name, string description = "")
+        TExitCode>(CommandNode parent, string name, string description = "")
         where TCommand : class, IAsyncCommand<TSettings, TExitCode>
         where TSettings : class, ICommandSettings<TSettings>
         where TExitCode : struct, Enum
@@ -353,7 +353,7 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var definitions = BuildSettingsDefinitions<TSettings>();
-        _commands[name] = new CommandRegistration(
+        var registration = new CommandRegistration(
             (serviceProvider, context, commandArguments) =>
             {
                 var settings = TSettings.Bind(commandArguments);
@@ -362,12 +362,9 @@ public sealed class ConsoleAppBuilder
             },
             definitions.Arguments,
             definitions.Options);
-        _commandInfos[name] = CreateCommandInfo(
-            name,
-            description,
-            definitions.Arguments,
-            definitions.Options);
-        return this;
+        var command = new CommandNode(name, description) { Command = registration };
+        parent.AddChild(command);
+        return command;
     }
 
     /// <summary>
@@ -381,7 +378,7 @@ public sealed class ConsoleAppBuilder
     public ConfiguredConsoleAppBuilder ConfigureCommands(Action<CommandConfigurator> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);
-        configure(new CommandConfigurator(this));
+        configure(new CommandConfigurator(this, Root));
         return new ConfiguredConsoleAppBuilder(this);
     }
 
@@ -399,7 +396,7 @@ public sealed class ConsoleAppBuilder
         where TExitCode : struct, Enum
     {
         ArgumentNullException.ThrowIfNull(configure);
-        configure(new CommandConfigurator<TExitCode>(this));
+        configure(new CommandConfigurator<TExitCode>(this, Root));
         return new ConfiguredConsoleAppBuilder<TExitCode>(this);
     }
 
@@ -426,8 +423,7 @@ public sealed class ConsoleAppBuilder
         int exitCode)
         where THandler : class, IUnrecognizedCommandHandler
     {
-        _unrecognizedCommandHandlerFactory =
-            serviceProvider => ResolveUnrecognizedCommandHandler<THandler>(serviceProvider);
+        _unrecognizedCommandHandlerFactory = (ResolveUnrecognizedCommandHandler<THandler>);
         _unrecognizedCommandExitCode = exitCode;
         return this;
     }
@@ -438,19 +434,33 @@ public sealed class ConsoleAppBuilder
     /// <returns>A new <see cref="ConsoleApp"/> instance.</returns>
     public ConsoleApp Build()
     {
+        ValidateCommandTree(Root);
+
         var globalOptions = _globalOptions.Build();
         ValidateGlobalOptions(globalOptions);
 
         return new ConsoleApp(
             _name,
             _version,
-            new Dictionary<string, CommandRegistration>(_commands, StringComparer.Ordinal),
-            [.. _commandInfos.Values],
+            Root,
             globalOptions,
             _serviceProvider,
             _helpProviderFactory,
             _unrecognizedCommandHandlerFactory,
             _unrecognizedCommandExitCode);
+    }
+
+    private static void ValidateCommandTree(CommandNode parent)
+    {
+        foreach (var child in parent.Children)
+        {
+            if (child.Children.Count > 0)
+            {
+                EnsureCanHaveSubcommands(child);
+            }
+
+            ValidateCommandTree(child);
+        }
     }
 
     private void ValidateGlobalOptions(IReadOnlyList<OptionDefinition> globalOptions)
@@ -481,16 +491,16 @@ public sealed class ConsoleAppBuilder
             }
         }
 
-        foreach (var command in _commands)
+        foreach (var (commandName, command) in EnumerateCommands(Root, string.Empty))
         {
-            foreach (var option in command.Value.Options)
+            foreach (var option in command.Options)
             {
                 foreach (var name in option.Names)
                 {
                     if (names.Contains(name))
                     {
                         throw new InvalidOperationException(
-                            $"Global option '{name}' conflicts with an option on command '{command.Key}'.");
+                            $"Global option '{name}' conflicts with an option on command '{commandName}'.");
                     }
                 }
             }
@@ -505,27 +515,44 @@ public sealed class ConsoleAppBuilder
         return new SettingsDefinitions(builder.Arguments.Build(), builder.Options.Build());
     }
 
-    private static CommandInfo CreateCommandInfo(
-        string name,
-        string description,
-        IReadOnlyList<ArgumentDefinition> arguments,
-        IReadOnlyList<OptionDefinition> options) =>
-        new(name, description)
+    internal CommandNode Root { get; } = new(string.Empty, string.Empty);
+
+    internal static void EnsureCanHaveSubcommands(CommandNode command)
+    {
+        if (command.Command is { Arguments.Count: > 0 })
         {
-            Arguments = [.. arguments
-                .Select(argument => new ArgumentInfo(
-                    argument.Name,
-                    argument.Description,
-                    argument.ArgumentType,
-                    argument.Arity))],
-            Options = [.. options
-                .Select(option => new OptionInfo(
-                    option.Names,
-                    option.Description,
-                    option.Required,
-                    option.TakesValue,
-                    option.DeclaredType))],
-        };
+            throw new InvalidOperationException(
+                $"Command '{command.Name}' has subcommands and cannot define positional arguments.");
+        }
+    }
+
+    internal CommandNode AddGroup(CommandNode parent, string name, string description)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        var group = new CommandNode(name, description);
+        parent.AddChild(group);
+        return group;
+    }
+
+    private static IEnumerable<(string Name, CommandRegistration Command)> EnumerateCommands(
+        CommandNode parent,
+        string prefix)
+    {
+        foreach (var child in parent.Children)
+        {
+            var name = prefix.Length == 0 ? child.Name : prefix + " " + child.Name;
+            if (child.Command is { } command)
+            {
+                yield return (name, command);
+            }
+
+            foreach (var nested in EnumerateCommands(child, name))
+            {
+                yield return nested;
+            }
+        }
+    }
 
     private sealed record SettingsDefinitions(
         IReadOnlyList<ArgumentDefinition> Arguments,

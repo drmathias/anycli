@@ -15,4 +15,10 @@ public sealed record UnrecognizedCommandContext(
     string? AppName,
     string CommandName,
     IReadOnlyList<string> AvailableCommands,
-    IConsole Console);
+    IConsole Console)
+{
+    /// <summary>
+    /// Gets a value indicating whether the command was recognized but requires a subcommand.
+    /// </summary>
+    public bool IsMissingSubcommand { get; init; }
+}

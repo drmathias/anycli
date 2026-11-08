@@ -1,0 +1,421 @@
+// SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
+//
+// SPDX-License-Identifier: MIT
+
+using AnyCli.Tests.Fixtures;
+
+namespace AnyCli.Tests;
+
+public class NestedCommandTests
+{
+    [Test]
+    public async Task NestedCommand_ExecutesWithFullPath()
+    {
+        var app = CreateApp();
+
+        var result = await TestAppHarness.RunAsync(
+            app,
+            ["remote", "add", "origin", "--loud"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("remote.add|origin|True|none");
+    }
+
+    [Test]
+    public async Task DeeplyNestedCommand_ExecutesWithFullPath()
+    {
+        var app = CreateApp();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "config", "set"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("remote.config.set");
+    }
+
+    [Test]
+    [Arguments("--log-level", "debug", "remote", "add", "origin")]
+    [Arguments("remote", "--log-level", "debug", "add", "origin")]
+    [Arguments("remote", "add", "--log-level", "debug", "origin")]
+    public async Task GlobalOptions_WorkAroundCommandPaths(params string[] args)
+    {
+        var app = CreateApp();
+
+        var result = await TestAppHarness.RunAsync(app, args);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("debug");
+    }
+
+    [Test]
+    public async Task RootHelp_IncludesGroupsAndCommands()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .ConfigureCommands(commands =>
+            {
+                commands.AddCommand<NestedPathCommand>("ping", "Ping the service");
+                commands.AddGroup("remote", "Manage remotes", group =>
+                {
+                    group.AddCommand<NestedPathCommand>("add", "Add a remote");
+                });
+            })
+            .AddHelp<TreeHelpProvider>()
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["--help"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo(
+            "ping|False|Ping the service|\n" +
+            "remote|True|Manage remotes|add");
+    }
+
+    [Test]
+    public async Task GroupHelp_ExposesGroupAndChildren()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .ConfigureCommands(commands =>
+            {
+                commands.AddGroup("remote", "Manage remotes", group =>
+                {
+                    group.AddCommand<NestedPathCommand>("add", "Add a remote");
+                    group.AddCommand<NestedPathCommand>("remove", "Remove a remote");
+                });
+            })
+            .AddHelp<TreeHelpProvider>()
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "--help"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo(
+            "remote|True|Manage remotes|add,remove");
+    }
+
+    [Test]
+    public async Task LeafHelp_ExposesFullPath()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .ConfigureCommands(commands =>
+            {
+                commands.AddGroup("remote", "Manage remotes", group =>
+                {
+                    group.AddCommand<NestedPathCommand>("add", "Add a remote");
+                });
+            })
+            .AddHelp<TreeHelpProvider>()
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "add", "--help"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("remote.add|False|Add a remote|");
+    }
+
+    [Test]
+    public async Task MissingSubcommand_ReportsRequiresSubcommand()
+    {
+        var app = CreateApp();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Error).IsEqualTo(
+            $"Command 'remote' requires a subcommand.{Environment.NewLine}");
+    }
+
+    [Test]
+    public async Task UnknownNestedCommand_ReportsFullPath()
+    {
+        var app = CreateApp();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Error).IsEqualTo(
+            $"Unknown command 'remote nope'.{Environment.NewLine}");
+    }
+
+    [Test]
+    public async Task DuplicateCommandName_Throws()
+    {
+        InvalidOperationException? exception = null;
+
+        try
+        {
+            _ = ConsoleAppBuilder.Create()
+                .ConfigureCommands(commands =>
+                {
+                    commands.AddCommand<NestedPathCommand>("remote");
+                    commands.AddGroup("remote", "Manage remotes", _ => { });
+                })
+                .Build();
+        }
+        catch (InvalidOperationException ex)
+        {
+            exception = ex;
+        }
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("remote");
+    }
+
+    [Test]
+    public async Task EnumExitCodeGroup_Works()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .ConfigureCommands<NestedExitCode>(commands =>
+            {
+                commands.AddGroup("remote", "Manage remotes", group =>
+                {
+                    group.AddCommand<NestedEnumCommand>("fail", "Fail");
+                });
+            })
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "fail"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo((int)NestedExitCode.Failed);
+    }
+
+    [Test]
+    public async Task ExecutableGroup_RunsParentWhenNoSubcommandIsSpecified()
+    {
+        var app = CreateExecutableGroupApp();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("remote|False");
+    }
+
+    [Test]
+    public async Task ExecutableGroup_RunsParentOptions()
+    {
+        var app = CreateExecutableGroupApp();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "--verbose"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("remote|True");
+    }
+
+    [Test]
+    public async Task ExecutableGroup_RunsChildWhenSubcommandIsSpecified()
+    {
+        var app = CreateExecutableGroupApp();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "add"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("remote.add");
+    }
+
+    [Test]
+    public async Task ExecutableGroup_GlobalOptionsCanPrecedeChild()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithGlobalOptions(options => options.AddValue<string>("log-level"))
+            .ConfigureCommands(commands =>
+            {
+                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupSettings>(
+                    "remote",
+                    "Manage remotes",
+                    group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
+            })
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(
+            app,
+            ["remote", "--log-level", "debug", "add"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("remote.add");
+    }
+
+    [Test]
+    public async Task ExecutableGroup_ReportsUnknownSubcommand()
+    {
+        var app = CreateExecutableGroupApp();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Error).IsEqualTo(
+            $"Unknown command 'remote nope'.{Environment.NewLine}");
+    }
+
+    [Test]
+    public async Task ExecutableGroup_HelpIncludesCommandAndChildren()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .ConfigureCommands(commands =>
+            {
+                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupSettings>(
+                    "remote",
+                    "Manage remotes",
+                    group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
+            })
+            .AddHelp<ExecutableGroupHelpProvider>()
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["remote", "--help"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("remote|False|True|1|add");
+    }
+
+    [Test]
+    public async Task ExecutableGroup_RejectsPositionalArguments()
+    {
+        InvalidOperationException? exception = null;
+
+        try
+        {
+            _ = ConsoleAppBuilder.Create()
+                .ConfigureCommands(commands =>
+                {
+                    commands.AddCommand<ExecutableGroupWithArgumentCommand, ExecutableGroupWithArgumentSettings>(
+                        "remote",
+                        "Manage remotes",
+                        group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
+                })
+                .Build();
+        }
+        catch (InvalidOperationException ex)
+        {
+            exception = ex;
+        }
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("remote");
+        await Assert.That(exception.Message).Contains("positional arguments");
+    }
+
+    private static ConsoleApp CreateExecutableGroupApp() =>
+        ConsoleAppBuilder.Create()
+            .ConfigureCommands(commands =>
+            {
+                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupSettings>(
+                    "remote",
+                    "Manage remotes",
+                    group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
+            })
+            .Build();
+
+    private static ConsoleApp CreateApp() =>
+        ConsoleAppBuilder.Create()
+            .WithGlobalOptions(options =>
+                options.AddValue<string>("log-level").SetAliases("l").SetDescription("Log level"))
+            .ConfigureCommands(commands =>
+            {
+                commands.AddGroup("remote", "Manage remotes", group =>
+                {
+                    group.AddCommand<NestedEchoCommand, NestedEchoSettings>("add", "Add a remote");
+                    group.AddGroup("config", "Configure remotes", nested =>
+                    {
+                        nested.AddCommand<NestedPathCommand>("set", "Set a value");
+                    });
+                });
+            })
+            .Build();
+
+    private sealed class NestedEchoCommand : ICommand<NestedEchoSettings>
+    {
+        public int Execute(CommandContext context, NestedEchoSettings settings)
+        {
+            var logLevel = context.GlobalOptions.TryGetValue("log-level", out var value)
+                ? value
+                : "none";
+            context.Console.Output.Write(
+                $"{string.Join(".", context.CommandPath)}|{settings.Value}|{settings.Loud}|{logLevel}");
+            return 0;
+        }
+    }
+
+    private sealed class NestedPathCommand : EmptyCommand
+    {
+        public override int Execute(CommandContext context)
+        {
+            context.Console.Output.Write(string.Join(".", context.CommandPath));
+            return 0;
+        }
+    }
+
+    private sealed class NestedEnumCommand : EmptyCommand<NestedExitCode>
+    {
+        public override NestedExitCode Execute(CommandContext context) => NestedExitCode.Failed;
+    }
+
+    private sealed class ExecutableGroupCommand : ICommand<ExecutableGroupSettings>
+    {
+        public int Execute(CommandContext context, ExecutableGroupSettings settings)
+        {
+            context.Console.Output.Write(
+                $"{string.Join(".", context.CommandPath)}|{settings.Verbose}");
+            return 0;
+        }
+    }
+
+    private sealed class ExecutableGroupWithArgumentCommand : ICommand<ExecutableGroupWithArgumentSettings>
+    {
+        public int Execute(CommandContext context, ExecutableGroupWithArgumentSettings settings) => 0;
+    }
+
+    private sealed class ExecutableGroupHelpProvider : IHelpProvider
+    {
+        public void WriteRootHelp(RootHelpContext context) =>
+            context.Console.Output.Write("root");
+
+        public void WriteCommandHelp(CommandHelpContext context)
+        {
+            var command = context.Command;
+            context.Console.Output.Write(
+                $"{string.Join(".", command.Path)}|{command.IsGroup}|{command.HasSubcommands}|" +
+                $"{command.Options.Count}|{string.Join(",", command.Children.Select(child => child.Name))}");
+        }
+    }
+
+    private sealed class TreeHelpProvider : IHelpProvider
+    {
+        public void WriteRootHelp(RootHelpContext context) =>
+            Write(context.Commands, context.Console);
+
+        public void WriteCommandHelp(CommandHelpContext context) =>
+            Write([context.Command], context.Console);
+
+        private static void Write(
+            IReadOnlyList<CommandInfo> commands,
+            IConsoleWriter console) =>
+            console.Output.Write(string.Join("\n", commands.Select(Describe)));
+
+        private static string Describe(CommandInfo command) =>
+            $"{string.Join(".", command.Path)}|{command.IsGroup}|{command.Description}|" +
+            $"{string.Join(",", command.Children.Select(child => child.Name))}";
+    }
+}
+
+public sealed partial class NestedEchoSettings
+{
+    [Argument(0)]
+    public string Value { get; set; } = "";
+
+    [Option("loud")]
+    public bool Loud { get; set; }
+}
+
+public sealed partial class ExecutableGroupSettings
+{
+    [Option("verbose")]
+    public bool Verbose { get; set; }
+}
+
+public sealed partial class ExecutableGroupWithArgumentSettings
+{
+    [Argument(0)]
+    public string Name { get; set; } = "";
+}
+
+public enum NestedExitCode
+{
+    Failed = 4,
+}

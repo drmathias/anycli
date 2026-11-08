@@ -12,11 +12,10 @@ namespace AnyCli;
 /// </remarks>
 public sealed class ConsoleApp
 {
-    private readonly Dictionary<string, CommandRegistration> _commands;
-    private readonly IReadOnlyList<CommandInfo> _commandInfos;
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private readonly string? _name;
+    private readonly CommandNode _root;
     private readonly IServiceProvider? _serviceProvider;
     private readonly Func<IServiceProvider?, IUnrecognizedCommandHandler> _unrecognizedCommandHandlerFactory;
     private readonly int _unrecognizedCommandExitCode;
@@ -25,8 +24,7 @@ public sealed class ConsoleApp
     internal ConsoleApp(
         string? name,
         string? version,
-        Dictionary<string, CommandRegistration> commands,
-        IReadOnlyList<CommandInfo> commandInfos,
+        CommandNode root,
         IReadOnlyList<OptionDefinition> globalOptions,
         IServiceProvider? serviceProvider,
         Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
@@ -35,8 +33,7 @@ public sealed class ConsoleApp
     {
         _name = name;
         _version = version;
-        _commands = commands;
-        _commandInfos = commandInfos;
+        _root = root;
         _globalOptions = globalOptions;
         _serviceProvider = serviceProvider;
         _helpProviderFactory = helpProviderFactory;
@@ -76,7 +73,7 @@ public sealed class ConsoleApp
     /// <param name="console">The console used for input, output, and errors.</param>
     /// <returns>The process exit code.</returns>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="args"/> or <paramref name="console"/> is <see langword="null"/>.
+    /// <paramref name="args"/> or <paramref name="console"/> are <see langword="null"/>.
     /// </exception>
     public async Task<int> RunAsync(string[] args, IConsole console)
     {
@@ -106,53 +103,259 @@ public sealed class ConsoleApp
             return 0;
         }
 
-        var commandName = commandIndex >= 0 && commandIndex < args.Length
-            ? args[commandIndex]
-            : string.Empty;
-
-        if (commandIndex >= 0 && _commands.TryGetValue(args[commandIndex], out var command))
+        if (commandIndex < 0)
         {
-            var arguments = CommandArgumentsParser.Parse(
-                command.Arguments,
-                command.Options,
+            return HandleUnrecognized(
+                console,
+                string.Empty,
+                GetChildPaths(_root, []),
+                isMissingSubcommand: false);
+        }
+
+        var path = new List<string>();
+        var current = _root;
+        var index = commandIndex;
+
+        while (true)
+        {
+            if (index >= args.Length)
+            {
+                return current.Command is not null
+                    ? await ExecuteCommandAsync(
+                        current,
+                        path,
+                        args,
+                        args.Length,
+                        console,
+                        globalOptionValues).ConfigureAwait(false)
+                    : HandleUnrecognized(
+                        console,
+                        string.Join(' ', path),
+                        GetChildPaths(current, path),
+                        isMissingSubcommand: true);
+            }
+
+            var token = args[index];
+            if (!current.TryGetChild(token, out var child))
+            {
+                var attemptedPath = new List<string>(path) { token };
+                return HandleUnrecognized(
+                    console,
+                    string.Join(' ', attemptedPath),
+                    GetChildPaths(current, path),
+                    isMissingSubcommand: false);
+            }
+
+            path.Add(token);
+
+            if (child.Children.Count == 0)
+            {
+                return await ExecuteCommandAsync(
+                    child,
+                    path,
+                    args,
+                    index + 1,
+                    console,
+                    globalOptionValues).ConfigureAwait(false);
+            }
+
+            if (child.Command is not null)
+            {
+                var childRelativeIndex = CommandArgumentsParser.FindFirstNonGlobalOption(
+                    _globalOptions,
+                    args.AsSpan(index + 1),
+                    globalOptionValues,
+                    _helpProviderFactory is not null,
+                    _version is not null,
+                    out var commandHelpRequested,
+                    out var commandVersionRequested);
+
+                if (commandVersionRequested)
+                {
+                    outputWriter.WriteLine(_version);
+                    return 0;
+                }
+
+                if (commandHelpRequested)
+                {
+                    WriteCommandHelp(console, child, path);
+                    return 0;
+                }
+
+                if (childRelativeIndex >= 0)
+                {
+                    var absoluteIndex = index + 1 + childRelativeIndex;
+                    var nextToken = args[absoluteIndex];
+
+                    if (child.TryGetChild(nextToken, out _))
+                    {
+                        current = child;
+                        index = absoluteIndex;
+                        continue;
+                    }
+
+                    if (nextToken.Length > 0 && nextToken[0] != '-')
+                    {
+                        var attemptedPath = new List<string>(path) { nextToken };
+                        return HandleUnrecognized(
+                            console,
+                            string.Join(' ', attemptedPath),
+                            GetChildPaths(child, path),
+                            isMissingSubcommand: false);
+                    }
+
+                    return await ExecuteCommandAsync(
+                        child,
+                        path,
+                        args,
+                        absoluteIndex,
+                        console,
+                        globalOptionValues).ConfigureAwait(false);
+                }
+
+                return await ExecuteCommandAsync(
+                    child,
+                    path,
+                    args,
+                    args.Length,
+                    console,
+                    globalOptionValues).ConfigureAwait(false);
+            }
+
+            var relativeIndex = CommandArgumentsParser.ParseLeadingGlobalOptions(
                 _globalOptions,
-                args.AsSpan(commandIndex + 1),
+                args.AsSpan(index + 1),
                 globalOptionValues,
                 _helpProviderFactory is not null,
                 _version is not null,
-                out var helpRequested,
-                out var versionRequested);
+                out var groupHelpRequested,
+                out var groupVersionRequested);
 
-            if (versionRequested)
+            if (groupVersionRequested)
             {
                 outputWriter.WriteLine(_version);
                 return 0;
             }
 
-            if (helpRequested)
+            if (groupHelpRequested)
             {
-                WriteCommandHelp(console, commandName);
+                WriteCommandHelp(console, child, path);
                 return 0;
             }
 
-            ValidateRequiredGlobalOptions(globalOptionValues);
+            if (relativeIndex < 0)
+            {
+                return HandleUnrecognized(
+                    console,
+                    string.Join(' ', path),
+                    GetChildPaths(child, path),
+                    isMissingSubcommand: true);
+            }
 
-            return await command.Execute
-                .Invoke(
-                    _serviceProvider,
-                    new CommandContext(
-                        commandName,
-                        console,
-                        new CommandOptionValues(globalOptionValues)),
-                    arguments!)
-                .ConfigureAwait(false);
+            current = child;
+            index = index + 1 + relativeIndex;
+        }
+    }
+
+    private async Task<int> ExecuteCommandAsync(
+        CommandNode node,
+        IReadOnlyList<string> path,
+        string[] args,
+        int startIndex,
+        IConsole console,
+        Dictionary<string, OptionValue> globalOptionValues)
+    {
+        var command = node.Command!;
+        var arguments = CommandArgumentsParser.Parse(
+            command.Arguments,
+            command.Options,
+            _globalOptions,
+            args.AsSpan(startIndex),
+            globalOptionValues,
+            _helpProviderFactory is not null,
+            _version is not null,
+            out var helpRequested,
+            out var versionRequested);
+
+        if (versionRequested)
+        {
+            console.Output.WriteLine(_version);
+            return 0;
         }
 
+        if (helpRequested)
+        {
+            WriteCommandHelp(console, node, path);
+            return 0;
+        }
+
+        ValidateRequiredGlobalOptions(globalOptionValues);
+
+        return await command.Execute
+            .Invoke(
+                _serviceProvider,
+                new CommandContext(
+                    path,
+                    console,
+                    new CommandOptionValues(globalOptionValues)),
+                arguments!)
+            .ConfigureAwait(false);
+    }
+
+    private static CommandInfo CreateCommandInfo(
+        CommandNode node,
+        IReadOnlyList<string> parentPath)
+    {
+        var path = new List<string>(parentPath.Count + 1);
+        path.AddRange(parentPath);
+        path.Add(node.Name);
+
+        var command = node.Command;
+        return new CommandInfo(node.Name, node.Description)
+        {
+            Path = path,
+            IsGroup = command is null,
+            HasSubcommands = node.Children.Count > 0,
+            Arguments = command is null
+                ? []
+                : [.. command.Arguments
+                    .Select(argument => new ArgumentInfo(
+                        argument.Name,
+                        argument.Description,
+                        argument.ArgumentType,
+                        argument.Arity))],
+            Options = command is null
+                ? []
+                : [.. command.Options
+                    .Select(option => new OptionInfo(
+                        option.Names,
+                        option.Description,
+                        option.Required,
+                        option.TakesValue,
+                        option.DeclaredType))],
+            Children = [.. node.Children.Select(child => CreateCommandInfo(child, path))],
+        };
+    }
+
+    private static IReadOnlyList<string> GetChildPaths(
+        CommandNode node,
+        IReadOnlyList<string> parentPath) =>
+        [.. node.Children.Select(child => string.Join(' ', parentPath.Append(child.Name)))];
+
+    private int HandleUnrecognized(
+        IConsole console,
+        string commandName,
+        IReadOnlyList<string> availableCommands,
+        bool isMissingSubcommand)
+    {
         var context = new UnrecognizedCommandContext(
             _name,
             commandName,
-            [.. _commandInfos.Select(info => info.Name)],
-            console);
+            availableCommands,
+            console)
+        {
+            IsMissingSubcommand = isMissingSubcommand,
+        };
 
         _unrecognizedCommandHandlerFactory(_serviceProvider).Handle(context);
         return _unrecognizedCommandExitCode;
@@ -165,18 +368,20 @@ public sealed class ConsoleApp
                 _name ?? string.Empty,
                 console,
                 GetOptions(),
-                _commandInfos));
+                [.. _root.Children.Select(child => CreateCommandInfo(child, []))]));
     }
 
-    private void WriteCommandHelp(IConsole console, string commandName)
+    private void WriteCommandHelp(
+        IConsole console,
+        CommandNode command,
+        IReadOnlyList<string> commandPath)
     {
-        var command = _commandInfos.First(info => info.Name == commandName);
         _helpProviderFactory!(_serviceProvider).WriteCommandHelp(
             new CommandHelpContext(
                 _name ?? string.Empty,
                 console,
                 GetOptions(),
-                command));
+                CreateCommandInfo(command, [.. commandPath.Take(commandPath.Count - 1)])));
     }
 
     private void ValidateRequiredGlobalOptions(

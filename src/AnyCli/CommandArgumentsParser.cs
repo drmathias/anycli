@@ -72,6 +72,82 @@ internal static class CommandArgumentsParser
         return -1;
     }
 
+    public static int FindFirstNonGlobalOption(
+        IReadOnlyList<OptionDefinition> globalOptionDefinitions,
+        ReadOnlySpan<string> tokens,
+        IDictionary<string, OptionValue> globalValues,
+        bool hasHelp,
+        bool hasVersion,
+        out bool helpRequested,
+        out bool versionRequested)
+    {
+        var optionLookup = CreateOptionLookup([], globalOptionDefinitions);
+        var commandValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
+
+        helpRequested = false;
+        versionRequested = false;
+
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            var token = tokens[index];
+
+            if (token == "--")
+            {
+                return index;
+            }
+
+            if (hasHelp && IsHelpFlag(token))
+            {
+                helpRequested = true;
+                continue;
+            }
+
+            if (hasVersion && IsVersionFlag(token))
+            {
+                versionRequested = true;
+                continue;
+            }
+
+            if (token.Length > 1 && token[0] == '-' && token[1] != '-')
+            {
+                if (!IsShortGlobalOption(token, optionLookup))
+                {
+                    return index;
+                }
+
+                index = ParseShortOption(
+                    token,
+                    tokens,
+                    index,
+                    optionLookup,
+                    commandValues,
+                    globalValues);
+                continue;
+            }
+
+            if (token.Length > 2 && token[0] == '-' && token[1] == '-')
+            {
+                if (!IsLongGlobalOption(token, optionLookup))
+                {
+                    return index;
+                }
+
+                ParseLongOption(
+                    token,
+                    tokens,
+                    ref index,
+                    optionLookup,
+                    commandValues,
+                    globalValues);
+                continue;
+            }
+
+            return index;
+        }
+
+        return -1;
+    }
+
     public static CommandArguments? Parse(
         IReadOnlyList<ArgumentDefinition> definitions,
         IReadOnlyList<OptionDefinition> optionDefinitions,
@@ -233,6 +309,43 @@ internal static class CommandArgumentsParser
         }
 
         return optionLookup;
+    }
+
+    private static bool IsShortGlobalOption(
+        string token,
+        IReadOnlyDictionary<string, OptionBinding> optionLookup)
+    {
+        var equalsIndex = token.IndexOf('=');
+        if (equalsIndex >= 0)
+        {
+            var name = token[..equalsIndex];
+            return name.Length == 2 && optionLookup.ContainsKey(name);
+        }
+
+        if (token.Length == 2)
+        {
+            return optionLookup.ContainsKey(token);
+        }
+
+        for (var index = 1; index < token.Length; index++)
+        {
+            if (!optionLookup.TryGetValue("-" + token[index], out var option) ||
+                option.Definition.TakesValue)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsLongGlobalOption(
+        string token,
+        IReadOnlyDictionary<string, OptionBinding> optionLookup)
+    {
+        var equalsIndex = token.IndexOf('=');
+        var name = equalsIndex >= 0 ? token[..equalsIndex] : token;
+        return optionLookup.ContainsKey(name);
     }
 
     private static bool IsHelpFlag(string token) => token is "-h" or "--help";

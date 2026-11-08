@@ -15,7 +15,7 @@ public sealed class RootHelpContext : HelpContext
     /// <param name="appName">The application name.</param>
     /// <param name="console">The console writer.</param>
     /// <param name="globalOptions">The application-wide options.</param>
-    /// <param name="commands">The registered commands.</param>
+    /// <param name="commands">The registered top-level commands and command groups.</param>
     public RootHelpContext(
         string appName,
         IConsoleWriter console,
@@ -27,7 +27,7 @@ public sealed class RootHelpContext : HelpContext
     }
 
     /// <summary>
-    /// Gets the registered commands.
+    /// Gets the registered top-level commands and command groups.
     /// </summary>
     public IReadOnlyList<CommandInfo> Commands { get; }
 }

@@ -16,6 +16,8 @@ public sealed class DefaultUnrecognizedCommandHandler : IUnrecognizedCommandHand
 
         context.Console.Error.WriteLine(string.IsNullOrEmpty(context.CommandName)
             ? "No command was specified."
-            : $"Unknown command '{context.CommandName}'.");
+            : context.IsMissingSubcommand
+                ? $"Command '{context.CommandName}' requires a subcommand."
+                : $"Unknown command '{context.CommandName}'.");
     }
 }
