@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using AnyCli.Tests.Fixtures;
+
 namespace AnyCli.Tests;
 
 public class CollectionTargetTests
@@ -11,7 +13,7 @@ public class CollectionTargetTests
     {
         var app = CreateApp<ReadOnlyListCommand, ReadOnlyListSettings>("values");
 
-        var result = await Run(app, ["values", "1", "2", "3"]);
+        var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
         await Assert.That(result.Output).IsEqualTo("1,2,3");
     }
@@ -21,7 +23,7 @@ public class CollectionTargetTests
     {
         var app = CreateApp<ListCommand, ListSettings>("values");
 
-        var result = await Run(app, ["values", "1", "2", "3"]);
+        var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
         await Assert.That(result.Output).IsEqualTo("1,2,3");
     }
@@ -31,7 +33,7 @@ public class CollectionTargetTests
     {
         var app = CreateApp<CollectionCommand, CollectionSettings>("values");
 
-        var result = await Run(app, ["values", "1", "2", "3"]);
+        var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
         await Assert.That(result.Output).IsEqualTo("1,2,3");
     }
@@ -41,7 +43,7 @@ public class CollectionTargetTests
     {
         var app = CreateApp<EnumerableCommand, EnumerableSettings>("values");
 
-        var result = await Run(app, ["values", "1", "2", "3"]);
+        var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
         await Assert.That(result.Output).IsEqualTo("1,2,3");
     }
@@ -51,7 +53,7 @@ public class CollectionTargetTests
     {
         var app = CreateApp<HashSetCommand, HashSetSettings>("values");
 
-        var result = await Run(app, ["values", "1", "2", "2", "3"]);
+        var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "2", "3"]);
 
         await Assert.That(result.Output).IsEqualTo("1,2,3");
     }
@@ -64,14 +66,14 @@ public class CollectionTargetTests
 
         try
         {
-            _ = await Run(app, ["values"]);
+            _ = await TestAppHarness.RunAsync(app, ["values"]);
         }
         catch (CommandArgumentException ex)
         {
             exception = ex;
         }
 
-        var result = await Run(app, ["values", "1", "2"]);
+        var result = await TestAppHarness.RunAsync(app, ["values", "1", "2"]);
 
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!.Message).Contains("'values'");
@@ -85,20 +87,6 @@ public class CollectionTargetTests
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<TCommand, TSettings>(name))
             .Build();
-
-    private static async Task<RunResult> Run(ConsoleApp app, string[] args)
-    {
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync(
-            args,
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        return new RunResult(exitCode, output.ToString());
-    }
-
-    private sealed record RunResult(int ExitCode, string Output);
 
     private sealed class ReadOnlyListCommand : ICommand<ReadOnlyListSettings>
     {

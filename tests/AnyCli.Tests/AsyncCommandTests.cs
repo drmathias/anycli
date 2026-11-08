@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using AnyCli.Tests.Fixtures;
+
 namespace AnyCli.Tests;
 
 public class AsyncCommandTests
@@ -22,7 +24,7 @@ public class AsyncCommandTests
         await Assert.That(result.Output).IsEqualTo("done");
     }
 
-    private static async Task<RunResult> RunAsync<TCommand>(string commandName)
+    private static async Task<TestAppResult> RunAsync<TCommand>(string commandName)
         where TCommand : EmptyAsyncCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
@@ -30,15 +32,8 @@ public class AsyncCommandTests
             .ConfigureCommands(commands => commands.AddAsyncCommand<TCommand>(commandName))
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync([commandName], output, error);
-
-        return new RunResult(exitCode, output.ToString(), error.ToString());
+        return await TestAppHarness.RunAsync(app, [commandName]);
     }
-
-    private sealed record RunResult(int ExitCode, string Output, string Error);
 
     private sealed class ReturnIntAsyncCommand : EmptyAsyncCommand
     {

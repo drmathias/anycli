@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: MIT
 
+using AnyCli.Tests.Fixtures;
+using AnyCli.Tests.Helpers;
+
 namespace AnyCli.Tests;
 
 public class DependencyInjectionTests
@@ -9,7 +12,7 @@ public class DependencyInjectionTests
     [Test]
     public async Task Command_IsResolvedFromProvider()
     {
-        var serviceProvider = new TestServiceProvider();
+        var serviceProvider = new StubServiceProvider();
         serviceProvider.Add(() => new GreetCommand(new GreetingService("hello")));
 
         var app = ConsoleAppBuilder.Create()
@@ -17,20 +20,17 @@ public class DependencyInjectionTests
             .ConfigureCommands(commands => commands.AddCommand<GreetCommand>("greet"))
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["greet"]);
 
-        var exitCode = await app.RunAsync(["greet"], output, error);
-
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(output.ToString()).IsEqualTo("hello");
-        await Assert.That(error.ToString()).IsEmpty();
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("hello");
+        await Assert.That(result.Error).IsEmpty();
     }
 
     [Test]
     public async Task AsyncCommand_IsResolvedFromProvider()
     {
-        var serviceProvider = new TestServiceProvider();
+        var serviceProvider = new StubServiceProvider();
         serviceProvider.Add(() => new AsyncGreetCommand(new GreetingService("hello")));
 
         var app = ConsoleAppBuilder.Create()
@@ -38,21 +38,18 @@ public class DependencyInjectionTests
             .ConfigureCommands(commands => commands.AddAsyncCommand<AsyncGreetCommand>("greet"))
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["greet"]);
 
-        var exitCode = await app.RunAsync(["greet"], output, error);
-
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(output.ToString()).IsEqualTo("async:hello");
-        await Assert.That(error.ToString()).IsEmpty();
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("async:hello");
+        await Assert.That(result.Error).IsEmpty();
     }
 
     [Test]
     public async Task Command_ResolvesNewInstancePerRun()
     {
         var created = 0;
-        var serviceProvider = new TestServiceProvider();
+        var serviceProvider = new StubServiceProvider();
         serviceProvider.Add(() =>
         {
             created++;
@@ -64,8 +61,8 @@ public class DependencyInjectionTests
             .ConfigureCommands(commands => commands.AddCommand<GreetCommand>("greet"))
             .Build();
 
-        await app.RunAsync(["greet"], new StringWriter(), new StringWriter());
-        await app.RunAsync(["greet"], new StringWriter(), new StringWriter());
+        await TestAppHarness.RunAsync(app, ["greet"]);
+        await TestAppHarness.RunAsync(app, ["greet"]);
 
         await Assert.That(created).IsEqualTo(2);
     }
@@ -73,7 +70,7 @@ public class DependencyInjectionTests
     [Test]
     public async Task HelpProvider_IsResolvedFromProvider()
     {
-        var serviceProvider = new TestServiceProvider();
+        var serviceProvider = new StubServiceProvider();
         serviceProvider.Add(() => new InjectedHelpProvider(new GreetingService("help")));
 
         var app = ConsoleAppBuilder.Create()
@@ -83,29 +80,13 @@ public class DependencyInjectionTests
             .AddHelp<InjectedHelpProvider>()
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["--help"]);
 
-        var exitCode = await app.RunAsync(
-            ["--help"],
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(output.ToString()).IsEqualTo("help");
-        await Assert.That(error.ToString()).IsEmpty();
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("help");
+        await Assert.That(result.Error).IsEmpty();
     }
 
-    private sealed class TestServiceProvider : IServiceProvider
-    {
-        private readonly Dictionary<Type, Func<object>> _factories = [];
-
-        public void Add<TService>(Func<TService> factory)
-            where TService : class =>
-            _factories[typeof(TService)] = factory;
-
-        public object? GetService(Type serviceType) =>
-            _factories.TryGetValue(serviceType, out var factory) ? factory() : null;
-    }
 
     private sealed class GreetingService(string greeting)
     {

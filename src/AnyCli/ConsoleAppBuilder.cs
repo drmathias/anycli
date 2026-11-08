@@ -17,6 +17,9 @@ public sealed class ConsoleAppBuilder
     private readonly Dictionary<string, CommandInfo> _commandInfos = new(StringComparer.Ordinal);
     private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private IServiceProvider? _serviceProvider;
+    private Func<IServiceProvider?, IUnrecognizedCommandHandler> _unrecognizedCommandHandlerFactory =
+        static _ => new DefaultUnrecognizedCommandHandler();
+    private int _unrecognizedCommandExitCode = 2;
     private string? _name;
     private string? _version;
 
@@ -351,12 +354,13 @@ public sealed class ConsoleAppBuilder
     /// <exception cref="ArgumentNullException">
     /// <paramref name="configure"/> is <see langword="null"/>.
     /// </exception>
-    public ConfiguredConsoleAppBuilder ConfigureCommands<TExitCode>(Action<CommandConfigurator<TExitCode>> configure)
+    public ConfiguredConsoleAppBuilder<TExitCode> ConfigureCommands<TExitCode>(
+        Action<CommandConfigurator<TExitCode>> configure)
         where TExitCode : struct, Enum
     {
         ArgumentNullException.ThrowIfNull(configure);
         configure(new CommandConfigurator<TExitCode>(this));
-        return new ConfiguredConsoleAppBuilder(this);
+        return new ConfiguredConsoleAppBuilder<TExitCode>(this);
     }
 
     /// <summary>
@@ -377,6 +381,17 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    internal ConsoleAppBuilder UseUnrecognizedCommandHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(
+        int exitCode)
+        where THandler : class, IUnrecognizedCommandHandler
+    {
+        _unrecognizedCommandHandlerFactory =
+            serviceProvider => ResolveUnrecognizedCommandHandler<THandler>(serviceProvider);
+        _unrecognizedCommandExitCode = exitCode;
+        return this;
+    }
+
     /// <summary>
     /// Creates the configured application.
     /// </summary>
@@ -388,7 +403,9 @@ public sealed class ConsoleAppBuilder
             new Dictionary<string, CommandRegistration>(_commands, StringComparer.Ordinal),
             [.. _commandInfos.Values],
             _serviceProvider,
-            _helpProviderFactory);
+            _helpProviderFactory,
+            _unrecognizedCommandHandlerFactory,
+            _unrecognizedCommandExitCode);
 
     private static IReadOnlyList<ArgumentDefinition> BuildSettingsArguments<TSettings>()
         where TSettings : class, ICommandSettings<TSettings>
@@ -428,6 +445,20 @@ public sealed class ConsoleAppBuilder
             : serviceProvider.GetService(typeof(THelpProvider)) as THelpProvider
                 ?? throw new InvalidOperationException(
                     $"Service '{typeof(THelpProvider).FullName}' is not registered.");
+    }
+
+    private static THandler ResolveUnrecognizedCommandHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(
+        IServiceProvider? serviceProvider)
+        where THandler : class, IUnrecognizedCommandHandler
+    {
+        return serviceProvider is null
+            ? Activator.CreateInstance<THandler>()
+                ?? throw new InvalidOperationException(
+                    $"Could not create unrecognized command handler '{typeof(THandler).FullName}'.")
+            : serviceProvider.GetService(typeof(THandler)) as THandler
+                ?? throw new InvalidOperationException(
+                    $"Service '{typeof(THandler).FullName}' is not registered.");
     }
 
     private static TCommand ResolveCommand<

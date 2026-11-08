@@ -17,6 +17,8 @@ public sealed class ConsoleApp
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private readonly string? _name;
     private readonly IServiceProvider? _serviceProvider;
+    private readonly Func<IServiceProvider?, IUnrecognizedCommandHandler> _unrecognizedCommandHandlerFactory;
+    private readonly int _unrecognizedCommandExitCode;
     private readonly string? _version;
 
     internal ConsoleApp(
@@ -25,7 +27,9 @@ public sealed class ConsoleApp
         Dictionary<string, CommandRegistration> commands,
         IReadOnlyList<CommandInfo> commandInfos,
         IServiceProvider? serviceProvider,
-        Func<IServiceProvider?, IHelpProvider>? helpProviderFactory)
+        Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
+        Func<IServiceProvider?, IUnrecognizedCommandHandler> unrecognizedCommandHandlerFactory,
+        int unrecognizedCommandExitCode)
     {
         _name = name;
         _version = version;
@@ -33,6 +37,8 @@ public sealed class ConsoleApp
         _commandInfos = commandInfos;
         _serviceProvider = serviceProvider;
         _helpProviderFactory = helpProviderFactory;
+        _unrecognizedCommandHandlerFactory = unrecognizedCommandHandlerFactory;
+        _unrecognizedCommandExitCode = unrecognizedCommandExitCode;
     }
 
     /// <summary>
@@ -110,7 +116,14 @@ public sealed class ConsoleApp
                 .ConfigureAwait(false);
         }
 
-        throw new NotImplementedException();
+        var context = new UnrecognizedCommandContext(
+            _name,
+            args.Length >= 1 ? args[0] : string.Empty,
+            [.. _commandInfos.Select(info => info.Name)],
+            console);
+
+        _unrecognizedCommandHandlerFactory(_serviceProvider).Handle(context);
+        return _unrecognizedCommandExitCode;
     }
 
     private static bool IsVersionRequest(string[] args) =>

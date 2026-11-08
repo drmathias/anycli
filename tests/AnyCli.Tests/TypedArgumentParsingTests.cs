@@ -5,6 +5,7 @@
 using System.Globalization;
 
 using AnyCli;
+using AnyCli.Tests.Fixtures;
 
 [assembly: ArgumentParser<AnyCli.Tests.RegisteredWidget, AnyCli.Tests.RegisteredWidgetParser>]
 
@@ -18,7 +19,7 @@ public class TypedArgumentParsingTests
         var app = CreateApp<ScalarCommand, ScalarSettings>("parse");
         var id = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
 
-        var result = await Run(app, ["parse", "42", "true", id.ToString(), "2026-11-07", "very-slow", "3"]);
+        var result = await TestAppHarness.RunAsync(app, ["parse", "42", "true", id.ToString(), "2026-11-07", "very-slow", "3"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo($"42|True|{id}|2026-11-07|VerySlow|3");
@@ -30,7 +31,7 @@ public class TypedArgumentParsingTests
         var app = CreateApp<ScalarCommand, ScalarSettings>("parse");
         var id = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
 
-        var result = await Run(app, ["parse", "1", "false", id.ToString(), "2026-11-07", "fast"]);
+        var result = await TestAppHarness.RunAsync(app, ["parse", "1", "false", id.ToString(), "2026-11-07", "fast"]);
 
         await Assert.That(result.Output).IsEqualTo($"1|False|{id}|2026-11-07|Fast|null");
     }
@@ -43,7 +44,7 @@ public class TypedArgumentParsingTests
 
         try
         {
-            await Run(app, ["parse"]);
+            await TestAppHarness.RunAsync(app, ["parse"]);
         }
         catch (CommandArgumentException ex)
         {
@@ -62,7 +63,7 @@ public class TypedArgumentParsingTests
 
         try
         {
-            await Run(app, ["parse", "nope", "true", Guid.Empty.ToString(), "2026-11-07", "fast"]);
+            await TestAppHarness.RunAsync(app, ["parse", "nope", "true", Guid.Empty.ToString(), "2026-11-07", "fast"]);
         }
         catch (CommandArgumentException ex)
         {
@@ -79,7 +80,7 @@ public class TypedArgumentParsingTests
     {
         var app = CreateApp<SumCommand, SumSettings>("sum");
 
-        var result = await Run(app, ["sum", "1", "2", "3"]);
+        var result = await TestAppHarness.RunAsync(app, ["sum", "1", "2", "3"]);
 
         await Assert.That(result.Output).IsEqualTo("6");
     }
@@ -89,7 +90,7 @@ public class TypedArgumentParsingTests
     {
         var app = CreateApp<SumCommand, SumSettings>("sum");
 
-        var result = await Run(app, ["sum"]);
+        var result = await TestAppHarness.RunAsync(app, ["sum"]);
 
         await Assert.That(result.Output).IsEqualTo("0");
     }
@@ -105,14 +106,14 @@ public class TypedArgumentParsingTests
         CommandArgumentException? exception = null;
         try
         {
-            await Run(app, ["tags"]);
+            await TestAppHarness.RunAsync(app, ["tags"]);
         }
         catch (CommandArgumentException ex)
         {
             exception = ex;
         }
 
-        var result = await Run(app, ["tags", "a", "b"]);
+        var result = await TestAppHarness.RunAsync(app, ["tags", "a", "b"]);
 
         await Assert.That(exception).IsNotNull();
         await Assert.That(exception!.Message).Contains("'tags'");
@@ -124,7 +125,7 @@ public class TypedArgumentParsingTests
     {
         var app = CreateApp<ParsableOnlyCommand, ParsableOnlySettings>("parsable");
 
-        var result = await Run(app, ["parsable", "value:hello"]);
+        var result = await TestAppHarness.RunAsync(app, ["parsable", "value:hello"]);
 
         await Assert.That(result.Output).IsEqualTo("hello");
     }
@@ -134,7 +135,7 @@ public class TypedArgumentParsingTests
     {
         var app = CreateApp<RegisteredWidgetCommand, RegisteredWidgetSettings>("registered");
 
-        var result = await Run(app, ["registered", "widget:hello"]);
+        var result = await TestAppHarness.RunAsync(app, ["registered", "widget:hello"]);
 
         await Assert.That(result.Output).IsEqualTo("hello");
     }
@@ -144,7 +145,7 @@ public class TypedArgumentParsingTests
     {
         var app = CreateApp<WidgetCommand, WidgetSettings>("widget");
 
-        var result = await Run(app, ["widget", "widget:hello"]);
+        var result = await TestAppHarness.RunAsync(app, ["widget", "widget:hello"]);
 
         await Assert.That(result.Output).IsEqualTo("hello");
     }
@@ -157,7 +158,7 @@ public class TypedArgumentParsingTests
 
         try
         {
-            await Run(app, ["widget", "nope"]);
+            await TestAppHarness.RunAsync(app, ["widget", "nope"]);
         }
         catch (CommandArgumentException ex)
         {
@@ -176,20 +177,6 @@ public class TypedArgumentParsingTests
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<TCommand, TSettings>(name))
             .Build();
-
-    private static async Task<RunResult> Run(ConsoleApp app, string[] args)
-    {
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync(
-            args,
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        return new RunResult(exitCode, output.ToString(), error.ToString());
-    }
-
-    private sealed record RunResult(int ExitCode, string Output, string Error);
 
     private sealed class ScalarCommand : ICommand<ScalarSettings>
     {

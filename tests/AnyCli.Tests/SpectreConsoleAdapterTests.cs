@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 using AnyCli.SpectreConsole;
+using AnyCli.Tests.Fixtures;
 
 using Spectre.Console;
 
@@ -55,16 +56,28 @@ public class SpectreConsoleAdapterTests
             .AddHelp<AnsiHelpProvider>()
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["--help"]);
 
-        var exitCode = await app.RunAsync(
-            ["--help"],
-            new TextConsole(new StringReader(string.Empty), output, error));
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output.Contains("help", StringComparison.Ordinal)).IsTrue();
+        await Assert.That(result.Error).IsEmpty();
+    }
 
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(output.ToString().Contains("help", StringComparison.Ordinal)).IsTrue();
-        await Assert.That(error.ToString()).IsEmpty();
+    [Test]
+    public async Task UnrecognizedCommand_UsesSpectreErrorHandler()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureCommands(_ => { })
+            .UseUnrecognizedCommandHandler<DefaultSpectreUnrecognizedCommandHandler>(4)
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(4);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("Unknown command");
+        await Assert.That(result.Error).Contains("nope");
     }
 
     [Test]
@@ -80,7 +93,7 @@ public class SpectreConsoleAdapterTests
         await Assert.That(output.ToString()).IsEqualTo("\u001b[32mok\u001b[0m");
     }
 
-    private static async Task<RunResult> Run<TCommand>(string commandName)
+    private static async Task<TestAppResult> Run<TCommand>(string commandName)
         where TCommand : EmptyCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
@@ -88,17 +101,8 @@ public class SpectreConsoleAdapterTests
             .ConfigureCommands(commands => commands.AddCommand<TCommand>(commandName))
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync(
-            [commandName],
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        return new RunResult(exitCode, output.ToString(), error.ToString());
+        return await TestAppHarness.RunAsync(app, [commandName]);
     }
-
-    private sealed record RunResult(int ExitCode, string Output, string Error);
 
     private sealed class PropertyCommand : EmptyCommand
     {

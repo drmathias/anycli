@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using AnyCli.Tests.Fixtures;
+
 namespace AnyCli.Tests;
 
 public class CommandTests
@@ -33,14 +35,12 @@ public class CommandTests
             .Build();
 
         using var input = new StringReader("hello");
-        using var output = new StringWriter();
-        using var error = new StringWriter();
 
-        var exitCode = await app.RunAsync(["read"], new TextConsole(input, output, error));
+        var result = await TestAppHarness.RunAsync(app, ["read"], input);
 
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(output.ToString()).IsEqualTo("hello");
-        await Assert.That(error.ToString()).IsEmpty();
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("hello");
+        await Assert.That(result.Error).IsEmpty();
     }
 
     [Test]
@@ -51,14 +51,11 @@ public class CommandTests
             .ConfigureCommands(commands => commands.AddCommand<WriteErrorCommand>("fail"))
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["fail"]);
 
-        var exitCode = await app.RunAsync(["fail"], output, error);
-
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(output.ToString()).IsEmpty();
-        await Assert.That(error.ToString()).IsEqualTo("boom");
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).IsEqualTo("boom");
     }
 
     [Test]
@@ -70,16 +67,13 @@ public class CommandTests
             .ConfigureCommands(commands => commands.AddCommand<ReturnIntCommand>("add"))
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["--version"]);
 
-        var exitCode = await app.RunAsync(["--version"], output, error);
-
-        await Assert.That(output.ToString()).IsEqualTo($"9.9.9{Environment.NewLine}");
-        await Assert.That(exitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo($"9.9.9{Environment.NewLine}");
+        await Assert.That(result.ExitCode).IsEqualTo(0);
     }
 
-    private static async Task<RunResult> Run<TCommand>(string commandName)
+    private static async Task<TestAppResult> Run<TCommand>(string commandName)
         where TCommand : EmptyCommand, new()
     {
         var app = ConsoleAppBuilder.Create()
@@ -87,15 +81,8 @@ public class CommandTests
             .ConfigureCommands(commands => commands.AddCommand<TCommand>(commandName))
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync([commandName], output, error);
-
-        return new RunResult(exitCode, output.ToString(), error.ToString());
+        return await TestAppHarness.RunAsync(app, [commandName]);
     }
-
-    private sealed record RunResult(int ExitCode, string Output, string Error);
 
     private sealed class ReturnIntCommand : EmptyCommand
     {

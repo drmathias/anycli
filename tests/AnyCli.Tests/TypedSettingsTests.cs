@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using AnyCli.Tests.Fixtures;
+
 namespace AnyCli.Tests;
 
 public class TypedSettingsTests
@@ -14,7 +16,7 @@ public class TypedSettingsTests
             .ConfigureCommands(commands => commands.AddCommand<CopyCommand, CopySettings>("copy", "Copies files"))
             .Build();
 
-        var result = await Run(app, ["copy", "source.txt"]);
+        var result = await TestAppHarness.RunAsync(app, ["copy", "source.txt"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo("source.txt|<null>|default|");
@@ -28,7 +30,7 @@ public class TypedSettingsTests
             .ConfigureCommands(commands => commands.AddCommand<CopyCommand, CopySettings>("copy", "Copies files"))
             .Build();
 
-        var result = await Run(app, ["copy", "source.txt", "dest.txt", "fast", "a", "b"]);
+        var result = await TestAppHarness.RunAsync(app, ["copy", "source.txt", "dest.txt", "fast", "a", "b"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo("source.txt|dest.txt|fast|a,b");
@@ -42,8 +44,8 @@ public class TypedSettingsTests
             .ConfigureCommands(commands => commands.AddCommand<ComputedCommand, ComputedSettings>("computed"))
             .Build();
 
-        var missing = await Run(app, ["computed"]);
-        var supplied = await Run(app, ["computed", "custom"]);
+        var missing = await TestAppHarness.RunAsync(app, ["computed"]);
+        var supplied = await TestAppHarness.RunAsync(app, ["computed", "custom"]);
 
         await Assert.That(missing.Output).IsEqualTo("computed");
         await Assert.That(supplied.Output).IsEqualTo("custom");
@@ -58,7 +60,7 @@ public class TypedSettingsTests
                 .AddCommand<ExitCodeCommand, ExitCodeSettings>("exit"))
             .Build();
 
-        var result = await Run(app, ["exit", "ignored"]);
+        var result = await TestAppHarness.RunAsync(app, ["exit", "ignored"]);
 
         await Assert.That(result.ExitCode).IsEqualTo((int)SettingsExitCode.Failed);
     }
@@ -71,25 +73,11 @@ public class TypedSettingsTests
             .ConfigureCommands(commands => commands.AddAsyncCommand<AsyncSettingsCommand, AsyncSettings>("async"))
             .Build();
 
-        var result = await Run(app, ["async", "hello"]);
+        var result = await TestAppHarness.RunAsync(app, ["async", "hello"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo("hello");
     }
-
-    private static async Task<RunResult> Run(ConsoleApp app, string[] args)
-    {
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync(
-            args,
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        return new RunResult(exitCode, output.ToString(), error.ToString());
-    }
-
-    private sealed record RunResult(int ExitCode, string Output, string Error);
 
     private sealed class CopyCommand : ICommand<CopySettings>
     {

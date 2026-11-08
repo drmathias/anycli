@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 using AnyCli;
+using AnyCli.Tests.Fixtures;
 
 [assembly: EnumArgumentParser<AnyCli.Tests.TestEnumArgumentParser>]
 
@@ -62,7 +63,7 @@ public class EnumParsingTests
             .ConfigureCommands(commands => commands.AddCommand<GlobalEnumCommand, GlobalEnumSettings>("mode"))
             .Build();
 
-        var result = await Run(app, ["mode", "very-slow"]);
+        var result = await TestAppHarness.RunAsync(app, ["mode", "very-slow"]);
 
         await Assert.That(result.Output).IsEqualTo("VerySlow");
     }
@@ -75,24 +76,10 @@ public class EnumParsingTests
             .ConfigureCommands(commands => commands.AddCommand<GlobalEnumCommand, GlobalEnumSettings>("mode"))
             .Build();
 
-        var result = await Run(app, ["mode", "custom"]);
+        var result = await TestAppHarness.RunAsync(app, ["mode", "custom"]);
 
         await Assert.That(result.Output).IsEqualTo("VerySlow");
     }
-
-    private static async Task<RunResult> Run(ConsoleApp app, string[] args)
-    {
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync(
-            args,
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        return new RunResult(exitCode, output.ToString());
-    }
-
-    private sealed record RunResult(int ExitCode, string Output);
 
     private sealed class GlobalEnumCommand : ICommand<GlobalEnumSettings>
     {

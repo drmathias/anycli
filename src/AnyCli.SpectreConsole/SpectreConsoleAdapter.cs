@@ -15,6 +15,7 @@ public static class SpectreConsoleAdapter
 {
     private static readonly ConditionalWeakTable<CommandContext, IAnsiConsoleContext> CommandContextConsoles = [];
     private static readonly ConditionalWeakTable<HelpContext, IAnsiConsoleContext> HelpContextConsoles = [];
+    private static readonly ConditionalWeakTable<UnrecognizedCommandContext, IAnsiConsoleContext> UnrecognizedCommandContextConsoles = [];
 
     /// <summary>
     /// Creates an ANSI console that writes to the specified output writer.
@@ -94,6 +95,19 @@ public static class SpectreConsoleAdapter
         /// The consoles are created once for the help context and reused on later accesses.
         /// </remarks>
         public IAnsiConsoleContext AnsiConsole => HelpContextConsoles.GetValue(context, static helpContext => CreateConsoles(helpContext.Console));
+    }
+
+    extension(UnrecognizedCommandContext context)
+    {
+        /// <summary>
+        /// Gets the cached ANSI consoles for the unrecognized command context's standard output and error.
+        /// </summary>
+        /// <remarks>
+        /// The consoles are created once for the context and reused on later accesses.
+        /// </remarks>
+        public IAnsiConsoleContext AnsiConsole => UnrecognizedCommandContextConsoles.GetValue(
+            context,
+            static commandContext => CreateConsoles(commandContext.Console));
     }
 
     private static AnsiConsoleContext CreateConsoles(IConsoleWriter console) => new(Create(console.Output), Create(console.Error));

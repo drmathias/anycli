@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 using AnyCli;
+using AnyCli.Tests.Fixtures;
 
 [assembly: ArgumentParser<AnyCli.Tests.PrecedenceValue, AnyCli.Tests.AssemblyPrecedenceParser>]
 [assembly: ArgumentParser<AnyCli.Tests.SpanPrecedenceValue, AnyCli.Tests.AssemblySpanPrecedenceParser>]
@@ -17,7 +18,7 @@ public class ParsingPrecedenceTests
     {
         var app = CreateApp<AssemblyValueCommand, AssemblyValueSettings>("value");
 
-        var result = await Run(app, ["value", "input"]);
+        var result = await TestAppHarness.RunAsync(app, ["value", "input"]);
 
         await Assert.That(result.Output).IsEqualTo("assembly:input");
     }
@@ -27,7 +28,7 @@ public class ParsingPrecedenceTests
     {
         var app = CreateApp<AssemblySpanValueCommand, AssemblySpanValueSettings>("value");
 
-        var result = await Run(app, ["value", "input"]);
+        var result = await TestAppHarness.RunAsync(app, ["value", "input"]);
 
         await Assert.That(result.Output).IsEqualTo("assembly-span:input");
     }
@@ -37,7 +38,7 @@ public class ParsingPrecedenceTests
     {
         var app = CreateApp<PropertyValueCommand, PropertyValueSettings>("value");
 
-        var result = await Run(app, ["value", "input"]);
+        var result = await TestAppHarness.RunAsync(app, ["value", "input"]);
 
         await Assert.That(result.Output).IsEqualTo("property:input");
     }
@@ -47,7 +48,7 @@ public class ParsingPrecedenceTests
     {
         var app = CreateApp<AssemblyEnumCommand, AssemblyEnumSettings>("mode");
 
-        var result = await Run(app, ["mode", "whatever"]);
+        var result = await TestAppHarness.RunAsync(app, ["mode", "whatever"]);
 
         await Assert.That(result.Output).IsEqualTo("Assembly");
     }
@@ -57,7 +58,7 @@ public class ParsingPrecedenceTests
     {
         var app = CreateApp<PropertyEnumCommand, PropertyEnumSettings>("mode");
 
-        var result = await Run(app, ["mode", "whatever"]);
+        var result = await TestAppHarness.RunAsync(app, ["mode", "whatever"]);
 
         await Assert.That(result.Output).IsEqualTo("Property");
     }
@@ -69,20 +70,6 @@ public class ParsingPrecedenceTests
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<TCommand, TSettings>(name))
             .Build();
-
-    private static async Task<RunResult> Run(ConsoleApp app, string[] args)
-    {
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync(
-            args,
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        return new RunResult(exitCode, output.ToString());
-    }
-
-    private sealed record RunResult(int ExitCode, string Output);
 
     private sealed class AssemblyValueCommand : ICommand<AssemblyValueSettings>
     {

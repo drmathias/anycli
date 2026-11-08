@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using AnyCli.Tests.Fixtures;
+
 namespace AnyCli.Tests;
 
 public class ConfigureCommandsTests
@@ -14,7 +16,7 @@ public class ConfigureCommandsTests
             .ConfigureCommands(commands => commands.AddCommand<IntCommand>("int"))
             .Build();
 
-        var result = await Run(app, ["int"]);
+        var result = await TestAppHarness.RunAsync(app, ["int"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(7);
     }
@@ -27,7 +29,7 @@ public class ConfigureCommandsTests
             .ConfigureCommands(commands => commands.AddAsyncCommand<AsyncIntCommand>("async"))
             .Build();
 
-        var result = await Run(app, ["async"]);
+        var result = await TestAppHarness.RunAsync(app, ["async"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(8);
     }
@@ -42,26 +44,12 @@ public class ConfigureCommandsTests
                 .AddAsyncCommand<AsyncEnumCommand>("async"))
             .Build();
 
-        var syncResult = await Run(app, ["enum"]);
-        var asyncResult = await Run(app, ["async"]);
+        var syncResult = await TestAppHarness.RunAsync(app, ["enum"]);
+        var asyncResult = await TestAppHarness.RunAsync(app, ["async"]);
 
         await Assert.That(syncResult.ExitCode).IsEqualTo((int)TestExitCode.Failed);
         await Assert.That(asyncResult.ExitCode).IsEqualTo((int)TestExitCode.Failed);
     }
-
-    private static async Task<RunResult> Run(ConsoleApp app, string[] args)
-    {
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync(
-            args,
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        return new RunResult(exitCode, output.ToString(), error.ToString());
-    }
-
-    private sealed record RunResult(int ExitCode, string Output, string Error);
 
     private sealed class IntCommand : EmptyCommand
     {

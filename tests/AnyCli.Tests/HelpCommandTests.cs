@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using AnyCli.Tests.Fixtures;
+
 namespace AnyCli.Tests;
 
 public class HelpCommandTests
@@ -76,16 +78,11 @@ public class HelpCommandTests
             .AddHelp<ThrowHelpProvider>()
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["throw", flag]);
 
-        var exitCode = await app.RunAsync(
-            ["throw", flag],
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(Normalize(output.ToString())).IsEqualTo(Normalize(ExpectedThrowHelp));
-        await Assert.That(error.ToString()).IsEmpty();
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(Normalize(result.Output)).IsEqualTo(Normalize(ExpectedThrowHelp));
+        await Assert.That(result.Error).IsEmpty();
     }
 
     [Test]
@@ -97,19 +94,14 @@ public class HelpCommandTests
             .AddHelp<TypeHelpProvider>()
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["types", "--help"]);
 
-        var exitCode = await app.RunAsync(
-            ["types", "--help"],
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(output.ToString()).IsEqualTo(
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo(
             $"{typeof(int).Name}:1:1:True:False," +
             $"{typeof(int?).Name}:0:1:False:False," +
             $"{typeof(string[]).Name}:0:{int.MaxValue}:False:True");
-        await Assert.That(error.ToString()).IsEmpty();
+        await Assert.That(result.Error).IsEmpty();
     }
 
     [Test]
@@ -121,20 +113,15 @@ public class HelpCommandTests
             .AddHelp<TypeHelpProvider>()
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
+        var result = await TestAppHarness.RunAsync(app, ["tags", "--help"]);
 
-        var exitCode = await app.RunAsync(
-            ["tags", "--help"],
-            new TextConsole(new StringReader(string.Empty), output, error));
-
-        await Assert.That(exitCode).IsEqualTo(0);
-        await Assert.That(output.ToString()).IsEqualTo(
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo(
             $"{typeof(string[]).Name}:1:{int.MaxValue}:True:True");
-        await Assert.That(error.ToString()).IsEmpty();
+        await Assert.That(result.Error).IsEmpty();
     }
 
-    private static async Task<RunResult> Run(string[] args)
+    private static async Task<TestAppResult> Run(string[] args)
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("jvln")
@@ -151,12 +138,7 @@ public class HelpCommandTests
             .AddHelp<StubHelpProvider>()
             .Build();
 
-        using var output = new StringWriter();
-        using var error = new StringWriter();
-
-        var exitCode = await app.RunAsync(args, output, error);
-
-        return new RunResult(exitCode, output.ToString(), error.ToString());
+        return await TestAppHarness.RunAsync(app, args);
     }
 
     private static string Normalize(string value) =>
@@ -166,8 +148,6 @@ public class HelpCommandTests
                 .Split('\n')
                 .Select(line => line.TrimEnd()))
             .TrimEnd('\n');
-
-    private sealed record RunResult(int ExitCode, string Output, string Error);
 
     private sealed class NoOpCommand : EmptyCommand
     {

@@ -9,7 +9,7 @@ namespace AnyCli;
 /// <summary>
 /// Finishes configuring a <see cref="ConsoleApp"/> after commands have been configured.
 /// </summary>
-public sealed class ConfiguredConsoleAppBuilder
+public class ConfiguredConsoleAppBuilder
 {
     private readonly ConsoleAppBuilder _builder;
 
@@ -17,6 +17,8 @@ public sealed class ConfiguredConsoleAppBuilder
     {
         _builder = builder;
     }
+
+    internal ConsoleAppBuilder Builder => _builder;
 
     /// <summary>
     /// Sets the application name.
@@ -26,7 +28,7 @@ public sealed class ConfiguredConsoleAppBuilder
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public ConfiguredConsoleAppBuilder WithName(string name)
+    public virtual ConfiguredConsoleAppBuilder WithName(string name)
     {
         _builder.WithName(name);
         return this;
@@ -40,7 +42,7 @@ public sealed class ConfiguredConsoleAppBuilder
     /// <exception cref="ArgumentException">
     /// <paramref name="version"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public ConfiguredConsoleAppBuilder WithVersion(string version)
+    public virtual ConfiguredConsoleAppBuilder WithVersion(string version)
     {
         _builder.WithVersion(version);
         return this;
@@ -54,7 +56,7 @@ public sealed class ConfiguredConsoleAppBuilder
     /// <exception cref="ArgumentNullException">
     /// <paramref name="serviceProvider"/> is <see langword="null"/>.
     /// </exception>
-    public ConfiguredConsoleAppBuilder UseServiceProvider(IServiceProvider serviceProvider)
+    public virtual ConfiguredConsoleAppBuilder UseServiceProvider(IServiceProvider serviceProvider)
     {
         _builder.UseServiceProvider(serviceProvider);
         return this;
@@ -70,11 +72,30 @@ public sealed class ConfiguredConsoleAppBuilder
     /// If a service provider was set with <see cref="UseServiceProvider"/>, the help provider is
     /// resolved from it; otherwise, it is created with its public parameterless constructor.
     /// </remarks>
-    public ConfiguredConsoleAppBuilder AddHelp<
+    public virtual ConfiguredConsoleAppBuilder AddHelp<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
         where THelpProvider : class, IHelpProvider
     {
         _builder.AddHelp<THelpProvider>();
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the handler and exit code used when the command is not recognized.
+    /// </summary>
+    /// <typeparam name="THandler">The handler type.</typeparam>
+    /// <param name="exitCode">The exit code returned for an unrecognized command.</param>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// The handler is resolved from the service provider when one is configured; otherwise, it is
+    /// created with its public parameterless constructor.
+    /// </remarks>
+    public ConfiguredConsoleAppBuilder UseUnrecognizedCommandHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(
+        int exitCode = 2)
+        where THandler : class, IUnrecognizedCommandHandler
+    {
+        _builder.UseUnrecognizedCommandHandler<THandler>(exitCode);
         return this;
     }
 
