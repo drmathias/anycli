@@ -7,6 +7,10 @@ SPDX-License-Identifier: MIT
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <PackageId>AnyCli</PackageId>
+    <Title>AnyCli</Title>
+    <Description>A source-generated, AOT-friendly command-line framework for .NET</Description>
+    <PackageTags>cli;command-line;parser;source-generator;aot;roslyn;dependency-injection</PackageTags>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

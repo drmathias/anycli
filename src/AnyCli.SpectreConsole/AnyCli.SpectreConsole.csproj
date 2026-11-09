@@ -7,6 +7,10 @@ SPDX-License-Identifier: MIT
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <PackageId>AnyCli.SpectreConsole</PackageId>
+    <Title>AnyCli Spectre.Console Integration</Title>
+    <Description>Spectre.Console adaptor for AnyCli command-line applications, including ANSI console output.</Description>
+    <PackageTags>cli;command-line;spectre;spectre-console;aot</PackageTags>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

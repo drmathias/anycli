@@ -1,0 +1,35 @@
+<!--
+SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
+
+SPDX-License-Identifier: MIT
+-->
+
+<Project>
+
+  <PropertyGroup>
+    <Authors>Adam Shirt</Authors>
+    <Copyright>Copyright © 2026 Adam Shirt</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl Condition="'$(RepositoryUrl)' == '' and '$(GITHUB_REPOSITORY)' != ''">$(GITHUB_SERVER_URL)/$(GITHUB_REPOSITORY).git</RepositoryUrl>
+    <PackageProjectUrl Condition="'$(PackageProjectUrl)' == '' and '$(GITHUB_REPOSITORY)' != ''">$(GITHUB_SERVER_URL)/$(GITHUB_REPOSITORY)</PackageProjectUrl>
+    <PackageProjectUrl Condition="'$(PackageProjectUrl)' == '' and '$(RepositoryUrl)' != ''">$(RepositoryUrl)</PackageProjectUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>portable</DebugType>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RepositoryUrl)' != ''">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.403" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
