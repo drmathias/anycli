@@ -97,10 +97,48 @@ Task("Push")
     }
 });
 
-Task("Publish")
+Task("Release")
     .IsDependentOn("Test")
     .IsDependentOn("Pack")
-    .IsDependentOn("Push");
+    .Does(() =>
+{
+    var packages = GetFiles($"{packagesDirectory}/*.nupkg")
+        .Concat(GetFiles($"{packagesDirectory}/*.snupkg"))
+        .ToArray();
+    if (packages.Length == 0) throw new CakeException($"No NuGet packages were found in {packagesDirectory}.");
+
+    var tag = $"v{versionText}";
+    var arguments = new ProcessArgumentBuilder()
+        .Append("release")
+        .Append("create")
+        .AppendQuoted(tag);
+
+    foreach (var package in packages) arguments.AppendQuoted(package.FullPath);
+
+    arguments
+        .Append("--title")
+        .AppendQuoted(tag)
+        .Append("--generate-notes");
+
+    var repository = GetGitHubRepository();
+    if (!string.IsNullOrWhiteSpace(repository)) arguments.Append("--repo").AppendQuoted(repository);
+
+    var settings = new ProcessSettings { Arguments = arguments };
+    var githubToken = GetConfigurationValue("GH_TOKEN") ?? GetConfigurationValue("GITHUB_TOKEN");
+    if (!string.IsNullOrWhiteSpace(githubToken))
+    {
+        settings.EnvironmentVariables = new Dictionary<string, string>
+        {
+            ["GH_TOKEN"] = githubToken,
+        };
+    }
+
+    var exitCode = StartProcess("gh", settings);
+    if (exitCode != 0) throw new CakeException($"gh release create failed with exit code {exitCode}.");
+});
+
+Task("Publish")
+    .IsDependentOn("Release");
 
 Task("Default")
     .IsDependentOn("Test")
@@ -123,6 +161,22 @@ static DotNetMSBuildSettings CreateVersionedMsBuildSettings(string versionText)
     if (!string.IsNullOrWhiteSpace(packageProjectUrl)) settings.WithProperty("PackageProjectUrl", packageProjectUrl);
 
     return settings;
+}
+
+static string? GetGitHubRepository()
+{
+    var repository = GetConfigurationValue("GITHUB_REPOSITORY");
+    if (!string.IsNullOrWhiteSpace(repository)) return repository;
+
+    var repositoryUrl = GetConfigurationValue("REPOSITORY_URL");
+    if (string.IsNullOrWhiteSpace(repositoryUrl)) return null;
+
+    var value = repositoryUrl.Trim().TrimEnd('/');
+    if (value.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) value = value[..^4];
+
+    var lastSlash = value.LastIndexOf('/');
+    var previousSlash = lastSlash > 0 ? value.LastIndexOf('/', lastSlash - 1) : -1;
+    return previousSlash >= 0 ? value[(previousSlash + 1)..] : null;
 }
 
 static string? GetConfigurationValue(string name)
