@@ -72,31 +72,6 @@ Task("Pack")
     }
 });
 
-Task("Push")
-.Does(() =>
-{
-    var apiKey = GetConfigurationValue("NUGET_API_KEY");
-    if (string.IsNullOrWhiteSpace(apiKey)) throw new CakeException("NUGET_API_KEY is required. Add it to .env or set it as an environment variable.");
-
-    var source = GetConfigurationValue("NUGET_SOURCE");
-    if (string.IsNullOrWhiteSpace(source)) source = "https://api.nuget.org/v3/index.json";
-
-    var packages = GetFiles($"{packagesDirectory}/*.nupkg")
-        .Concat(GetFiles($"{packagesDirectory}/*.snupkg"))
-        .ToArray();
-    if (packages.Length == 0) throw new CakeException($"No NuGet packages were found in {packagesDirectory}.");
-
-    foreach (var package in packages)
-    {
-        DotNetNuGetPush(package, new DotNetNuGetPushSettings
-        {
-            ApiKey = apiKey,
-            Source = source,
-            SkipDuplicate = true,
-        });
-    }
-});
-
 Task("Release")
     .IsDependentOn("Test")
     .IsDependentOn("Pack")
