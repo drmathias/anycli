@@ -4,6 +4,13 @@
     <Project Path="src/AnyCli.SpectreConsole/AnyCli.SpectreConsole.csproj" />
     <Project Path="src/AnyCli/AnyCli.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/AnyCli.Benchmarks/AnyCli.Benchmarks.csproj" />
+    <Project Path="benchmarks/hosts/AnyCli.Host/AnyCli.Host.csproj" />
+    <Project Path="benchmarks/hosts/ConsoleAppFramework.Host/ConsoleAppFramework.Host.csproj" />
+    <Project Path="benchmarks/hosts/SpectreCli.Host/SpectreCli.Host.csproj" />
+    <Project Path="benchmarks/hosts/SystemCommandLine.Host/SystemCommandLine.Host.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AnyCli.Generators.Tests/AnyCli.Generators.Tests.csproj" />
     <Project Path="tests/AnyCli.Tests/AnyCli.Tests.csproj" />

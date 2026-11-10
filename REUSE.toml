@@ -12,6 +12,7 @@ path = [
     "global.json",
     "src/AnyCli.Generators/AnalyzerReleases.Shipped.md",
     "src/AnyCli.Generators/AnalyzerReleases.Unshipped.md",
+    "**/packages.lock.json",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Adam Shirt <adamshirt@outlook.com>"

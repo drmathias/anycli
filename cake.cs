@@ -17,6 +17,7 @@ if (!SemVersion.TryParse(versionArgument, out var version))
 var versionText = version.ToString();
 var solution = "./AnyCli.slnx";
 var packagesDirectory = "./artifacts/packages";
+var benchmarkResultsDirectory = "./benchmarks/results/latest";
 var packageProjects = new[]
 {
     "./src/AnyCli/AnyCli.csproj",
@@ -72,15 +73,93 @@ Task("Pack")
     }
 });
 
+Task("PrepareRelease")
+    .IsDependentOn("Test")
+    .Does(() =>
+{
+    EnsureCleanWorktree();
+
+    var benchmarkExitCode = StartProcess("bash", new ProcessSettings
+    {
+        Arguments = "./benchmarks/run.sh",
+    });
+    if (benchmarkExitCode != 0)
+    {
+        throw new CakeException($"Benchmark run failed with exit code {benchmarkExitCode}.");
+    }
+
+    RunGit("add", "README.md");
+
+    var hasReadmeChanges = StartProcess("git", new ProcessSettings
+    {
+        Arguments = "diff --cached --quiet -- README.md",
+    }) != 0;
+
+    if (hasReadmeChanges)
+    {
+        var commitMessage = $"chore: update benchmark results for v{versionText}";
+        var commitExitCode = StartProcess("git", new ProcessSettings
+        {
+            Arguments = new ProcessArgumentBuilder()
+                .Append("commit")
+                .Append("-m")
+                .AppendQuoted(commitMessage),
+        });
+        if (commitExitCode != 0)
+        {
+            throw new CakeException($"Git commit failed with exit code {commitExitCode}.");
+        }
+    }
+    else
+    {
+        Console.WriteLine("Benchmark results did not change README.md.");
+    }
+
+    Console.WriteLine("Run this command to complete the release:");
+    Console.WriteLine($"dotnet cake.cs -- --target=Release --package-version={versionText}");
+});
+
 Task("Release")
     .IsDependentOn("Test")
     .IsDependentOn("Pack")
     .Does(() =>
 {
+    EnsureCleanWorktree();
+
     var packages = GetFiles($"{packagesDirectory}/*.nupkg")
         .Concat(GetFiles($"{packagesDirectory}/*.snupkg"))
         .ToArray();
-    if (packages.Length == 0) throw new CakeException($"No NuGet packages were found in {packagesDirectory}.");
+    if (packages.Length == 0)
+    {
+        throw new CakeException($"No NuGet packages were found in {packagesDirectory}.");
+    }
+
+    var benchmarkResults = GetFiles($"{benchmarkResultsDirectory}/*").ToArray();
+    if (benchmarkResults.Length == 0)
+    {
+        throw new CakeException(
+            $"No benchmark results were found in {benchmarkResultsDirectory}. " +
+            "Run PrepareRelease first.");
+    }
+
+    var branch = GetGitOutput("rev-parse", "--abbrev-ref", "HEAD").Trim();
+    if (string.Equals(branch, "HEAD", StringComparison.Ordinal))
+    {
+        throw new CakeException("Release cannot run from a detached HEAD.");
+    }
+
+    var commit = GetGitOutput("rev-parse", "HEAD").Trim();
+    var pushExitCode = StartProcess("git", new ProcessSettings
+    {
+        Arguments = new ProcessArgumentBuilder()
+            .Append("push")
+            .Append("origin")
+            .AppendQuoted(branch),
+    });
+    if (pushExitCode != 0)
+    {
+        throw new CakeException($"Git push failed with exit code {pushExitCode}.");
+    }
 
     var tag = $"v{versionText}";
     var arguments = new ProcessArgumentBuilder()
@@ -89,8 +168,11 @@ Task("Release")
         .AppendQuoted(tag);
 
     foreach (var package in packages) arguments.AppendQuoted(package.FullPath);
+    foreach (var result in benchmarkResults) arguments.AppendQuoted(result.FullPath);
 
     arguments
+        .Append("--target")
+        .AppendQuoted(commit)
         .Append("--title")
         .AppendQuoted(tag)
         .Append("--generate-notes");
@@ -122,6 +204,44 @@ Task("Default")
 //////////////////////////////////////////////////////////////////////
 // HELPERS
 //////////////////////////////////////////////////////////////////////
+
+static void EnsureCleanWorktree()
+{
+    var status = GetGitOutput("status", "--porcelain");
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+        throw new CakeException(
+            "The working tree must be clean before this target. Commit or stash changes first.");
+    }
+}
+
+static void RunGit(params string[] arguments)
+{
+    var builder = new ProcessArgumentBuilder();
+    foreach (var argument in arguments) builder.Append(argument);
+
+    var exitCode = StartProcess("git", new ProcessSettings { Arguments = builder });
+    if (exitCode != 0) throw new CakeException($"Git command failed with exit code {exitCode}.");
+}
+
+static string GetGitOutput(params string[] arguments)
+{
+    var builder = new ProcessArgumentBuilder();
+    foreach (var argument in arguments) builder.Append(argument);
+
+    var exitCode = StartProcess(
+        "git",
+        new ProcessSettings
+        {
+            Arguments = builder,
+            RedirectStandardOutput = true,
+        },
+        out var output);
+
+    if (exitCode != 0) throw new CakeException($"Git command failed with exit code {exitCode}.");
+
+    return string.Join(Environment.NewLine, output);
+}
 
 static DotNetMSBuildSettings CreateVersionedMsBuildSettings(string versionText)
 {
