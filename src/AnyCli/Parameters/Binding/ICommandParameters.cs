@@ -23,9 +23,12 @@ public interface ICommandParameters<TSelf>
     static abstract void Configure(CommandParameterDefinitionBuilder parameters);
 
     /// <summary>
-    /// Creates typed parameters from parsed command parameter values.
+    /// Creates typed parameters from parsed command parameter values and global option values.
     /// </summary>
     /// <param name="parameterValues">The parsed parameter values.</param>
+    /// <param name="globalOptionValues">The parsed global option values.</param>
     /// <returns>The parameters instance.</returns>
-    static abstract TSelf Bind(ParsedCommandParameters parameterValues);
+    static abstract TSelf Bind(
+        ParsedCommandParameters parameterValues,
+        CommandOptionValues globalOptionValues);
 }

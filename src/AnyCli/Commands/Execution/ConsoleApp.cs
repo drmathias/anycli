@@ -2,9 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-using System.Collections;
-using System.Globalization;
-
 namespace AnyCli.Commands.Execution;
 
 /// <summary>
@@ -15,6 +12,7 @@ namespace AnyCli.Commands.Execution;
 /// </remarks>
 public sealed class ConsoleApp
 {
+    private readonly IGlobalOptionsDefinition? _globalOptionsDefinition;
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private readonly IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories;
@@ -30,6 +28,7 @@ public sealed class ConsoleApp
         string? version,
         CommandNode root,
         IReadOnlyList<OptionDefinition> globalOptions,
+        IGlobalOptionsDefinition? globalOptionsDefinition,
         IServiceProvider? serviceProvider,
         Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
         Func<IServiceProvider?, IUnrecognizedCommandHandler> unrecognizedCommandHandlerFactory,
@@ -40,6 +39,7 @@ public sealed class ConsoleApp
         _version = version;
         _root = root;
         _globalOptions = globalOptions;
+        _globalOptionsDefinition = globalOptionsDefinition;
         _serviceProvider = serviceProvider;
         _helpProviderFactory = helpProviderFactory;
         _unrecognizedCommandHandlerFactory = unrecognizedCommandHandlerFactory;
@@ -297,14 +297,21 @@ public sealed class ConsoleApp
 
         ValidateRequiredGlobalOptions(globalOptionValues);
 
-        var context = new CommandContext(
-            path,
-            console,
-            CreateGlobalOptionValues(globalOptionValues));
+        var suppliedGlobalOptionValues = new CommandOptionValues(globalOptionValues);
+        var context = _globalOptionsDefinition is null
+            ? new CommandContext(path, console)
+            : _globalOptionsDefinition.CreateContext(
+                path,
+                console,
+                suppliedGlobalOptionValues);
 
         return await ExecuteWithInterceptorsAsync(
                 context,
-                () => command.Execute.Invoke(_serviceProvider, context, arguments!))
+                () => command.Execute.Invoke(
+                    _serviceProvider,
+                    context,
+                    arguments!,
+                    suppliedGlobalOptionValues))
             .ConfigureAwait(false);
     }
 
@@ -422,55 +429,6 @@ public sealed class ConsoleApp
                 console,
                 GetOptions(),
                 CreateCommandInfo(command, [.. commandPath.Take(commandPath.Count - 1)])));
-    }
-
-    private CommandOptionValues CreateGlobalOptionValues(
-        IReadOnlyDictionary<string, OptionValue> globalOptionValues)
-    {
-        var defaults = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
-        foreach (var option in _globalOptions)
-        {
-            if (!option.HasDefaultValue || globalOptionValues.ContainsKey(option.Name))
-            {
-                continue;
-            }
-
-            var defaultValue = new OptionValue();
-            AddDefaultValues(defaultValue, option.DefaultValue);
-            defaults[option.Name] = defaultValue;
-        }
-
-        return new CommandOptionValues(globalOptionValues, defaults);
-    }
-
-    private static void AddDefaultValues(OptionValue optionValue, object? value)
-    {
-        if (value is null)
-        {
-            return;
-        }
-
-        if (value is string stringValue)
-        {
-            optionValue.Values.Add(stringValue);
-            return;
-        }
-
-        if (value is IEnumerable enumerable)
-        {
-            foreach (var item in enumerable)
-            {
-                AddDefaultValues(optionValue, item);
-            }
-
-            return;
-        }
-
-        var text = Convert.ToString(value, CultureInfo.InvariantCulture);
-        if (text is not null)
-        {
-            optionValue.Values.Add(text);
-        }
     }
 
     private void ValidateRequiredGlobalOptions(

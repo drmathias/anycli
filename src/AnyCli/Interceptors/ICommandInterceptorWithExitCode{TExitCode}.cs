@@ -10,7 +10,7 @@ namespace AnyCli.Interceptors;
 /// Intercepts command execution for commands that return a custom exit code enum.
 /// </summary>
 /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
-public interface ICommandInterceptor<TExitCode> : ICommandInterceptor
+public interface ICommandInterceptorWithExitCode<TExitCode> : ICommandInterceptor
     where TExitCode : struct, Enum
 {
     /// <summary>

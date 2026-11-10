@@ -34,14 +34,6 @@ public sealed class ConfiguredConsoleAppBuilder<TExitCode> : ConfiguredConsoleAp
     }
 
     /// <inheritdoc/>
-    public override ConfiguredConsoleAppBuilder<TExitCode> WithGlobalOptions(
-        Action<GlobalOptionBuilder> configure)
-    {
-        base.WithGlobalOptions(configure);
-        return this;
-    }
-
-    /// <inheritdoc/>
     public override ConfiguredConsoleAppBuilder<TExitCode> UseServiceProvider(
         IServiceProvider serviceProvider)
     {

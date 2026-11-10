@@ -25,11 +25,11 @@ public class InterceptorTests
     }
 
     [Test]
-    public async Task Interceptor_CanReadGlobalOptionValues()
+    public async Task Interceptor_CanReadTypedGlobalOptions()
     {
         var app = ConsoleAppBuilder.Create()
-            .WithGlobalOptions(options => options.AddValue<string>("log-level"))
-            .ConfigureCommands(commands => commands.AddCommand<OutputCommand>("run"))
+            .AddGlobalOptions<TestGlobalOptions>()
+            .ConfigureCommands(commands => commands.AddCommand<TypedGlobalOutputCommand, TestGlobalEchoParameters>("run"))
             .AddInterceptor<GlobalOptionInterceptor>()
             .Build();
 
@@ -149,6 +149,15 @@ public class InterceptorTests
         }
     }
 
+    private sealed class TypedGlobalOutputCommand : ICommand<TestGlobalEchoParameters>
+    {
+        public int Execute(CommandContext context, TestGlobalEchoParameters parameters)
+        {
+            context.Console.Output.Write("command");
+            return 0;
+        }
+    }
+
     private sealed class AsyncOutputCommand : NoParametersAsyncCommand
     {
         public override Task<int> ExecuteAsync(CommandContext context)
@@ -191,14 +200,13 @@ public class InterceptorTests
         }
     }
 
-    private sealed class GlobalOptionInterceptor : ICommandInterceptor
+    private sealed class GlobalOptionInterceptor : ICommandInterceptor<TestGlobalOptions>
     {
-        public Task<int> InterceptAsync(CommandContext context, Func<Task<int>> next)
+        public Task<int> InterceptAsync(
+            CommandContext<TestGlobalOptions> context,
+            Func<Task<int>> next)
         {
-            var logLevel = context.GlobalOptionValues.TryGetValue("log-level", out var value)
-                ? value
-                : "none";
-            context.Console.Output.Write($"{logLevel}|");
+            context.Console.Output.Write($"{context.GlobalOptions.LogLevel}|");
             return next();
         }
     }
@@ -218,7 +226,7 @@ public class InterceptorTests
             await next().ConfigureAwait(false) + 10;
     }
 
-    private sealed class EnumInterceptor : ICommandInterceptor<InterceptorExitCode>
+    private sealed class EnumInterceptor : ICommandInterceptorWithExitCode<InterceptorExitCode>
     {
         public async Task<InterceptorExitCode> InterceptAsync(
             CommandContext context,

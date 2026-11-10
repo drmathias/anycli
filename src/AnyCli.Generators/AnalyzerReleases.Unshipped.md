@@ -19,3 +19,5 @@ ANYCLI014 | AnyCli | Error | Duplicate option name
 ANYCLI010 | AnyCli | Error | Invalid collection default value
 ANYCLI011 | AnyCli | Error | Invalid default value element type
 ANYCLI012 | AnyCli | Error | Default value on required variadic parameter
+ANYCLI015 | AnyCli | Error | Global option declared as argument
+ANYCLI016 | AnyCli | Error | Conflicting parameters kind

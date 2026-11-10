@@ -266,7 +266,9 @@ public sealed class OneOrMoreParameters : ICommandParameters<OneOrMoreParameters
     public static void Configure(CommandParameterDefinitionBuilder parameters) =>
         parameters.Arguments.AddVariadic<string>("tags", ArgumentArity.OneOrMore);
 
-    public static OneOrMoreParameters Bind(ParsedCommandParameters parameters) =>
+    public static OneOrMoreParameters Bind(
+        ParsedCommandParameters parameters,
+        CommandOptionValues globalOptionValues) =>
         new() { Tags = [.. parameters.Arguments.GetVariadic("tags")] };
 }
 

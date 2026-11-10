@@ -49,20 +49,6 @@ public class ConfiguredConsoleAppBuilder
     }
 
     /// <summary>
-    /// Configures options that apply to every command.
-    /// </summary>
-    /// <param name="configure">The global option configuration callback.</param>
-    /// <returns>The current builder.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="configure"/> is <see langword="null"/>.
-    /// </exception>
-    public virtual ConfiguredConsoleAppBuilder WithGlobalOptions(Action<GlobalOptionBuilder> configure)
-    {
-        _builder.WithGlobalOptions(configure);
-        return this;
-    }
-
-    /// <summary>
     /// Sets the service provider used to resolve commands.
     /// </summary>
     /// <param name="serviceProvider">The service provider.</param>

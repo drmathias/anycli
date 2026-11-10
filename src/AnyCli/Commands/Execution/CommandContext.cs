@@ -7,17 +7,15 @@ namespace AnyCli.Commands.Execution;
 /// <summary>
 /// Provides the runtime context for a command execution.
 /// </summary>
-public sealed class CommandContext
+public class CommandContext
 {
     internal CommandContext(
         IReadOnlyList<string> commandPath,
-        IConsole console,
-        CommandOptionValues globalOptions)
+        IConsole console)
     {
         CommandPath = commandPath;
         Name = commandPath[^1];
         Console = console;
-        GlobalOptionValues = globalOptions;
     }
 
     /// <summary>
@@ -34,9 +32,4 @@ public sealed class CommandContext
     /// Gets the console used by the command.
     /// </summary>
     public IConsole Console { get; }
-
-    /// <summary>
-    /// Gets the parsed global option values that apply to every command.
-    /// </summary>
-    public CommandOptionValues GlobalOptionValues { get; }
 }

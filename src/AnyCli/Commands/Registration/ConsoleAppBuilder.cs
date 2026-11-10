@@ -14,6 +14,7 @@ public sealed class ConsoleAppBuilder
 {
     private readonly GlobalOptionBuilder _globalOptions = new();
     private readonly List<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories = [];
+    private IGlobalOptionsDefinition? _globalOptionsDefinition;
     private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private IServiceProvider? _serviceProvider;
     private Func<IServiceProvider?, IUnrecognizedCommandHandler> _unrecognizedCommandHandlerFactory =
@@ -63,18 +64,26 @@ public sealed class ConsoleAppBuilder
     }
 
     /// <summary>
-    /// Configures options that apply to every command.
+    /// Configures typed global options that apply to every command.
     /// </summary>
-    /// <param name="configure">The global option configuration callback.</param>
-    /// <returns>The current builder.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="configure"/> is <see langword="null"/>.
+    /// <typeparam name="TGlobalOptions">The global options type.</typeparam>
+    /// <returns>A builder that registers commands using <typeparamref name="TGlobalOptions"/>.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Global options have already been configured.
     /// </exception>
-    public ConsoleAppBuilder WithGlobalOptions(Action<GlobalOptionBuilder> configure)
+    public ConsoleAppBuilder<TGlobalOptions> AddGlobalOptions<TGlobalOptions>()
+        where TGlobalOptions : class, IGlobalOptions<TGlobalOptions>
     {
-        ArgumentNullException.ThrowIfNull(configure);
-        configure.Invoke(_globalOptions);
-        return this;
+        if (_globalOptionsDefinition is not null)
+        {
+            throw new InvalidOperationException(
+                "Global options have already been configured.");
+        }
+
+        TGlobalOptions.Configure(_globalOptions);
+        _globalOptionsDefinition = new GlobalOptionsDefinition<TGlobalOptions>();
+
+        return new ConsoleAppBuilder<TGlobalOptions>(this);
     }
 
     /// <summary>
@@ -120,7 +129,7 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var registration = new CommandRegistration(
-            (serviceProvider, context, _) =>
+            (serviceProvider, context, _, _) =>
                 Task.FromResult(ResolveCommand<TCommand>(serviceProvider).Execute(context)),
             [],
             []);
@@ -153,7 +162,7 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var registration = new CommandRegistration(
-            (serviceProvider, context, _) => ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context),
+            (serviceProvider, context, _, _) => ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context),
             [],
             []);
         var command = new CommandNode(name, description) { Command = registration };
@@ -182,7 +191,7 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var registration = new CommandRegistration(
-            (serviceProvider, context, _) => Task.FromResult(
+            (serviceProvider, context, _, _) => Task.FromResult(
                 Convert.ToInt32(
                     ResolveCommand<TCommand>(serviceProvider).Execute(context),
                     CultureInfo.InvariantCulture)),
@@ -214,7 +223,7 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var registration = new CommandRegistration(
-            (serviceProvider, context, _) => ConvertExitCodeAsync(
+            (serviceProvider, context, _, _) => ConvertExitCodeAsync(
                 ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context)),
             [],
             []);
@@ -245,14 +254,17 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments) =>
+            (serviceProvider, context, commandArguments, globalOptionValues) =>
             {
-                var parameters = TParameters.Bind(commandArguments);
+                var parameters = TParameters.Bind(commandArguments, globalOptionValues);
                 return Task.FromResult(
                     ResolveCommand<TCommand>(serviceProvider).Execute(context, parameters));
             },
             definitions.Arguments,
-            definitions.Options);
+            definitions.Options)
+        {
+            ParametersType = typeof(TParameters),
+        };
         var command = new CommandNode(name, description) { Command = registration };
         parent.AddChild(command);
         return command;
@@ -283,14 +295,17 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments) =>
+            (serviceProvider, context, commandArguments, globalOptionValues) =>
             {
-                var parameters = TParameters.Bind(commandArguments);
+                var parameters = TParameters.Bind(commandArguments, globalOptionValues);
                 var exitCode = ResolveCommand<TCommand>(serviceProvider).Execute(context, parameters);
                 return Task.FromResult(Convert.ToInt32(exitCode, CultureInfo.InvariantCulture));
             },
             definitions.Arguments,
-            definitions.Options);
+            definitions.Options)
+        {
+            ParametersType = typeof(TParameters),
+        };
         var command = new CommandNode(name, description) { Command = registration };
         parent.AddChild(command);
         return command;
@@ -318,13 +333,16 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments) =>
+            (serviceProvider, context, commandArguments, globalOptionValues) =>
             {
-                var parameters = TParameters.Bind(commandArguments);
+                var parameters = TParameters.Bind(commandArguments, globalOptionValues);
                 return ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters);
             },
             definitions.Arguments,
-            definitions.Options);
+            definitions.Options)
+        {
+            ParametersType = typeof(TParameters),
+        };
         var command = new CommandNode(name, description) { Command = registration };
         parent.AddChild(command);
         return command;
@@ -355,14 +373,17 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments) =>
+            (serviceProvider, context, commandArguments, globalOptionValues) =>
             {
-                var parameters = TParameters.Bind(commandArguments);
+                var parameters = TParameters.Bind(commandArguments, globalOptionValues);
                 return ConvertExitCodeAsync(
                     ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters));
             },
             definitions.Arguments,
-            definitions.Options);
+            definitions.Options)
+        {
+            ParametersType = typeof(TParameters),
+        };
         var command = new CommandNode(name, description) { Command = registration };
         parent.AddChild(command);
         return command;
@@ -393,11 +414,11 @@ public sealed class ConsoleAppBuilder
     /// <paramref name="configure"/> is <see langword="null"/>.
     /// </exception>
     public ConfiguredConsoleAppBuilder<TExitCode> ConfigureCommands<TExitCode>(
-        Action<CommandRegistrar<TExitCode>> configure)
+        Action<CommandRegistrarWithExitCode<TExitCode>> configure)
         where TExitCode : struct, Enum
     {
         ArgumentNullException.ThrowIfNull(configure);
-        configure(new CommandRegistrar<TExitCode>(this, Root));
+        configure(new CommandRegistrarWithExitCode<TExitCode>(this, Root));
         return new ConfiguredConsoleAppBuilder<TExitCode>(this);
     }
 
@@ -447,6 +468,24 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    internal void ValidateGlobalOptionsBase(Type globalOptionsType)
+    {
+        foreach (var (commandName, command) in EnumerateCommands(Root, string.Empty))
+        {
+            if (command.ParametersType is null)
+            {
+                throw new InvalidOperationException(
+                    $"Command '{commandName}' must declare parameters that derive from '{globalOptionsType.FullName}'.");
+            }
+
+            if (!globalOptionsType.IsAssignableFrom(command.ParametersType))
+            {
+                throw new InvalidOperationException(
+                    $"Command '{commandName}' parameters type '{command.ParametersType.FullName}' must derive from '{globalOptionsType.FullName}'.");
+            }
+        }
+    }
+
     /// <summary>
     /// Creates the configured application.
     /// </summary>
@@ -463,6 +502,7 @@ public sealed class ConsoleAppBuilder
             _version,
             Root,
             globalOptions,
+            _globalOptionsDefinition,
             _serviceProvider,
             _helpProviderFactory,
             _unrecognizedCommandHandlerFactory,

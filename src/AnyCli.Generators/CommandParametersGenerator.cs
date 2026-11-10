@@ -21,7 +21,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private const string VariadicArgumentAttributeName = "AnyCli.Parameters.Arguments.VariadicArgumentAttribute";
     private const string OptionAttributeName = "AnyCli.Parameters.Options.OptionAttribute";
     private const string RequiredOptionAttributeName = "AnyCli.Parameters.Options.RequiredOptionAttribute";
+    private const string GlobalOptionsAttributeName = "AnyCli.Parameters.Options.GlobalOptionsAttribute";
     private const string ParametersInterfaceName = "ICommandParameters`1";
+    private const string GlobalOptionsInterfaceName = "IGlobalOptions`1";
     private const string ParameterValueParserAttributeName = "ParameterValueParserAttribute`2";
     private const string EnumParameterParserAttributeName = "EnumParameterParserAttribute`1";
     private const string ParameterParserInterfaceName = "IParameterParser`1";
@@ -153,6 +155,24 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor GlobalOptionCannotBeArgumentDiagnostic = new(
+        id: "ANYCLI015",
+        title: "Global option declared as argument",
+        messageFormat:
+            "Global option property '{0}' cannot be declared as a positional argument",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ConflictingParametersKindDiagnostic = new(
+        id: "ANYCLI016",
+        title: "Conflicting parameters kind",
+        messageFormat:
+            "Type '{0}' cannot be both global options and command parameters",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var models = context.SyntaxProvider
@@ -191,21 +211,44 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     }
 
     private static bool IsCandidate(SyntaxNode node) =>
-        node is ClassDeclarationSyntax declaration &&
+        node is TypeDeclarationSyntax declaration &&
+        declaration is ClassDeclarationSyntax or RecordDeclarationSyntax &&
         declaration.Modifiers.Any(SyntaxKind.PartialKeyword) &&
         (declaration.BaseList is not null ||
          declaration.Members
              .OfType<PropertyDeclarationSyntax>()
-             .Any(property => property.AttributeLists.Count > 0));
+             .Any(property => property.AttributeLists.Count > 0) ||
+         HasGlobalOptionsAttributeSyntax(declaration));
+
+    private static bool HasGlobalOptionsAttributeSyntax(TypeDeclarationSyntax declaration) =>
+        declaration.AttributeLists
+            .SelectMany(list => list.Attributes)
+            .Any(attribute =>
+            {
+                var name = attribute.Name switch
+                {
+                    QualifiedNameSyntax qualified => qualified.Right.Identifier.ValueText,
+                    AliasQualifiedNameSyntax alias => alias.Name.Identifier.ValueText,
+                    SimpleNameSyntax simple => simple.Identifier.ValueText,
+                    _ => string.Empty,
+                };
+
+                return name is "GlobalOptions" or "GlobalOptionsAttribute";
+            });
 
     private static ParametersModel? GetModel(
         GeneratorSyntaxContext context,
         CancellationToken cancellationToken)
     {
-        var declaration = (ClassDeclarationSyntax)context.Node;
+        var declaration = (TypeDeclarationSyntax)context.Node;
         var symbol = context.SemanticModel.GetDeclaredSymbol(declaration, cancellationToken);
-        if (symbol is not INamedTypeSymbol type ||
-            type.TypeKind != TypeKind.Class ||
+        if (symbol is not INamedTypeSymbol type)
+        {
+            return null;
+        }
+
+        var isGlobalOptions = HasGlobalOptionsAttribute(type);
+        if (type.TypeKind != TypeKind.Class ||
             type.IsStatic ||
             type.IsAbstract ||
             type.Arity > 0 ||
@@ -215,20 +258,38 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         }
 
         var compilation = context.SemanticModel.Compilation;
+        if (!isGlobalOptions && ImplementsGlobalOptionsInterface(type))
+        {
+            return null;
+        }
+
+        var globalOptionsBase = isGlobalOptions ? null : GetGlobalOptionsBase(type);
         var registrations = GetParameterParserRegistrations(
             compilation,
             cancellationToken);
         var arguments = new List<ArgumentModel>();
         var argumentPositions = new List<(int Position, Location Location, string PropertyName)>();
         var options = new List<OptionModel>();
+        var globalOptions = new List<OptionModel>();
         var optionNames = new HashSet<string>(StringComparer.Ordinal);
         var diagnostics = new List<DiagnosticModel>();
+        if (isGlobalOptions && ImplementsParametersInterface(type))
+        {
+            diagnostics.Add(new DiagnosticModel(
+                ConflictingParametersKindDiagnostic,
+                type.Locations.FirstOrDefault() ?? Location.None,
+                type.Name));
+        }
+
         foreach (var property in GetParameterProperties(type, compilation))
         {
             if (property.SetMethod is null || property.SetMethod.IsInitOnly)
             {
                 return null;
             }
+
+            var isGlobalOptionProperty = globalOptionsBase is not null &&
+                IsDeclaredInTypeOrBase(globalOptionsBase, property.ContainingType);
 
             foreach (var attribute in GetParameterAttributes(property))
             {
@@ -245,16 +306,23 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         diagnostics);
                     if (option is not null)
                     {
-                        options.Add(option);
-                        foreach (var optionName in option.Names)
+                        if (isGlobalOptionProperty)
                         {
-                            if (!optionNames.Add(optionName))
+                            globalOptions.Add(option);
+                        }
+                        else
+                        {
+                            options.Add(option);
+                            foreach (var optionName in option.Names)
                             {
-                                diagnostics.Add(new DiagnosticModel(
-                                    DuplicateOptionNameDiagnostic,
-                                    GetLocation(property),
-                                    property.Name,
-                                    optionName));
+                                if (!optionNames.Add(optionName))
+                                {
+                                    diagnostics.Add(new DiagnosticModel(
+                                        DuplicateOptionNameDiagnostic,
+                                        GetLocation(property),
+                                        property.Name,
+                                        optionName));
+                                }
                             }
                         }
                     }
@@ -262,10 +330,24 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     continue;
                 }
 
+                if (isGlobalOptionProperty)
+                {
+                    continue;
+                }
+
                 var isOptionalArgument = attributeName == OptionalArgumentAttributeName;
                 var isVariadic = attributeName == VariadicArgumentAttributeName;
                 if (!isVariadic && !isOptionalArgument && attributeName != ArgumentAttributeName)
                 {
+                    continue;
+                }
+
+                if (isGlobalOptions)
+                {
+                    diagnostics.Add(new DiagnosticModel(
+                        GlobalOptionCannotBeArgumentDiagnostic,
+                        GetLocation(property),
+                        property.Name));
                     continue;
                 }
 
@@ -438,7 +520,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         ValidateArgumentPositions(argumentPositions, diagnostics);
 
-        return arguments.Count == 0 && options.Count == 0 && diagnostics.Count == 0
+        return !isGlobalOptions &&
+               arguments.Count == 0 &&
+               options.Count == 0 &&
+               globalOptions.Count == 0 &&
+               diagnostics.Count == 0
             ? null
             : new ParametersModel(
                 type.ContainingNamespace.IsGlobalNamespace ? string.Empty : type.ContainingNamespace.ToDisplayString(),
@@ -447,9 +533,12 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 GetAccessibility(type.DeclaredAccessibility),
                 type.IsSealed,
                 type.IsRecord,
+                isGlobalOptions,
+                ImplementsGlobalOptionsInterface(type),
                 ImplementsParametersInterface(type),
                 [.. arguments.OrderBy(argument => argument.Position)],
                 [.. options],
+                [.. globalOptions],
                 [.. diagnostics]);
     }
 
@@ -1223,6 +1312,50 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 currentInterface.TypeArguments.Length == 1 &&
                 SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], type));
 
+    private static bool ImplementsGlobalOptionsInterface(INamedTypeSymbol type) =>
+        type.AllInterfaces.Any(
+            currentInterface =>
+                currentInterface.OriginalDefinition.MetadataName == GlobalOptionsInterfaceName &&
+                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli.Parameters.Options" &&
+                currentInterface.TypeArguments.Length == 1 &&
+                SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], type));
+
+    private static bool HasGlobalOptionsAttribute(INamedTypeSymbol type) =>
+        type.GetAttributes().Any(
+            attribute => attribute.AttributeClass?.ToDisplayString() == GlobalOptionsAttributeName);
+
+    private static INamedTypeSymbol? GetGlobalOptionsBase(INamedTypeSymbol type)
+    {
+        for (var current = type.BaseType;
+             current is not null && current.SpecialType != SpecialType.System_Object;
+             current = current.BaseType)
+        {
+            if (HasGlobalOptionsAttribute(current))
+            {
+                return current;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsDeclaredInTypeOrBase(
+        INamedTypeSymbol baseType,
+        INamedTypeSymbol containingType)
+    {
+        for (var current = baseType;
+             current is not null && current.SpecialType != SpecialType.System_Object;
+             current = current.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current, containingType))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string GetAccessibility(Accessibility accessibility) =>
         accessibility switch
         {
@@ -1273,13 +1406,52 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         source.Append("partial ").Append(model.IsRecord ? "record" : "class").Append(' ').Append(model.TypeName);
 
-        if (!model.ImplementsParametersInterface)
+        if (model.IsGlobalOptions)
+        {
+            if (!model.ImplementsGlobalOptionsInterface)
+            {
+                source.Append(" : global::AnyCli.Parameters.Options.IGlobalOptions<")
+                    .Append(model.FullTypeName)
+                    .Append('>');
+            }
+        }
+        else if (!model.ImplementsParametersInterface)
         {
             source.Append(" : global::AnyCli.Parameters.Binding.ICommandParameters<").Append(model.FullTypeName).Append('>');
         }
 
         source.AppendLine();
         source.Append(indent).AppendLine("{");
+
+        if (model.IsGlobalOptions)
+        {
+            source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.Parameters.Options.GlobalOptionBuilder options)");
+            source.Append(indent).AppendLine("    {");
+            EmitOptionConfiguration(source, indent, model.Options, "options", 0);
+            source.Append(indent).AppendLine("    }");
+            source.AppendLine();
+
+            source.Append(indent)
+                .Append("    public static ")
+                .Append(model.FullTypeName)
+                .AppendLine(" Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
+            source.Append(indent).AppendLine("    {");
+            source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
+            EmitOptionBindings(source, indent, model.Options, "values", 0);
+            source.Append(indent).AppendLine("        return parameters;");
+            source.Append(indent).AppendLine("    }");
+            source.Append(indent).AppendLine("}");
+
+            if (hasNamespace)
+            {
+                source.AppendLine("}");
+            }
+
+            context.AddSource(
+                model.FullTypeName.Replace("global::", string.Empty).Replace('.', '_') + ".CommandParameters.g.cs",
+                SourceText.From(source.ToString(), Encoding.UTF8));
+            return;
+        }
 
         source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.Parameters.Binding.CommandParameterDefinitionBuilder parameters)");
         source.Append(indent).AppendLine("    {");
@@ -1327,79 +1499,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             }
         }
 
-        var optionIndex = 0;
-        foreach (var option in model.Options)
-        {
-            var local = "__option" + optionIndex++;
-
-            source.Append(indent)
-                .Append("        var ")
-                .Append(local)
-                .Append(" = parameters.Options.");
-
-            if (option.IsFlag)
-            {
-                source.Append("AddFlag(")
-                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
-                    .Append(')');
-            }
-            else if (option.IsCollection)
-            {
-                source.Append("AddCollection<")
-                    .Append(option.ElementTypeFullName)
-                    .Append(">(")
-                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
-                    .Append(')');
-            }
-            else
-            {
-                source.Append("AddValue<")
-                    .Append(option.ElementTypeFullName)
-                    .Append(">(")
-                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
-                    .Append(')');
-            }
-
-            source.AppendLine(";");
-
-            if (option.Aliases.Count > 0)
-            {
-                source.Append(indent)
-                    .Append("        ")
-                    .Append(local)
-                    .Append(".SetAliases(")
-                    .Append(GetStringArrayExpression(option.Aliases))
-                    .AppendLine(");");
-            }
-
-            if (option.Description.Length > 0)
-            {
-                source.Append(indent)
-                    .Append("        ")
-                    .Append(local)
-                    .Append(".SetDescription(")
-                    .Append(SymbolDisplay.FormatLiteral(option.Description, true))
-                    .AppendLine(");");
-            }
-
-            if (option.DefaultValueExpression is not null)
-            {
-                source.Append(indent)
-                    .Append("        ")
-                    .Append(local)
-                    .Append(".SetDefaultValue(")
-                    .Append(option.DefaultValueExpression)
-                    .AppendLine(");");
-            }
-
-            if (option.Required)
-            {
-                source.Append(indent)
-                    .Append("        ")
-                    .Append(local)
-                    .AppendLine(".SetRequired();");
-            }
-        }
+        EmitOptionConfiguration(source, indent, model.Options, "parameters.Options", 0);
 
         source.Append(indent).AppendLine("    }");
         source.AppendLine();
@@ -1407,7 +1507,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         source.Append(indent)
             .Append("    public static ")
             .Append(model.FullTypeName)
-            .AppendLine(" Bind(global::AnyCli.Parameters.Binding.ParsedCommandParameters parameterValues)");
+            .AppendLine(" Bind(")
+            .Append(indent)
+            .AppendLine("        global::AnyCli.Parameters.Binding.ParsedCommandParameters parameterValues,")
+            .Append(indent)
+            .AppendLine("        global::AnyCli.Parameters.Options.CommandOptionValues globalOptionValues)");
         source.Append(indent).AppendLine("    {");
         source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
 
@@ -1541,7 +1645,115 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             localIndex++;
         }
 
-        foreach (var option in model.Options)
+        EmitOptionBindings(source, indent, model.GlobalOptions, "globalOptionValues", localIndex);
+        localIndex += model.GlobalOptions.Count;
+        EmitOptionBindings(source, indent, model.Options, "parameterValues.Options", localIndex);
+
+        source.Append(indent).AppendLine("        return parameters;");
+        source.Append(indent).AppendLine("    }");
+        source.Append(indent).AppendLine("}");
+
+        if (hasNamespace)
+        {
+            source.AppendLine("}");
+        }
+
+        context.AddSource(
+            model.FullTypeName.Replace("global::", string.Empty).Replace('.', '_') + ".CommandParameters.g.cs",
+            SourceText.From(source.ToString(), Encoding.UTF8));
+    }
+
+    private static void EmitOptionConfiguration(
+        StringBuilder source,
+        string indent,
+        IReadOnlyList<OptionModel> options,
+        string optionsExpression,
+        int optionIndex)
+    {
+        foreach (var option in options)
+        {
+            var local = "__option" + optionIndex++;
+
+            source.Append(indent)
+                .Append("        var ")
+                .Append(local)
+                .Append(" = ")
+                .Append(optionsExpression)
+                .Append('.');
+
+            if (option.IsFlag)
+            {
+                source.Append("AddFlag(")
+                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
+                    .Append(')');
+            }
+            else if (option.IsCollection)
+            {
+                source.Append("AddCollection<")
+                    .Append(option.ElementTypeFullName)
+                    .Append(">(")
+                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
+                    .Append(')');
+            }
+            else
+            {
+                source.Append("AddValue<")
+                    .Append(option.ElementTypeFullName)
+                    .Append(">(")
+                    .Append(SymbolDisplay.FormatLiteral(option.Name, true))
+                    .Append(')');
+            }
+
+            source.AppendLine(";");
+
+            if (option.Aliases.Count > 0)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .Append(".SetAliases(")
+                    .Append(GetStringArrayExpression(option.Aliases))
+                    .AppendLine(");");
+            }
+
+            if (option.Description.Length > 0)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .Append(".SetDescription(")
+                    .Append(SymbolDisplay.FormatLiteral(option.Description, true))
+                    .AppendLine(");");
+            }
+
+            if (option.DefaultValueExpression is not null)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .Append(".SetDefaultValue(")
+                    .Append(option.DefaultValueExpression)
+                    .AppendLine(");");
+            }
+
+            if (option.Required)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .AppendLine(".SetRequired();");
+            }
+        }
+    }
+
+    private static void EmitOptionBindings(
+        StringBuilder source,
+        string indent,
+        IReadOnlyList<OptionModel> options,
+        string valuesExpression,
+        int localIndex)
+    {
+        foreach (var option in options)
         {
             var literalName = SymbolDisplay.FormatLiteral(option.Name, true);
             var rawLocal = "__raw" + localIndex;
@@ -1554,7 +1766,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 if (option.DefaultValueExpression is not null)
                 {
                     source.Append(indent)
-                        .Append("        if (parameterValues.Options.Has(")
+                        .Append("        if (")
+                        .Append(valuesExpression)
+                        .Append(".Has(")
                         .Append(literalName)
                         .AppendLine("))");
                     source.Append(indent).AppendLine("        {");
@@ -1563,7 +1777,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 source.Append(indent)
                     .Append("        var ")
                     .Append(rawLocal)
-                    .Append(" = parameterValues.Options.GetValues(")
+                    .Append(" = ")
+                    .Append(valuesExpression)
+                    .Append(".GetValues(")
                     .Append(literalName)
                     .AppendLine(");");
                 source.Append(indent)
@@ -1627,7 +1843,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             else
             {
                 source.Append(indent)
-                    .Append("        if (parameterValues.Options.TryGetValue(")
+                    .Append("        if (")
+                    .Append(valuesExpression)
+                    .Append(".TryGetValue(")
                     .Append(literalName)
                     .Append(", out var ")
                     .Append(rawLocal)
@@ -1671,19 +1889,6 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
             localIndex++;
         }
-
-        source.Append(indent).AppendLine("        return parameters;");
-        source.Append(indent).AppendLine("    }");
-        source.Append(indent).AppendLine("}");
-
-        if (hasNamespace)
-        {
-            source.AppendLine("}");
-        }
-
-        context.AddSource(
-            model.FullTypeName.Replace("global::", string.Empty).Replace('.', '_') + ".CommandParameters.g.cs",
-            SourceText.From(source.ToString(), Encoding.UTF8));
     }
 
     private static string GetStringArrayExpression(IReadOnlyList<string> values) =>
@@ -1787,9 +1992,12 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             string accessibility,
             bool isSealed,
             bool isRecord,
+            bool isGlobalOptions,
+            bool implementsGlobalOptionsInterface,
             bool implementsParametersInterface,
             IReadOnlyList<ArgumentModel> arguments,
             IReadOnlyList<OptionModel> options,
+            IReadOnlyList<OptionModel> globalOptions,
             IReadOnlyList<DiagnosticModel> diagnostics)
         {
             Namespace = @namespace;
@@ -1798,9 +2006,12 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             Accessibility = accessibility;
             IsSealed = isSealed;
             IsRecord = isRecord;
+            IsGlobalOptions = isGlobalOptions;
+            ImplementsGlobalOptionsInterface = implementsGlobalOptionsInterface;
             ImplementsParametersInterface = implementsParametersInterface;
             Arguments = arguments;
             Options = options;
+            GlobalOptions = globalOptions;
             Diagnostics = diagnostics;
         }
 
@@ -1816,11 +2027,17 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         public bool IsRecord { get; }
 
+        public bool IsGlobalOptions { get; }
+
+        public bool ImplementsGlobalOptionsInterface { get; }
+
         public bool ImplementsParametersInterface { get; }
 
         public IReadOnlyList<ArgumentModel> Arguments { get; }
 
         public IReadOnlyList<OptionModel> Options { get; }
+
+        public IReadOnlyList<OptionModel> GlobalOptions { get; }
 
         public IReadOnlyList<DiagnosticModel> Diagnostics { get; }
     }

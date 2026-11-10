@@ -214,13 +214,13 @@ public class NestedCommandTests
     public async Task ExecutableGroup_GlobalOptionsCanPrecedeChild()
     {
         var app = ConsoleAppBuilder.Create()
-            .WithGlobalOptions(options => options.AddValue<string>("log-level"))
+            .AddGlobalOptions<TestGlobalOptions>()
             .ConfigureCommands(commands =>
             {
-                commands.AddCommand<ExecutableGroupCommand, ExecutableGroupParameters>(
+                commands.AddCommand<TypedExecutableGroupCommand, ExecutableGroupParameters>(
                     "remote",
                     "Manage remotes",
-                    group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
+                    group => group.AddCommand<TypedNestedPathCommand, TypedNestedPathParameters>("add", "Add a remote"));
             })
             .Build();
 
@@ -304,8 +304,7 @@ public class NestedCommandTests
 
     private static ConsoleApp CreateApp() =>
         ConsoleAppBuilder.Create()
-            .WithGlobalOptions(options =>
-                options.AddValue<string>("log-level").SetAliases("l").SetDescription("Log level"))
+            .AddGlobalOptions<TestGlobalOptions>()
             .ConfigureCommands(commands =>
             {
                 commands.AddGroup("remote", "Manage remotes", group =>
@@ -313,7 +312,7 @@ public class NestedCommandTests
                     group.AddCommand<NestedEchoCommand, NestedEchoParameters>("add", "Add a remote");
                     group.AddGroup("config", "Configure remotes", nested =>
                     {
-                        nested.AddCommand<NestedPathCommand>("set", "Set a value");
+                        nested.AddCommand<TypedNestedPathCommand, TypedNestedPathParameters>("set", "Set a value");
                     });
                 });
             })
@@ -323,11 +322,27 @@ public class NestedCommandTests
     {
         public int Execute(CommandContext context, NestedEchoParameters parameters)
         {
-            var logLevel = context.GlobalOptionValues.TryGetValue("log-level", out var value)
-                ? value
-                : "none";
             context.Console.Output.Write(
-                $"{string.Join(".", context.CommandPath)}|{parameters.Value}|{parameters.Loud}|{logLevel}");
+                $"{string.Join(".", context.CommandPath)}|{parameters.Value}|{parameters.Loud}|{parameters.LogLevel}");
+            return 0;
+        }
+    }
+
+    private sealed class TypedNestedPathCommand : ICommand<TypedNestedPathParameters>
+    {
+        public int Execute(CommandContext context, TypedNestedPathParameters parameters)
+        {
+            context.Console.Output.Write(string.Join(".", context.CommandPath));
+            return 0;
+        }
+    }
+
+    private sealed class TypedExecutableGroupCommand : ICommand<ExecutableGroupParameters>
+    {
+        public int Execute(CommandContext context, ExecutableGroupParameters parameters)
+        {
+            context.Console.Output.Write(
+                $"{string.Join(".", context.CommandPath)}|{parameters.Verbose}");
             return 0;
         }
     }
@@ -394,7 +409,7 @@ public class NestedCommandTests
     }
 }
 
-public sealed partial class NestedEchoParameters
+public sealed partial class NestedEchoParameters : TestGlobalOptions
 {
     [Argument(0)]
     public string Value { get; set; } = "";
@@ -403,7 +418,7 @@ public sealed partial class NestedEchoParameters
     public bool Loud { get; set; }
 }
 
-public sealed partial class ExecutableGroupParameters
+public sealed partial class ExecutableGroupParameters : TestGlobalOptions
 {
     [Option("verbose")]
     public bool Verbose { get; set; }
@@ -413,6 +428,10 @@ public sealed partial class ExecutableGroupWithArgumentParameters
 {
     [Argument(0)]
     public string Name { get; set; } = "";
+}
+
+public sealed partial class TypedNestedPathParameters : TestGlobalOptions
+{
 }
 
 public enum NestedExitCode

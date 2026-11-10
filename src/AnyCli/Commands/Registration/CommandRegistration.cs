@@ -5,13 +5,15 @@
 namespace AnyCli.Commands.Registration;
 
 internal sealed class CommandRegistration(
-    Func<IServiceProvider?, CommandContext, ParsedCommandParameters, Task<int>> execute,
+    Func<IServiceProvider?, CommandContext, ParsedCommandParameters, CommandOptionValues, Task<int>> execute,
     IReadOnlyList<ArgumentDefinition> arguments,
     IReadOnlyList<OptionDefinition> options)
 {
-    public Func<IServiceProvider?, CommandContext, ParsedCommandParameters, Task<int>> Execute { get; } = execute;
+    public Func<IServiceProvider?, CommandContext, ParsedCommandParameters, CommandOptionValues, Task<int>> Execute { get; } = execute;
 
     public IReadOnlyList<ArgumentDefinition> Arguments { get; } = arguments;
 
     public IReadOnlyList<OptionDefinition> Options { get; } = options;
+
+    public Type? ParametersType { get; init; }
 }

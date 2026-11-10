@@ -756,6 +756,152 @@ public class GeneratorDiagnosticTests
         await Assert.That(errors.Length).IsEqualTo(0);
     }
 
+    [Test]
+    public async Task GeneratesGlobalOptions()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Options;
+
+            [GlobalOptions]
+            public sealed partial class AppOptions
+            {
+                [Option("--log-level", "-l", Description = "Log level")]
+                public string LogLevel { get; set; } = "information";
+
+                [Option("--verbose")]
+                public bool Verbose { get; set; }
+
+                [Option("--tag", DefaultValue = new[] { "a", "b" })]
+                public string[] Tags { get; set; } = [];
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(generated).Contains("IGlobalOptions<");
+        await Assert.That(generated).Contains("GlobalOptionBuilder options");
+        await Assert.That(generated).Contains("Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
+        await Assert.That(generated).DoesNotContain("ICommandParameters<");
+    }
+
+    [Test]
+    public async Task GeneratesGlobalOptionsForPartialRecord()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Options;
+
+            [GlobalOptions]
+            public sealed partial record AppOptions
+            {
+                [Option]
+                public int Value { get; set; }
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(generated).Contains("partial record AppOptions");
+    }
+
+    [Test]
+    public async Task GeneratesParametersWithInheritedGlobalOptions()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+
+            [GlobalOptions]
+            public partial class AppOptions
+            {
+                [Option("--log-level")]
+                public string LogLevel { get; set; } = "information";
+            }
+
+            public sealed partial class RunParameters : AppOptions
+            {
+                [Argument(0)]
+                public string Name { get; set; } = "";
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts
+            .Single(source => source.Contains("partial class RunParameters"));
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(2);
+        await Assert.That(generated).Contains("global::AnyCli.Parameters.Options.CommandOptionValues globalOptionValues");
+        await Assert.That(generated).Contains("globalOptionValues.TryGetValue(\"--log-level\"");
+        await Assert.That(generated).DoesNotContain("Options.AddValue<string>(\"--log-level\"");
+    }
+
+    [Test]
+    public async Task GeneratesGlobalOptionsWithoutProperties()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Options;
+
+            [GlobalOptions]
+            public sealed partial class EmptyOptions
+            {
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task ReportsPositionalArgumentOnGlobalOptions()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+
+            [GlobalOptions]
+            public sealed partial class BadOptions
+            {
+                [Argument(0)]
+                public string Value { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI015");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Value");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
     private static GeneratorResult RunGenerator(string source)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(source);

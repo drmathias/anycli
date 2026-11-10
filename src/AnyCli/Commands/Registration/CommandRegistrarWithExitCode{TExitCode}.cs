@@ -7,17 +7,19 @@ using System.Diagnostics.CodeAnalysis;
 namespace AnyCli.Commands.Registration;
 
 /// <summary>
-/// Registers commands inside a command group that returns a custom exit code enum.
+/// Registers commands that return a custom exit code enum.
 /// </summary>
 /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
-public sealed class CommandGroupRegistrar<TExitCode>
+public sealed class CommandRegistrarWithExitCode<TExitCode>
     where TExitCode : struct, Enum
 {
-    private readonly CommandRegistrar<TExitCode> _commands;
+    private readonly ConsoleAppBuilder _builder;
+    private readonly CommandNode _target;
 
-    internal CommandGroupRegistrar(CommandRegistrar<TExitCode> commands)
+    internal CommandRegistrarWithExitCode(ConsoleAppBuilder builder, CommandNode target)
     {
-        _commands = commands;
+        _builder = builder;
+        _target = target;
     }
 
     /// <summary>
@@ -30,13 +32,13 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public CommandGroupRegistrar<TExitCode> AddCommand<
+    public CommandRegistrarWithExitCode<TExitCode> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
         where TCommand : NoParametersCommand<TExitCode>
     {
-        _commands.AddCommand<TCommand>(name, description);
+        _builder.AddNoParametersExitCodeCommand<TCommand, TExitCode>(_target, name, description);
         return this;
     }
 
@@ -51,13 +53,13 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public CommandGroupRegistrar<TExitCode> AddCommand<
+    public CommandRegistrarWithExitCode<TExitCode> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(string name, string description = "")
         where TCommand : class, ICommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
     {
-        _commands.AddCommand<TCommand, TParameters>(name, description);
+        _builder.AddExitCodeCommand<TCommand, TParameters, TExitCode>(_target, name, description);
         return this;
     }
 
@@ -71,13 +73,13 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public CommandGroupRegistrar<TExitCode> AddAsyncCommand<
+    public CommandRegistrarWithExitCode<TExitCode> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description = "")
         where TCommand : NoParametersAsyncCommand<TExitCode>
     {
-        _commands.AddAsyncCommand<TCommand>(name, description);
+        _builder.AddNoParametersExitCodeAsyncCommand<TCommand, TExitCode>(_target, name, description);
         return this;
     }
 
@@ -92,13 +94,13 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
     /// </exception>
-    public CommandGroupRegistrar<TExitCode> AddAsyncCommand<
+    public CommandRegistrarWithExitCode<TExitCode> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(string name, string description = "")
         where TCommand : class, IAsyncCommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
     {
-        _commands.AddAsyncCommand<TCommand, TParameters>(name, description);
+        _builder.AddExitCodeAsyncCommand<TCommand, TParameters, TExitCode>(_target, name, description);
         return this;
     }
 
@@ -110,15 +112,21 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <param name="description">A short description shown in help output.</param>
     /// <param name="configureChildren">The subcommand configuration callback.</param>
     /// <returns>The current configurator.</returns>
-    public CommandGroupRegistrar<TExitCode> AddCommand<
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configureChildren"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandRegistrarWithExitCode<TExitCode> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description,
-        Action<CommandGroupRegistrar<TExitCode>> configureChildren)
+        Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
         where TCommand : NoParametersCommand<TExitCode>
     {
-        _commands.AddCommand<TCommand>(name, description, configureChildren);
-        return this;
+        var command = _builder.AddNoParametersExitCodeCommand<TCommand, TExitCode>(_target, name, description);
+        return ConfigureChildren(command, configureChildren);
     }
 
     /// <summary>
@@ -130,17 +138,23 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <param name="description">A short description shown in help output.</param>
     /// <param name="configureChildren">The subcommand configuration callback.</param>
     /// <returns>The current configurator.</returns>
-    public CommandGroupRegistrar<TExitCode> AddCommand<
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configureChildren"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandRegistrarWithExitCode<TExitCode> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
         string description,
-        Action<CommandGroupRegistrar<TExitCode>> configureChildren)
+        Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
         where TCommand : class, ICommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
     {
-        _commands.AddCommand<TCommand, TParameters>(name, description, configureChildren);
-        return this;
+        var command = _builder.AddExitCodeCommand<TCommand, TParameters, TExitCode>(_target, name, description);
+        return ConfigureChildren(command, configureChildren);
     }
 
     /// <summary>
@@ -151,15 +165,21 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <param name="description">A short description shown in help output.</param>
     /// <param name="configureChildren">The subcommand configuration callback.</param>
     /// <returns>The current configurator.</returns>
-    public CommandGroupRegistrar<TExitCode> AddAsyncCommand<
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configureChildren"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandRegistrarWithExitCode<TExitCode> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
         string description,
-        Action<CommandGroupRegistrar<TExitCode>> configureChildren)
+        Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
         where TCommand : NoParametersAsyncCommand<TExitCode>
     {
-        _commands.AddAsyncCommand<TCommand>(name, description, configureChildren);
-        return this;
+        var command = _builder.AddNoParametersExitCodeAsyncCommand<TCommand, TExitCode>(_target, name, description);
+        return ConfigureChildren(command, configureChildren);
     }
 
     /// <summary>
@@ -171,21 +191,27 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <param name="description">A short description shown in help output.</param>
     /// <param name="configureChildren">The subcommand configuration callback.</param>
     /// <returns>The current configurator.</returns>
-    public CommandGroupRegistrar<TExitCode> AddAsyncCommand<
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configureChildren"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandRegistrarWithExitCode<TExitCode> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
         string description,
-        Action<CommandGroupRegistrar<TExitCode>> configureChildren)
+        Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
         where TCommand : class, IAsyncCommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
     {
-        _commands.AddAsyncCommand<TCommand, TParameters>(name, description, configureChildren);
-        return this;
+        var command = _builder.AddExitCodeAsyncCommand<TCommand, TParameters, TExitCode>(_target, name, description);
+        return ConfigureChildren(command, configureChildren);
     }
 
     /// <summary>
-    /// Registers a nested command group.
+    /// Registers a command group.
     /// </summary>
     /// <param name="name">The group name.</param>
     /// <param name="description">A short description shown in help output.</param>
@@ -197,12 +223,27 @@ public sealed class CommandGroupRegistrar<TExitCode>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="configure"/> is <see langword="null"/>.
     /// </exception>
-    public CommandGroupRegistrar<TExitCode> AddGroup(
+    public CommandRegistrarWithExitCode<TExitCode> AddGroup(
         string name,
         string description,
-        Action<CommandGroupRegistrar<TExitCode>> configure)
+        Action<CommandGroupRegistrarWithExitCode<TExitCode>> configure)
     {
-        _commands.AddGroup(name, description, configure);
+        ArgumentNullException.ThrowIfNull(configure);
+
+        var group = _builder.AddGroup(_target, name, description);
+        configure(new CommandGroupRegistrarWithExitCode<TExitCode>(
+            new CommandRegistrarWithExitCode<TExitCode>(_builder, group)));
+        return this;
+    }
+
+    private CommandRegistrarWithExitCode<TExitCode> ConfigureChildren(
+        CommandNode command,
+        Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
+    {
+        ArgumentNullException.ThrowIfNull(configureChildren);
+        ConsoleAppBuilder.EnsureCanHaveSubcommands(command);
+        configureChildren(new CommandGroupRegistrarWithExitCode<TExitCode>(
+            new CommandRegistrarWithExitCode<TExitCode>(_builder, command)));
         return this;
     }
 }
