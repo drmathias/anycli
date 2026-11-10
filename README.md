@@ -33,7 +33,7 @@ AnyCli is optimised for both utility and extensibility. It is mildly opinionated
 - Nested command groups
 - Custom value parsers
 - Dependency injection support
-- Global options
+- Typed global options
 - Interceptor middleware
 - Customisable help provider
 - Optional Spectre.Console adapter for rich, styled terminal output (tables, markup, progress bars etc.)
