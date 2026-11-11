@@ -155,6 +155,15 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor InvalidVariadicMaximumCountDiagnostic = new(
+        id: "ANYCLI017",
+        title: "Invalid variadic maximum count",
+        messageFormat:
+            "Variadic parameter property '{0}' has MaximumCount {1}; it must be greater than 1 and at least MinimumCount {2}",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     private static readonly DiagnosticDescriptor GlobalOptionCannotBeArgumentDiagnostic = new(
         id: "ANYCLI015",
         title: "Global option declared as argument",
@@ -375,6 +384,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 var description = string.Empty;
                 var optional = isOptionalArgument;
                 var minimumCount = 0;
+                var maximumCount = int.MaxValue;
                 ITypeSymbol? parserType = null;
                 foreach (var namedArgument in attribute.NamedArguments)
                 {
@@ -396,6 +406,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                              namedArgument.Value.Value is int customMinimumCount)
                     {
                         minimumCount = customMinimumCount;
+                    }
+                    else if (namedArgument.Key == "MaximumCount" &&
+                             namedArgument.Value.Value is int customMaximumCount)
+                    {
+                        maximumCount = customMaximumCount;
                     }
                 }
 
@@ -422,6 +437,17 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                             InvalidVariadicMinimumCountDiagnostic,
                             GetLocation(property),
                             property.Name,
+                            minimumCount));
+                        continue;
+                    }
+
+                    if (maximumCount <= 1 || maximumCount < minimumCount)
+                    {
+                        diagnostics.Add(new DiagnosticModel(
+                            InvalidVariadicMaximumCountDiagnostic,
+                            GetLocation(property),
+                            property.Name,
+                            maximumCount,
                             minimumCount));
                         continue;
                     }
@@ -513,6 +539,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     collectionTypeFullName,
                     collectionKind,
                     minimumCount,
+                    maximumCount,
                     defaultExpression,
                     parsePlan));
             }
@@ -1083,17 +1110,36 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             return true;
         }
 
-        if (type is INamedTypeSymbol named &&
-            named.TypeArguments.Length == 1 &&
-            named.OriginalDefinition.ContainingNamespace.ToDisplayString() == "System.Collections.Generic")
+        if (type is INamedTypeSymbol named && named.TypeArguments.Length == 1)
         {
-            var kind = named.OriginalDefinition.MetadataName switch
+            var definition = named.OriginalDefinition;
+            var collectionNamespace = definition.ContainingNamespace.ToDisplayString();
+            var kind = (collectionNamespace, definition.MetadataName) switch
             {
-                "IReadOnlyList`1" => (VariadicCollectionKind?)VariadicCollectionKind.ReadOnlyList,
-                "List`1" => VariadicCollectionKind.List,
-                "ICollection`1" => VariadicCollectionKind.Collection,
-                "IEnumerable`1" => VariadicCollectionKind.Enumerable,
-                "HashSet`1" => VariadicCollectionKind.HashSet,
+                ("System.Collections.Generic", "IReadOnlyList`1") =>
+                    (VariadicCollectionKind?)VariadicCollectionKind.ReadOnlyList,
+                ("System.Collections.Generic", "IReadOnlyCollection`1") =>
+                    VariadicCollectionKind.ReadOnlyCollection,
+                ("System.Collections.Generic", "IReadOnlySet`1") =>
+                    VariadicCollectionKind.ReadOnlySet,
+                ("System.Collections.Generic", "IList`1") => VariadicCollectionKind.List,
+                ("System.Collections.Generic", "List`1") => VariadicCollectionKind.List,
+                ("System.Collections.Generic", "ICollection`1") => VariadicCollectionKind.Collection,
+                ("System.Collections.Generic", "IEnumerable`1") => VariadicCollectionKind.Enumerable,
+                ("System.Collections.Generic", "HashSet`1") => VariadicCollectionKind.HashSet,
+                ("System.Collections.Generic", "ISet`1") => VariadicCollectionKind.Set,
+                ("System.Collections.Generic", "LinkedList`1") => VariadicCollectionKind.LinkedList,
+                ("System.Collections.Frozen", "FrozenSet`1") => VariadicCollectionKind.FrozenSet,
+                ("System.Collections.ObjectModel", "ReadOnlyCollection`1") =>
+                    VariadicCollectionKind.ReadOnlyCollectionConcrete,
+                ("System.Collections.ObjectModel", "Collection`1") =>
+                    VariadicCollectionKind.CollectionConcrete,
+                ("System.Collections.Immutable", "ImmutableArray`1") =>
+                    VariadicCollectionKind.ImmutableArray,
+                ("System.Collections.Immutable", "ImmutableList`1") =>
+                    VariadicCollectionKind.ImmutableList,
+                ("System.Collections.Immutable", "ImmutableHashSet`1") =>
+                    VariadicCollectionKind.ImmutableHashSet,
                 _ => null,
             };
 
@@ -1467,7 +1513,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .Append(", typeof(")
                     .Append(argument.CollectionTypeFullName)
                     .Append("), ")
-                    .Append(GetVariadicArityExpression(argument.MinimumCount))
+                    .Append(GetVariadicArityExpression(argument.MinimumCount, argument.MaximumCount))
                     .AppendLine(");");
             }
             else
@@ -1898,13 +1944,20 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
               string.Join(", ", values.Select(value => SymbolDisplay.FormatLiteral(value, true))) +
               " }";
 
-    private static string GetVariadicArityExpression(int minimumCount) =>
-        minimumCount switch
+    private static string GetVariadicArityExpression(int minimumCount, int maximumCount)
+    {
+        if (maximumCount == int.MaxValue)
         {
-            0 => "global::AnyCli.Parameters.Arguments.ArgumentArity.ZeroOrMore",
-            1 => "global::AnyCli.Parameters.Arguments.ArgumentArity.OneOrMore",
-            _ => $"new global::AnyCli.Parameters.Arguments.ArgumentArity({minimumCount}, global::System.Int32.MaxValue)",
-        };
+            return minimumCount switch
+            {
+                0 => "global::AnyCli.Parameters.Arguments.ArgumentArity.ZeroOrMore",
+                1 => "global::AnyCli.Parameters.Arguments.ArgumentArity.OneOrMore",
+                _ => $"new global::AnyCli.Parameters.Arguments.ArgumentArity({minimumCount}, global::System.Int32.MaxValue)",
+            };
+        }
+
+        return $"new global::AnyCli.Parameters.Arguments.ArgumentArity({minimumCount}, {maximumCount})";
+    }
 
     private static string GetCollectionExpression(
         VariadicCollectionKind collectionKind,
@@ -1913,8 +1966,24 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         collectionKind switch
         {
             VariadicCollectionKind.Array => valuesExpression,
-            VariadicCollectionKind.HashSet =>
+            VariadicCollectionKind.HashSet or
+            VariadicCollectionKind.Set or
+            VariadicCollectionKind.ReadOnlySet =>
                 $"new global::System.Collections.Generic.HashSet<{elementTypeFullName}>({valuesExpression})",
+            VariadicCollectionKind.FrozenSet =>
+                $"global::System.Collections.Frozen.FrozenSet.ToFrozenSet<{elementTypeFullName}>({valuesExpression})",
+            VariadicCollectionKind.LinkedList =>
+                $"new global::System.Collections.Generic.LinkedList<{elementTypeFullName}>({valuesExpression})",
+            VariadicCollectionKind.ReadOnlyCollectionConcrete =>
+                $"new global::System.Collections.ObjectModel.ReadOnlyCollection<{elementTypeFullName}>({valuesExpression})",
+            VariadicCollectionKind.CollectionConcrete =>
+                $"new global::System.Collections.ObjectModel.Collection<{elementTypeFullName}>({valuesExpression})",
+            VariadicCollectionKind.ImmutableArray =>
+                $"global::System.Collections.Immutable.ImmutableArray.CreateRange<{elementTypeFullName}>({valuesExpression})",
+            VariadicCollectionKind.ImmutableList =>
+                $"global::System.Collections.Immutable.ImmutableList.CreateRange<{elementTypeFullName}>({valuesExpression})",
+            VariadicCollectionKind.ImmutableHashSet =>
+                $"global::System.Collections.Immutable.ImmutableHashSet.CreateRange<{elementTypeFullName}>({valuesExpression})",
             _ =>
                 $"new global::System.Collections.Generic.List<{elementTypeFullName}>({valuesExpression})",
         };
@@ -2055,6 +2124,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             string collectionTypeFullName,
             VariadicCollectionKind collectionKind,
             int minimumCount,
+            int maximumCount,
             string? defaultValueExpression,
             ParsePlan parsePlan)
         {
@@ -2068,6 +2138,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             CollectionTypeFullName = collectionTypeFullName;
             CollectionKind = collectionKind;
             MinimumCount = minimumCount;
+            MaximumCount = maximumCount;
             DefaultValueExpression = defaultValueExpression;
             ParsePlan = parsePlan;
         }
@@ -2091,6 +2162,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         public VariadicCollectionKind CollectionKind { get; }
 
         public int MinimumCount { get; }
+
+        public int MaximumCount { get; }
 
         public string? DefaultValueExpression { get; }
 
@@ -2137,10 +2210,20 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     {
         Array,
         ReadOnlyList,
+        ReadOnlyCollection,
+        ReadOnlySet,
         List,
         Collection,
         Enumerable,
         HashSet,
+        Set,
+        FrozenSet,
+        LinkedList,
+        ReadOnlyCollectionConcrete,
+        CollectionConcrete,
+        ImmutableArray,
+        ImmutableList,
+        ImmutableHashSet,
     }
 
     private enum ParseKind

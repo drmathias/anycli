@@ -660,6 +660,52 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task ReportsInvalidVariadicMaximumCountBelowMinimum()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
+
+            public sealed partial class BadParameters
+            {
+                [VariadicArgument(0, MinimumCount = 3, MaximumCount = 2)]
+                public string[] Values { get; set; } = [];
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI017");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Values");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsInvalidVariadicMaximumCountNotVariadic()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Options;
+            using AnyCli.Parameters.Parsing;
+
+            public sealed partial class BadParameters
+            {
+                [VariadicArgument(0, MaximumCount = 1)]
+                public string[] Values { get; set; } = [];
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI017");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Values");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task GeneratesParametersForOptions()
     {
         var result = RunGenerator(

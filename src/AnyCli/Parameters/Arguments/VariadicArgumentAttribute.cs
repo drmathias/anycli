@@ -16,6 +16,12 @@ public sealed class VariadicArgumentAttribute(int position) : ArgumentAttributeB
     public int MinimumCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the maximum number of values accepted. Defaults to
+    /// <see cref="int.MaxValue"/> for no upper bound.
+    /// </summary>
+    public int MaximumCount { get; set; } = int.MaxValue;
+
+    /// <summary>
     /// Gets or sets the default values used when no argument values are supplied.
     /// </summary>
     public object? DefaultValue { get; set; }
