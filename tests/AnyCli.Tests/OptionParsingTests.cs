@@ -57,13 +57,66 @@ public class OptionParsingTests
     }
 
     [Test]
-    public async Task ScalarOption_LastValueWins()
+    public async Task RepeatedScalarOption_Throws()
     {
-        var result = await Run<OptionParametersCommand, OptionParameters>(
-            "opts",
-            ["opts", "--config", "cfg", "--count", "1", "--count", "2"]);
+        CommandParameterException? exception = null;
 
-        await Assert.That(result.Output).IsEqualTo("cfg|default|False|False||2|False");
+        try
+        {
+            _ = await Run<OptionParametersCommand, OptionParameters>(
+                "opts",
+                ["opts", "--config", "cfg", "--count", "1", "--count", "2"]);
+        }
+        catch (CommandParameterException ex)
+        {
+            exception = ex;
+        }
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("'--count'");
+        await Assert.That(exception.Message).Contains("more than once");
+    }
+
+    [Test]
+    public async Task RepeatedScalarOptionAlias_Throws()
+    {
+        CommandParameterException? exception = null;
+
+        try
+        {
+            _ = await Run<OptionParametersCommand, OptionParameters>(
+                "opts",
+                ["opts", "--config", "cfg", "--output", "out", "-o", "other"]);
+        }
+        catch (CommandParameterException ex)
+        {
+            exception = ex;
+        }
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("'--output'");
+        await Assert.That(exception.Message).Contains("more than once");
+    }
+
+    [Test]
+    public async Task RepeatedFlagOption_Throws()
+    {
+        CommandParameterException? exception = null;
+
+        try
+        {
+            _ = await Run<OptionParametersCommand, OptionParameters>(
+                "opts",
+                ["opts", "--config", "cfg", "-vv"]);
+        }
+        catch (CommandParameterException ex)
+        {
+            exception = ex;
+        }
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("'--verbose'");
+        await Assert.That(exception.Message).Contains("more than once");
     }
 
     [Test]

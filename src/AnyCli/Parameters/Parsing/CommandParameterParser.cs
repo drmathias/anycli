@@ -476,7 +476,15 @@ internal static class CommandParameterParser
         string? value)
     {
         var optionValues = binding.IsGlobal ? globalValues : commandValues;
-        if (!optionValues.TryGetValue(binding.Definition.Name, out var optionValue))
+        if (optionValues.TryGetValue(binding.Definition.Name, out var optionValue))
+        {
+            if (!binding.Definition.IsCollection)
+            {
+                throw new CommandParameterException(
+                    $"Option '{binding.Definition.Name}' cannot be specified more than once.");
+            }
+        }
+        else
         {
             optionValue = new OptionValue();
             optionValues[binding.Definition.Name] = optionValue;

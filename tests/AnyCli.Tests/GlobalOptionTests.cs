@@ -79,6 +79,32 @@ public class GlobalOptionTests
     }
 
     [Test]
+    public async Task RepeatedGlobalScalarOption_Throws()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .AddGlobalOptions<TestGlobalOptions>()
+            .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand, TestGlobalEchoParameters>("run"))
+            .Build();
+
+        CommandParameterException? exception = null;
+
+        try
+        {
+            _ = await TestAppHarness.RunAsync(
+                app,
+                ["--log-level", "debug", "--log-level", "warning", "run"]);
+        }
+        catch (CommandParameterException ex)
+        {
+            exception = ex;
+        }
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("'--log-level'");
+        await Assert.That(exception.Message).Contains("more than once");
+    }
+
+    [Test]
     public async Task GlobalFlag_IsAvailableOnTypedContext()
     {
         var app = ConsoleAppBuilder.Create()

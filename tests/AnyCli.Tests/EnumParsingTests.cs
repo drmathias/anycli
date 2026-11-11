@@ -23,6 +23,61 @@ public class EnumParsingTests
     }
 
     [Test]
+    public async Task DefaultEnumParameterParser_RejectsNumericValues()
+    {
+        foreach (var value in new[] { "0", "1", "-1", "+1", "0x1", "999", "1,2" })
+        {
+            var success = DefaultEnumParameterParser.TryParse<KebabMode>(
+                value,
+                provider: null,
+                out _);
+
+            await Assert.That(success).IsFalse();
+        }
+    }
+
+    [Test]
+    public async Task ParseEnum_RejectsNumericValues()
+    {
+        CommandParameterException? exception = null;
+
+        try
+        {
+            _ = ParameterValueParsing.ParseEnum<KebabMode>("1", "mode");
+        }
+        catch (CommandParameterException ex)
+        {
+            exception = ex;
+        }
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("Invalid value '1'");
+    }
+
+    [Test]
+    public async Task GeneratedParameters_RejectNumericEnumValues()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureCommands(commands => commands.AddCommand<GlobalEnumCommand, GlobalEnumParameters>("mode"))
+            .Build();
+
+        CommandParameterException? exception = null;
+
+        try
+        {
+            _ = await TestAppHarness.RunAsync(app, ["mode", "1"]);
+        }
+        catch (CommandParameterException ex)
+        {
+            exception = ex;
+        }
+
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(exception!.Message).Contains("Invalid value '1'");
+    }
+
+    [Test]
     public async Task ParseEnum_MatchesExactCase()
     {
         var result = ParameterValueParsing.ParseEnum<KebabMode>("VerySlow", "mode");
