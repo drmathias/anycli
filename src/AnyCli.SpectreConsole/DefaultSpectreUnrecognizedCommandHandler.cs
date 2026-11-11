@@ -12,7 +12,9 @@ namespace AnyCli.SpectreConsole;
 public sealed class DefaultSpectreUnrecognizedCommandHandler : IUnrecognizedCommandHandler
 {
     /// <inheritdoc/>
-    public void Handle(UnrecognizedCommandContext context)
+    public ValueTask HandleAsync(
+        UnrecognizedCommandContext context,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -23,5 +25,7 @@ public sealed class DefaultSpectreUnrecognizedCommandHandler : IUnrecognizedComm
                 : $"Unknown command '{context.AttemptedCommandPath}'.";
 
         context.AnsiConsole.Error.MarkupLineInterpolated($"[red]{Markup.Escape(message)}[/]");
+
+        return ValueTask.CompletedTask;
     }
 }

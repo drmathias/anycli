@@ -94,17 +94,23 @@ public class UnrecognizedCommandTests
 
     private sealed class OutputUnrecognizedCommandHandler : IUnrecognizedCommandHandler
     {
-        public void Handle(UnrecognizedCommandContext context)
+        public ValueTask HandleAsync(
+            UnrecognizedCommandContext context,
+            CancellationToken cancellationToken)
         {
             context.Console.Output.WriteLine($"custom:{context.AttemptedCommandPath}");
+            return ValueTask.CompletedTask;
         }
     }
 
     private sealed class InjectedUnrecognizedCommandHandler(string message) : IUnrecognizedCommandHandler
     {
-        public void Handle(UnrecognizedCommandContext context)
+        public ValueTask HandleAsync(
+            UnrecognizedCommandContext context,
+            CancellationToken cancellationToken)
         {
             context.Console.Error.WriteLine(message);
+            return ValueTask.CompletedTask;
         }
     }
 }

@@ -13,5 +13,9 @@ public interface IUnrecognizedCommandHandler
     /// Writes the error for an unrecognized command.
     /// </summary>
     /// <param name="context">The unrecognized command context.</param>
-    void Handle(UnrecognizedCommandContext context);
+    /// <param name="cancellationToken">The cancellation token for the operation.</param>
+    /// <returns>A task that completes when the error has been written.</returns>
+    ValueTask HandleAsync(
+        UnrecognizedCommandContext context,
+        CancellationToken cancellationToken);
 }

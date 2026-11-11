@@ -13,11 +13,19 @@ public interface IHelpProvider
     /// Writes root help output.
     /// </summary>
     /// <param name="context">The root help context.</param>
-    void WriteRootHelp(RootHelpContext context);
+    /// <param name="cancellationToken">The cancellation token for the operation.</param>
+    /// <returns>A task that completes when the help output has been written.</returns>
+    ValueTask WriteRootHelpAsync(
+        RootHelpContext context,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Writes help output for a command.
     /// </summary>
     /// <param name="context">The command help context.</param>
-    void WriteCommandHelp(CommandHelpContext context);
+    /// <param name="cancellationToken">The cancellation token for the operation.</param>
+    /// <returns>A task that completes when the help output has been written.</returns>
+    ValueTask WriteCommandHelpAsync(
+        CommandHelpContext context,
+        CancellationToken cancellationToken);
 }

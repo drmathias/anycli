@@ -401,7 +401,7 @@ public class GlobalOptionTests
 
     private sealed class GlobalAsyncCommand : IAsyncCommand<TestGlobalEchoParameters>
     {
-        public Task<int> ExecuteAsync(CommandContext context, TestGlobalEchoParameters parameters)
+        public Task<int> ExecuteAsync(CommandContext context, TestGlobalEchoParameters parameters, CancellationToken cancellationToken)
         {
             context.Console.Output.Write(parameters.LogLevel);
             return Task.FromResult(0);
@@ -446,11 +446,21 @@ public class GlobalOptionTests
 
     private sealed class GlobalHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context) =>
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken)
+        {
             WriteOptions(context.GlobalOptions, context.Console);
+            return ValueTask.CompletedTask;
+        }
 
-        public void WriteCommandHelp(CommandHelpContext context) =>
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
+        {
             WriteOptions(context.GlobalOptions, context.Console);
+            return ValueTask.CompletedTask;
+        }
 
         private static void WriteOptions(
             IReadOnlyList<OptionInfo> options,

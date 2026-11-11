@@ -205,14 +205,23 @@ public class DefaultValueTests
 
     private sealed class DefaultHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context) => context.Console.Output.Write("root");
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken)
+        {
+            context.Console.Output.Write("root");
+            return ValueTask.CompletedTask;
+        }
 
-        public void WriteCommandHelp(CommandHelpContext context)
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
         {
             context.Console.Output.Write(string.Join(
                 "\n",
                 context.Command.Options.Select(option =>
                     $"{option.Names[0]}:{option.DefaultValue?.GetType().FullName}:{option.DefaultValue}")));
+            return ValueTask.CompletedTask;
         }
     }
 }

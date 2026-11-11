@@ -16,8 +16,12 @@ public interface IAsyncCommand<TParameters>
     /// </summary>
     /// <param name="context">The command context.</param>
     /// <param name="parameters">The parsed command parameters.</param>
+    /// <param name="cancellationToken">The cancellation token for the command.</param>
     /// <returns>A task that produces the process exit code.</returns>
-    Task<int> ExecuteAsync(CommandContext context, TParameters parameters);
+    Task<int> ExecuteAsync(
+        CommandContext context,
+        TParameters parameters,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -34,6 +38,10 @@ public interface IAsyncCommand<TParameters, TExitCode>
     /// </summary>
     /// <param name="context">The command context.</param>
     /// <param name="parameters">The parsed command parameters.</param>
+    /// <param name="cancellationToken">The cancellation token for the command.</param>
     /// <returns>A task that produces the command's exit code.</returns>
-    Task<TExitCode> ExecuteAsync(CommandContext context, TParameters parameters);
+    Task<TExitCode> ExecuteAsync(
+        CommandContext context,
+        TParameters parameters,
+        CancellationToken cancellationToken);
 }

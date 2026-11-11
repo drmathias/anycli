@@ -7,4 +7,7 @@ namespace AnyCli.Console;
 internal sealed class TextReaderInputReader(TextReader reader) : IInputReader
 {
     public string? ReadLine() => reader.ReadLine();
+
+    public ValueTask<string?> ReadLineAsync(CancellationToken cancellationToken) =>
+        reader.ReadLineAsync(cancellationToken);
 }

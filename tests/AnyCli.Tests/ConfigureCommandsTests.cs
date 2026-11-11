@@ -58,7 +58,7 @@ public class ConfigureCommandsTests
 
     private sealed class AsyncIntCommand : NoParametersAsyncCommand
     {
-        public override async Task<int> ExecuteAsync(CommandContext context)
+        public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
         {
             await Task.Yield();
             return 8;
@@ -72,7 +72,7 @@ public class ConfigureCommandsTests
 
     private sealed class AsyncEnumCommand : NoParametersAsyncCommand<TestExitCode>
     {
-        public override async Task<TestExitCode> ExecuteAsync(CommandContext context)
+        public override async Task<TestExitCode> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
         {
             await Task.Yield();
             return TestExitCode.Failed;

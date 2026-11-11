@@ -95,11 +95,21 @@ public class DependencyInjectionTests
 
     private sealed class InjectedHelpProvider(GreetingService greeting) : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context) =>
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken)
+        {
             context.Console.Output.Write(greeting.Greeting);
+            return ValueTask.CompletedTask;
+        }
 
-        public void WriteCommandHelp(CommandHelpContext context) =>
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
+        {
             context.Console.Output.Write(greeting.Greeting);
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class GreetCommand(GreetingService greeting) : NoParametersCommand
@@ -113,7 +123,7 @@ public class DependencyInjectionTests
 
     private sealed class AsyncGreetCommand(GreetingService greeting) : NoParametersAsyncCommand
     {
-        public override async Task<int> ExecuteAsync(CommandContext context)
+        public override async Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
         {
             await Task.Yield();
             context.Console.Output.Write($"async:{greeting.Greeting}");

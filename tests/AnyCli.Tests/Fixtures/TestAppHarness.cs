@@ -9,12 +9,19 @@ internal static class TestAppHarness
     public static Task<TestAppResult> RunAsync(ConsoleApp app, params string[] args) =>
         RunAsync(app, args, new StringReader(string.Empty));
 
-    public static async Task<TestAppResult> RunAsync(ConsoleApp app, string[] args, TextReader input)
+    public static async Task<TestAppResult> RunAsync(
+        ConsoleApp app,
+        string[] args,
+        TextReader input,
+        CancellationToken cancellationToken = default)
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
 
-        var exitCode = await app.RunAsync(args, new TextConsole(input, output, error));
+        var exitCode = await app.RunAsync(
+            args,
+            new TextConsole(input, output, error),
+            cancellationToken);
 
         return new TestAppResult(exitCode, output.ToString(), error.ToString());
     }

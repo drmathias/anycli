@@ -146,10 +146,20 @@ public class SpectreConsoleAdapterTests
 
     private sealed class AnsiHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context) =>
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken)
+        {
             context.AnsiConsole.Output.Markup("help");
+            return ValueTask.CompletedTask;
+        }
 
-        public void WriteCommandHelp(CommandHelpContext context) =>
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
+        {
             context.AnsiConsole.Output.Markup("help");
+            return ValueTask.CompletedTask;
+        }
     }
 }

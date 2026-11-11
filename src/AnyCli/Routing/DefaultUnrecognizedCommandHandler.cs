@@ -10,7 +10,9 @@ namespace AnyCli.Routing;
 public sealed class DefaultUnrecognizedCommandHandler : IUnrecognizedCommandHandler
 {
     /// <inheritdoc/>
-    public void Handle(UnrecognizedCommandContext context)
+    public ValueTask HandleAsync(
+        UnrecognizedCommandContext context,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -19,5 +21,7 @@ public sealed class DefaultUnrecognizedCommandHandler : IUnrecognizedCommandHand
             : context.IsMissingSubcommand
                 ? $"Command '{context.AttemptedCommandPath}' requires a subcommand."
                 : $"Unknown command '{context.AttemptedCommandPath}'.");
+
+        return ValueTask.CompletedTask;
     }
 }

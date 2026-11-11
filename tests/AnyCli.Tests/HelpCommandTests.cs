@@ -179,16 +179,21 @@ public class HelpCommandTests
 
     private sealed class OptionHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context)
-        {
-        }
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken) => default;
 
-        public void WriteCommandHelp(CommandHelpContext context) =>
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
+        {
             context.Console.Output.Write(
                 string.Join(
                     "|",
                     context.Command.Options.Select(option =>
                         $"{string.Join(",", option.Names)}:{option.IsRequired}:{option.TakesValue}")));
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class ThrowCommand : ICommand<ThrowParameters>
@@ -208,26 +213,33 @@ public class HelpCommandTests
 
     private sealed class TypeHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context)
-        {
-        }
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken) => default;
 
-        public void WriteCommandHelp(CommandHelpContext context) =>
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
+        {
             context.Console.Output.Write(
                 string.Join(
                     ",",
                     context.Command.Arguments.Select(argument =>
                         $"{argument.DeclaredType.Name}:{argument.Arity.Minimum}:{argument.Arity.Maximum}:" +
                         $"{argument.IsRequired}:{argument.IsVariadic}")));
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class ThrowHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context)
-        {
-        }
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken) => default;
 
-        public void WriteCommandHelp(CommandHelpContext context)
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
         {
             var command = context.Command;
             var output = context.Console.Output;
@@ -259,12 +271,16 @@ public class HelpCommandTests
                 var names = string.Join(", ", option.Names);
                 output.WriteLine($"    {names,-36}{option.Description}");
             }
+
+            return default;
         }
     }
 
     private sealed class StubHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context)
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken)
         {
             context.Console.Output.WriteLine("Usage:");
             context.Console.Output.WriteLine($"    {context.AppName} [OPTIONS] <COMMAND>");
@@ -284,10 +300,17 @@ public class HelpCommandTests
             {
                 context.Console.Output.WriteLine($"    {command.Name.PadRight(nameWidth)}  {command.Description}");
             }
+
+            return ValueTask.CompletedTask;
         }
 
-        public void WriteCommandHelp(CommandHelpContext context) =>
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
+        {
             context.Console.Output.Write($"{context.Command.Name}: {context.Command.Description}");
+            return ValueTask.CompletedTask;
+        }
     }
 }
 

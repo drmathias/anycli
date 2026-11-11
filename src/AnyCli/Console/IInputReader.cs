@@ -16,4 +16,14 @@ public interface IInputReader
     /// The next line from the input, or <see langword="null"/> when no more input is available.
     /// </returns>
     string? ReadLine();
+
+    /// <summary>
+    /// Reads a line of text asynchronously.
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token for the read operation.</param>
+    /// <returns>
+    /// A task that produces the next line from the input, or <see langword="null"/> when no more
+    /// input is available.
+    /// </returns>
+    ValueTask<string?> ReadLineAsync(CancellationToken cancellationToken);
 }

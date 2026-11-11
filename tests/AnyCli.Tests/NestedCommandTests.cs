@@ -378,25 +378,43 @@ public class NestedCommandTests
 
     private sealed class ExecutableGroupHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context) =>
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken)
+        {
             context.Console.Output.Write("root");
+            return ValueTask.CompletedTask;
+        }
 
-        public void WriteCommandHelp(CommandHelpContext context)
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
         {
             var command = context.Command;
             context.Console.Output.Write(
                 $"{string.Join(".", command.Path)}|{command.IsExecutable}|{command.HasSubcommands}|" +
                 $"{command.Options.Count}|{string.Join(",", command.Children.Select(child => child.Name))}");
+            return ValueTask.CompletedTask;
         }
     }
 
     private sealed class TreeHelpProvider : IHelpProvider
     {
-        public void WriteRootHelp(RootHelpContext context) =>
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken)
+        {
             Write(context.Commands, context.Console);
+            return ValueTask.CompletedTask;
+        }
 
-        public void WriteCommandHelp(CommandHelpContext context) =>
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
+        {
             Write([context.Command], context.Console);
+            return ValueTask.CompletedTask;
+        }
 
         private static void Write(
             IReadOnlyList<CommandInfo> commands,

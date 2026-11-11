@@ -13,8 +13,11 @@ public abstract class NoParametersAsyncCommand
     /// Executes the command.
     /// </summary>
     /// <param name="context">The command context.</param>
+    /// <param name="cancellationToken">The cancellation token for the command.</param>
     /// <returns>A task that produces the process exit code.</returns>
-    public abstract Task<int> ExecuteAsync(CommandContext context);
+    public abstract Task<int> ExecuteAsync(
+        CommandContext context,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -28,6 +31,9 @@ public abstract class NoParametersAsyncCommand<TExitCode>
     /// Executes the command.
     /// </summary>
     /// <param name="context">The command context.</param>
+    /// <param name="cancellationToken">The cancellation token for the command.</param>
     /// <returns>A task that produces the command's exit code.</returns>
-    public abstract Task<TExitCode> ExecuteAsync(CommandContext context);
+    public abstract Task<TExitCode> ExecuteAsync(
+        CommandContext context,
+        CancellationToken cancellationToken);
 }

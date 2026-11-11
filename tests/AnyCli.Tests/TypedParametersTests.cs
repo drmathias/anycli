@@ -106,7 +106,7 @@ public class TypedParametersTests
 
     private sealed class AsyncParametersCommand : IAsyncCommand<AsyncParameters>
     {
-        public async Task<int> ExecuteAsync(CommandContext context, AsyncParameters parameters)
+        public async Task<int> ExecuteAsync(CommandContext context, AsyncParameters parameters, CancellationToken cancellationToken)
         {
             await Task.Yield();
             context.Console.Output.Write(parameters.Name);

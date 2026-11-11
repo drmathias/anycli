@@ -35,7 +35,8 @@ AnyCli is optimised for both utility and extensibility. It is mildly opinionated
 - Dependency injection support
 - Typed global options
 - Interceptor middleware
-- Customisable help provider
+- Cancellation support for async commands and interceptors
+- Fully customisable help provider
 - Optional Spectre.Console adapter for rich, styled terminal output (tables, markup, progress bars etc.)
 
 ## Installation

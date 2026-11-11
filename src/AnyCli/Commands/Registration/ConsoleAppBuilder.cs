@@ -129,7 +129,7 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var registration = new CommandRegistration(
-            (serviceProvider, context, _, _) =>
+            (serviceProvider, context, _, _, _) =>
                 Task.FromResult(ResolveCommand<TCommand>(serviceProvider).Execute(context)),
             [],
             []);
@@ -162,7 +162,8 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var registration = new CommandRegistration(
-            (serviceProvider, context, _, _) => ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context),
+            (serviceProvider, context, _, _, cancellationToken) =>
+                ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, cancellationToken),
             [],
             []);
         var command = new CommandNode(name, description) { Command = registration };
@@ -191,7 +192,7 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var registration = new CommandRegistration(
-            (serviceProvider, context, _, _) => Task.FromResult(
+            (serviceProvider, context, _, _, _) => Task.FromResult(
                 Convert.ToInt32(
                     ResolveCommand<TCommand>(serviceProvider).Execute(context),
                     CultureInfo.InvariantCulture)),
@@ -223,8 +224,8 @@ public sealed class ConsoleAppBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         var registration = new CommandRegistration(
-            (serviceProvider, context, _, _) => ConvertExitCodeAsync(
-                ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context)),
+            (serviceProvider, context, _, _, cancellationToken) => ConvertExitCodeAsync(
+                ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, cancellationToken)),
             [],
             []);
         var command = new CommandNode(name, description) { Command = registration };
@@ -254,7 +255,7 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments, globalOptionValues) =>
+            (serviceProvider, context, commandArguments, globalOptionValues, _) =>
             {
                 var parameters = TParameters.Bind(commandArguments, globalOptionValues);
                 return Task.FromResult(
@@ -295,7 +296,7 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments, globalOptionValues) =>
+            (serviceProvider, context, commandArguments, globalOptionValues, _) =>
             {
                 var parameters = TParameters.Bind(commandArguments, globalOptionValues);
                 var exitCode = ResolveCommand<TCommand>(serviceProvider).Execute(context, parameters);
@@ -333,10 +334,10 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments, globalOptionValues) =>
+            (serviceProvider, context, commandArguments, globalOptionValues, cancellationToken) =>
             {
                 var parameters = TParameters.Bind(commandArguments, globalOptionValues);
-                return ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters);
+                return ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters, cancellationToken);
             },
             definitions.Arguments,
             definitions.Options)
@@ -373,11 +374,11 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments, globalOptionValues) =>
+            (serviceProvider, context, commandArguments, globalOptionValues, cancellationToken) =>
             {
                 var parameters = TParameters.Bind(commandArguments, globalOptionValues);
                 return ConvertExitCodeAsync(
-                    ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters));
+                    ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters, cancellationToken));
             },
             definitions.Arguments,
             definitions.Options)
