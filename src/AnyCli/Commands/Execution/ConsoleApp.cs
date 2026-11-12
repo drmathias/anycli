@@ -15,12 +15,11 @@ public sealed class ConsoleApp
     private readonly IGlobalOptionsDefinition? _globalOptionsDefinition;
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
+    private readonly Func<IServiceProvider?, ICommandErrorHandler> _errorHandlerFactory;
     private readonly IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories;
     private readonly string? _name;
     private readonly CommandNode _root;
     private readonly IServiceProvider? _serviceProvider;
-    private readonly Func<IServiceProvider?, IUnrecognizedCommandHandler> _unrecognizedCommandHandlerFactory;
-    private readonly int _unrecognizedCommandExitCode;
     private readonly string? _version;
 
     internal ConsoleApp(
@@ -31,8 +30,7 @@ public sealed class ConsoleApp
         IGlobalOptionsDefinition? globalOptionsDefinition,
         IServiceProvider? serviceProvider,
         Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
-        Func<IServiceProvider?, IUnrecognizedCommandHandler> unrecognizedCommandHandlerFactory,
-        int unrecognizedCommandExitCode,
+        Func<IServiceProvider?, ICommandErrorHandler> errorHandlerFactory,
         IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> interceptorFactories)
     {
         _name = name;
@@ -42,8 +40,7 @@ public sealed class ConsoleApp
         _globalOptionsDefinition = globalOptionsDefinition;
         _serviceProvider = serviceProvider;
         _helpProviderFactory = helpProviderFactory;
-        _unrecognizedCommandHandlerFactory = unrecognizedCommandHandlerFactory;
-        _unrecognizedCommandExitCode = unrecognizedCommandExitCode;
+        _errorHandlerFactory = errorHandlerFactory;
         _interceptorFactories = interceptorFactories;
     }
 
@@ -105,6 +102,25 @@ public sealed class ConsoleApp
         ArgumentNullException.ThrowIfNull(console);
         cancellationToken.ThrowIfCancellationRequested();
 
+        try
+        {
+            return await RunCoreAsync(args, console, cancellationToken).ConfigureAwait(false);
+        }
+        catch (CommandErrorException exception)
+        {
+            return await HandleErrorAsync(
+                console,
+                exception.CommandPath,
+                exception.Error,
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<int> RunCoreAsync(
+        string[] args,
+        IConsole console,
+        CancellationToken cancellationToken)
+    {
         var outputWriter = console.Output;
         var globalOptionValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
         var commandIndex = CommandParameterParser.ParseLeadingGlobalOptions(
@@ -130,11 +146,11 @@ public sealed class ConsoleApp
 
         if (commandIndex < 0)
         {
-            return await HandleUnrecognizedAsync(
+            return await HandleErrorAsync(
                 console,
-                string.Empty,
-                GetChildPaths(_root, []),
-                isMissingSubcommand: false, cancellationToken).ConfigureAwait(false);
+                [],
+                new NoCommandSpecifiedError(),
+                cancellationToken).ConfigureAwait(false);
         }
 
         var path = new List<string>();
@@ -155,22 +171,26 @@ public sealed class ConsoleApp
                         args.Length,
                         console,
                         globalOptionValues, cancellationToken).ConfigureAwait(false)
-                    : await HandleUnrecognizedAsync(
+                    : await HandleErrorAsync(
                         console,
-                        string.Join(' ', path),
-                        GetChildPaths(current, path),
-                        isMissingSubcommand: true, cancellationToken).ConfigureAwait(false);
+                        path,
+                        new MissingSubcommandError(
+                            string.Join(' ', path),
+                            GetChildPaths(current, path)),
+                        cancellationToken).ConfigureAwait(false);
             }
 
             var token = args[index];
             if (!current.TryGetChild(token, out var child))
             {
                 var attemptedPath = new List<string>(path) { token };
-                return await HandleUnrecognizedAsync(
+                return await HandleErrorAsync(
                     console,
-                    string.Join(' ', attemptedPath),
-                    GetChildPaths(current, path),
-                    isMissingSubcommand: false, cancellationToken).ConfigureAwait(false);
+                    attemptedPath,
+                    new UnknownCommandError(
+                        string.Join(' ', attemptedPath),
+                        GetChildPaths(current, path)),
+                    cancellationToken).ConfigureAwait(false);
             }
 
             path.Add(token);
@@ -224,11 +244,13 @@ public sealed class ConsoleApp
                     if (nextToken.Length > 0 && nextToken[0] != '-')
                     {
                         var attemptedPath = new List<string>(path) { nextToken };
-                        return await HandleUnrecognizedAsync(
+                        return await HandleErrorAsync(
                             console,
-                            string.Join(' ', attemptedPath),
-                            GetChildPaths(child, path),
-                            isMissingSubcommand: false, cancellationToken).ConfigureAwait(false);
+                            attemptedPath,
+                            new UnknownCommandError(
+                                string.Join(' ', attemptedPath),
+                                GetChildPaths(child, path)),
+                            cancellationToken).ConfigureAwait(false);
                     }
 
                     return await ExecuteCommandAsync(
@@ -272,11 +294,13 @@ public sealed class ConsoleApp
 
             if (relativeIndex < 0)
             {
-                return await HandleUnrecognizedAsync(
+                return await HandleErrorAsync(
                     console,
-                    string.Join(' ', path),
-                    GetChildPaths(child, path),
-                    isMissingSubcommand: true, cancellationToken).ConfigureAwait(false);
+                    path,
+                    new MissingSubcommandError(
+                        string.Join(' ', path),
+                        GetChildPaths(child, path)),
+                    cancellationToken).ConfigureAwait(false);
             }
 
             current = child;
@@ -285,6 +309,32 @@ public sealed class ConsoleApp
     }
 
     private async Task<int> ExecuteCommandAsync(
+        CommandNode node,
+        IReadOnlyList<string> path,
+        string[] args,
+        int startIndex,
+        IConsole console,
+        Dictionary<string, OptionValue> globalOptionValues,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ExecuteCommandCoreAsync(
+                node,
+                path,
+                args,
+                startIndex,
+                console,
+                globalOptionValues,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (CommandErrorException exception)
+        {
+            throw new CommandErrorException(exception.Error, path);
+        }
+    }
+
+    private async Task<int> ExecuteCommandCoreAsync(
         CommandNode node,
         IReadOnlyList<string> path,
         string[] args,
@@ -416,26 +466,21 @@ public sealed class ConsoleApp
         IReadOnlyList<string> parentPath) =>
         [.. node.Children.Select(child => string.Join(' ', parentPath.Append(child.Name)))];
 
-    private async Task<int> HandleUnrecognizedAsync(
+    private async Task<int> HandleErrorAsync(
         IConsole console,
-        string commandName,
-        IReadOnlyList<string> availableCommands,
-        bool isMissingSubcommand,
+        IReadOnlyList<string> commandPath,
+        CommandError error,
         CancellationToken cancellationToken)
     {
-        var context = new UnrecognizedCommandContext(
+        var context = new CommandErrorContext(
             _name,
-            commandName,
-            availableCommands,
-            console)
-        {
-            IsMissingSubcommand = isMissingSubcommand,
-        };
+            commandPath,
+            error,
+            console);
 
-        await _unrecognizedCommandHandlerFactory(_serviceProvider)
+        return await _errorHandlerFactory(_serviceProvider)
             .HandleAsync(context, cancellationToken)
             .ConfigureAwait(false);
-        return _unrecognizedCommandExitCode;
     }
 
     private Task WriteRootHelpAsync(IConsole console, CancellationToken cancellationToken)
@@ -471,8 +516,8 @@ public sealed class ConsoleApp
         {
             if (option.Required && !globalOptionValues.ContainsKey(option.Name))
             {
-                throw new CommandParameterException(
-                    $"Missing required option '{option.Name}'.");
+                throw new CommandErrorException(
+                    new MissingRequiredOptionError(option.Name, IsGlobal: true));
             }
         }
     }

@@ -226,7 +226,8 @@ internal static class CommandParameterParser
         {
             if (option.Required && !commandOptionValues.ContainsKey(option.Name))
             {
-                throw new CommandParameterException($"Missing required option '{option.Name}'.");
+                throw new CommandErrorException(
+                    new MissingRequiredOptionError(option.Name, IsGlobal: false));
             }
         }
 
@@ -240,14 +241,37 @@ internal static class CommandParameterParser
             arities[definition.Name] = definition.Arity;
 
             var available = positionalValues.Count - position;
+
+            if (definition.Arity.IsVariadic)
+            {
+                if (available < definition.Arity.Minimum)
+                {
+                    throw new CommandErrorException(
+                        new TooFewVariadicValuesError(
+                            definition.Name,
+                            definition.Arity.Minimum,
+                            available));
+                }
+
+                if (definition.Arity.Maximum != int.MaxValue &&
+                    available > definition.Arity.Maximum)
+                {
+                    throw new CommandErrorException(
+                        new TooManyVariadicValuesError(
+                            definition.Name,
+                            definition.Arity.Maximum,
+                            available));
+                }
+            }
+
             var count = definition.Arity.Maximum == int.MaxValue
                 ? available
                 : Math.Min(definition.Arity.Maximum, available);
 
             if (count < definition.Arity.Minimum)
             {
-                throw new CommandParameterException(
-                    $"Missing required argument '{definition.Name}'.");
+                throw new CommandErrorException(
+                    new MissingRequiredArgumentError(definition.Name));
             }
 
             if (definition.Arity.IsVariadic)
@@ -276,8 +300,8 @@ internal static class CommandParameterParser
 
         if (position < positionalValues.Count)
         {
-            throw new CommandParameterException(
-                $"Unexpected argument '{positionalValues[position]}'.");
+            throw new CommandErrorException(
+                new UnexpectedArgumentError(positionalValues[position]));
         }
 
         return new ParsedCommandParameters(
@@ -364,12 +388,12 @@ internal static class CommandParameterParser
             var name = token[..equalsIndex];
             if (name.Length != 2)
             {
-                throw new CommandParameterException($"Invalid option '{name}'.");
+                throw new CommandErrorException(new MalformedOptionError(name));
             }
 
             if (!optionLookup.TryGetValue(name, out var binding))
             {
-                throw new CommandParameterException($"Unknown option '{name}'.");
+                throw new CommandErrorException(new UnknownOptionError(name));
             }
 
             AddOptionValue(
@@ -384,15 +408,14 @@ internal static class CommandParameterParser
         {
             if (!optionLookup.TryGetValue(token, out var binding))
             {
-                throw new CommandParameterException($"Unknown option '{token}'.");
+                throw new CommandErrorException(new UnknownOptionError(token));
             }
 
             if (binding.Definition.TakesValue)
             {
                 if (index + 1 >= tokens.Length || tokens[index + 1] == "--")
                 {
-                    throw new CommandParameterException(
-                        $"Missing value for option '{token}'.");
+                    throw new CommandErrorException(new MissingOptionValueError(token));
                 }
 
                 AddOptionValue(commandValues, globalValues, binding, tokens[++index]);
@@ -410,13 +433,12 @@ internal static class CommandParameterParser
             var name = "-" + token[characterIndex];
             if (!optionLookup.TryGetValue(name, out var binding))
             {
-                throw new CommandParameterException($"Unknown option '{name}'.");
+                throw new CommandErrorException(new UnknownOptionError(name));
             }
 
             if (binding.Definition.TakesValue)
             {
-                throw new CommandParameterException(
-                    $"Option '{name}' requires a separate value; use '{name} value' or '{name}=value'.");
+                throw new CommandErrorException(new OptionRequiresSeparateValueError(name));
             }
 
             AddOptionValue(commandValues, globalValues, binding, null);
@@ -437,7 +459,7 @@ internal static class CommandParameterParser
         var name = equalsIndex >= 0 ? token[..equalsIndex] : token;
         if (!optionLookup.TryGetValue(name, out var binding))
         {
-            throw new CommandParameterException($"Unknown option '{name}'.");
+            throw new CommandErrorException(new UnknownOptionError(name));
         }
 
         if (binding.Definition.TakesValue)
@@ -454,8 +476,7 @@ internal static class CommandParameterParser
 
             if (index + 1 >= tokens.Length || tokens[index + 1] == "--")
             {
-                throw new CommandParameterException(
-                    $"Missing value for option '{name}'.");
+                throw new CommandErrorException(new MissingOptionValueError(name));
             }
 
             AddOptionValue(commandValues, globalValues, binding, tokens[++index]);
@@ -480,8 +501,8 @@ internal static class CommandParameterParser
         {
             if (!binding.Definition.IsCollection)
             {
-                throw new CommandParameterException(
-                    $"Option '{binding.Definition.Name}' cannot be specified more than once.");
+                throw new CommandErrorException(
+                    new RepeatedOptionError(binding.Definition.Name));
             }
         }
         else

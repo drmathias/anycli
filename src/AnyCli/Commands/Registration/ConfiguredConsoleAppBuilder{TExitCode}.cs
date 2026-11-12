@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 
 namespace AnyCli.Commands.Registration;
 
@@ -59,22 +58,27 @@ public sealed class ConfiguredConsoleAppBuilder<TExitCode> : ConfiguredConsoleAp
         return this;
     }
 
-    /// <summary>
-    /// Configures the handler and exit code used when the command is not recognized.
-    /// </summary>
-    /// <typeparam name="THandler">The handler type.</typeparam>
-    /// <param name="exitCode">The exit code returned for an unrecognized command.</param>
-    /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// The handler is resolved from the service provider when one is configured; otherwise, it is
-    /// created with its public parameterless constructor.
-    /// </remarks>
-    public ConfiguredConsoleAppBuilder<TExitCode> UseUnrecognizedCommandHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(
-        TExitCode exitCode)
-        where THandler : class, IUnrecognizedCommandHandler
+    /// <inheritdoc/>
+    public override ConfiguredConsoleAppBuilder<TExitCode> UseErrorHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>()
     {
-        Builder.UseUnrecognizedCommandHandler<THandler>(Convert.ToInt32(exitCode, CultureInfo.InvariantCulture));
+        base.UseErrorHandler<THandler>();
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public override ConfiguredConsoleAppBuilder<TExitCode> UseErrorMessageProvider<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
+    {
+        base.UseErrorMessageProvider<TProvider>();
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public override ConfiguredConsoleAppBuilder<TExitCode> UseErrorWriter<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>()
+    {
+        base.UseErrorWriter<TWriter>();
         return this;
     }
 }

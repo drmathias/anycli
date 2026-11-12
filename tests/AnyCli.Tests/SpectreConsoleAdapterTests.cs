@@ -64,17 +64,17 @@ public class SpectreConsoleAdapterTests
     }
 
     [Test]
-    public async Task UnrecognizedCommand_UsesSpectreErrorHandler()
+    public async Task UnrecognizedCommand_UsesSpectreErrorWriter()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(_ => { })
-            .UseUnrecognizedCommandHandler<DefaultSpectreUnrecognizedCommandHandler>(4)
+            .UseErrorWriter<SpectreCommandErrorWriter>()
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
 
-        await Assert.That(result.ExitCode).IsEqualTo(4);
+        await Assert.That(result.ExitCode).IsEqualTo(2);
         await Assert.That(result.Output).IsEmpty();
         await Assert.That(result.Error).Contains("Unknown command");
         await Assert.That(result.Error).Contains("nope");

@@ -148,18 +148,13 @@ public class CollectionTargetTests
     public async Task VariadicMaximumCount_RejectsExcessValues()
     {
         var app = CreateApp<MaximumCountCommand, MaximumCountParameters>("values");
-        CommandParameterException? exception = null;
 
-        try
-        {
-            _ = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
+        var result = await TestAppHarness.RunAsync(app, ["values", "1", "2", "3"]);
 
-        await Assert.That(exception).IsNotNull();
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'values'");
+        await Assert.That(result.Error).Contains("at most 2");
     }
 
     [Test]
@@ -236,21 +231,14 @@ public class CollectionTargetTests
     public async Task GeneratedOneOrMore_RequiresAtLeastOneValue()
     {
         var app = CreateApp<GeneratedOneOrMoreCommand, GeneratedOneOrMoreParameters>("values");
-        CommandParameterException? exception = null;
 
-        try
-        {
-            _ = await TestAppHarness.RunAsync(app, ["values"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
+        var failure = await TestAppHarness.RunAsync(app, ["values"]);
         var result = await TestAppHarness.RunAsync(app, ["values", "1", "2"]);
 
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'values'");
+        await Assert.That(failure.ExitCode).IsEqualTo(2);
+        await Assert.That(failure.Output).IsEmpty();
+        await Assert.That(failure.Error).Contains("'values'");
+        await Assert.That(failure.Error).Contains("at least 1");
         await Assert.That(result.Output).IsEqualTo("1,2");
     }
 

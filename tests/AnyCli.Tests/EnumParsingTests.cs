@@ -39,19 +39,23 @@ public class EnumParsingTests
     [Test]
     public async Task ParseEnum_RejectsNumericValues()
     {
-        CommandParameterException? exception = null;
+        CommandErrorException? exception = null;
 
         try
         {
             _ = ParameterValueParsing.ParseEnum<KebabMode>("1", "mode");
         }
-        catch (CommandParameterException ex)
+        catch (CommandErrorException ex)
         {
             exception = ex;
         }
 
         await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("Invalid value '1'");
+        await Assert.That(exception!.Error is InvalidParameterValueError).IsTrue();
+
+        var error = (InvalidParameterValueError)exception.Error;
+        await Assert.That(error.Value).IsEqualTo("1");
+        await Assert.That(error.ParameterName).IsEqualTo("mode");
     }
 
     [Test]
@@ -62,19 +66,11 @@ public class EnumParsingTests
             .ConfigureCommands(commands => commands.AddCommand<GlobalEnumCommand, GlobalEnumParameters>("mode"))
             .Build();
 
-        CommandParameterException? exception = null;
+        var result = await TestAppHarness.RunAsync(app, ["mode", "1"]);
 
-        try
-        {
-            _ = await TestAppHarness.RunAsync(app, ["mode", "1"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("Invalid value '1'");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("Invalid value '1'");
     }
 
     [Test]

@@ -79,29 +79,21 @@ public class GlobalOptionTests
     }
 
     [Test]
-    public async Task RepeatedGlobalScalarOption_Throws()
+    public async Task RepeatedGlobalScalarOption_WritesError()
     {
         var app = ConsoleAppBuilder.Create()
             .AddGlobalOptions<TestGlobalOptions>()
             .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand, TestGlobalEchoParameters>("run"))
             .Build();
 
-        CommandParameterException? exception = null;
+        var result = await TestAppHarness.RunAsync(
+            app,
+            ["--log-level", "debug", "--log-level", "warning", "run"]);
 
-        try
-        {
-            _ = await TestAppHarness.RunAsync(
-                app,
-                ["--log-level", "debug", "--log-level", "warning", "run"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'--log-level'");
-        await Assert.That(exception.Message).Contains("more than once");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'--log-level'");
+        await Assert.That(result.Error).Contains("more than once");
     }
 
     [Test]
@@ -184,19 +176,11 @@ public class GlobalOptionTests
             .ConfigureCommands(commands => commands.AddCommand<RequiredEchoCommand, RequiredEchoParameters>("run"))
             .Build();
 
-        CommandParameterException? exception = null;
+        var result = await TestAppHarness.RunAsync(app, ["run"]);
 
-        try
-        {
-            _ = await TestAppHarness.RunAsync(app, ["run"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'--log-level'");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'--log-level'");
     }
 
     [Test]
@@ -245,26 +229,18 @@ public class GlobalOptionTests
     }
 
     [Test]
-    public async Task UnknownGlobalOption_BeforeCommand_Throws()
+    public async Task UnknownGlobalOption_BeforeCommand_WritesError()
     {
         var app = ConsoleAppBuilder.Create()
             .AddGlobalOptions<TestGlobalOptions>()
             .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand, TestGlobalEchoParameters>("run"))
             .Build();
 
-        CommandParameterException? exception = null;
+        var result = await TestAppHarness.RunAsync(app, ["--unknown", "run"]);
 
-        try
-        {
-            _ = await TestAppHarness.RunAsync(app, ["--unknown", "run"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("--unknown");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("--unknown");
     }
 
     [Test]

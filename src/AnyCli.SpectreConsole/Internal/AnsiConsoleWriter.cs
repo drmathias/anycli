@@ -6,7 +6,7 @@ using Spectre.Console;
 
 namespace AnyCli.SpectreConsole;
 
-internal sealed class AnsiConsoleContext(IAnsiConsole output, IAnsiConsole error) : IAnsiConsoleContext
+internal sealed class AnsiConsoleWriter(IAnsiConsole output, IAnsiConsole error) : IAnsiConsoleWriter
 {
     public IAnsiConsole Output { get; } = output;
 

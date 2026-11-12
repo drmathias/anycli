@@ -13,9 +13,9 @@ namespace AnyCli.SpectreConsole;
 /// </summary>
 public static class SpectreConsoleAdapter
 {
-    private static readonly ConditionalWeakTable<CommandContext, IAnsiConsoleContext> CommandContextConsoles = [];
-    private static readonly ConditionalWeakTable<HelpContext, IAnsiConsoleContext> HelpContextConsoles = [];
-    private static readonly ConditionalWeakTable<UnrecognizedCommandContext, IAnsiConsoleContext> UnrecognizedCommandContextConsoles = [];
+    private static readonly ConditionalWeakTable<CommandContext, IAnsiConsoleWriter> CommandContextConsoles = [];
+    private static readonly ConditionalWeakTable<CommandErrorContext, IAnsiConsoleErrorWriter> CommandErrorContextConsoles = [];
+    private static readonly ConditionalWeakTable<HelpContext, IAnsiConsoleWriter> HelpContextConsoles = [];
 
     /// <summary>
     /// Creates an ANSI console that writes to the specified output writer.
@@ -83,7 +83,7 @@ public static class SpectreConsoleAdapter
         /// <remarks>
         /// The consoles are created once for the command context and reused on later accesses.
         /// </remarks>
-        public IAnsiConsoleContext AnsiConsole => CommandContextConsoles.GetValue(context, static commandContext => CreateConsoles(commandContext.Console));
+        public IAnsiConsoleWriter AnsiConsole => CommandContextConsoles.GetValue(context, static commandContext => CreateConsoles(commandContext.Console));
     }
 
     extension(HelpContext context)
@@ -94,21 +94,22 @@ public static class SpectreConsoleAdapter
         /// <remarks>
         /// The consoles are created once for the help context and reused on later accesses.
         /// </remarks>
-        public IAnsiConsoleContext AnsiConsole => HelpContextConsoles.GetValue(context, static helpContext => CreateConsoles(helpContext.Console));
+        public IAnsiConsoleWriter AnsiConsole => HelpContextConsoles.GetValue(context, static helpContext => CreateConsoles(helpContext.Console));
     }
 
-    extension(UnrecognizedCommandContext context)
+    extension(CommandErrorContext context)
     {
         /// <summary>
-        /// Gets the cached ANSI consoles for the unrecognized command context's standard output and error.
+        /// Gets the cached ANSI console for the error context's standard error.
         /// </summary>
         /// <remarks>
-        /// The consoles are created once for the context and reused on later accesses.
+        /// The console is created once for the context and reused on later accesses.
         /// </remarks>
-        public IAnsiConsoleContext AnsiConsole => UnrecognizedCommandContextConsoles.GetValue(
+        public IAnsiConsoleErrorWriter AnsiConsole => CommandErrorContextConsoles.GetValue(
             context,
-            static commandContext => CreateConsoles(commandContext.Console));
+            static errorContext => new AnsiConsoleErrorWriter(
+                Create(errorContext.Console.Error)));
     }
 
-    private static AnsiConsoleContext CreateConsoles(IConsoleWriter console) => new(Create(console.Output), Create(console.Error));
+    private static AnsiConsoleWriter CreateConsoles(IConsoleWriter console) => new(Create(console.Output), Create(console.Error));
 }

@@ -80,17 +80,41 @@ public sealed class ConsoleAppBuilder<TGlobalOptions>
     }
 
     /// <summary>
-    /// Configures the handler and exit code used when the command is not recognized.
+    /// Registers the handler used for command-line errors.
     /// </summary>
-    /// <typeparam name="THandler">The handler type.</typeparam>
-    /// <param name="exitCode">The exit code returned for an unrecognized command.</param>
+    /// <typeparam name="THandler">The error handler type.</typeparam>
     /// <returns>The current builder.</returns>
-    public ConsoleAppBuilder<TGlobalOptions> UseUnrecognizedCommandHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(
-        int exitCode = 2)
-        where THandler : class, IUnrecognizedCommandHandler
+    public ConsoleAppBuilder<TGlobalOptions> UseErrorHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>()
+        where THandler : class, ICommandErrorHandler
     {
-        _builder.UseUnrecognizedCommandHandler<THandler>(exitCode);
+        _builder.UseErrorHandler<THandler>();
+        return this;
+    }
+
+    /// <summary>
+    /// Registers the provider used to create command-line error messages.
+    /// </summary>
+    /// <typeparam name="TProvider">The message provider type.</typeparam>
+    /// <returns>The current builder.</returns>
+    public ConsoleAppBuilder<TGlobalOptions> UseErrorMessageProvider<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
+        where TProvider : class, ICommandErrorMessageProvider
+    {
+        _builder.UseErrorMessageProvider<TProvider>();
+        return this;
+    }
+
+    /// <summary>
+    /// Registers the writer used for command-line error messages.
+    /// </summary>
+    /// <typeparam name="TWriter">The error writer type.</typeparam>
+    /// <returns>The current builder.</returns>
+    public ConsoleAppBuilder<TGlobalOptions> UseErrorWriter<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>()
+        where TWriter : class, ICommandErrorWriter
+    {
+        _builder.UseErrorWriter<TWriter>();
         return this;
     }
 

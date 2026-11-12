@@ -4,5 +4,5 @@
 
 global using AnyCli.Commands.Execution;
 global using AnyCli.Console;
+global using AnyCli.Errors;
 global using AnyCli.Help;
-global using AnyCli.Routing;

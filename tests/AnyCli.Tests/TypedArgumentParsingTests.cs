@@ -36,42 +36,30 @@ public class TypedParameterValueParsingTests
     }
 
     [Test]
-    public async Task MissingRequiredArgument_ThrowsCommandParameterException()
+    public async Task MissingRequiredArgument_WritesError()
     {
         var app = CreateApp<ScalarCommand, ScalarParameters>("parse");
-        CommandParameterException? exception = null;
 
-        try
-        {
-            await TestAppHarness.RunAsync(app, ["parse"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
+        var result = await TestAppHarness.RunAsync(app, ["parse"]);
 
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'count'");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'count'");
     }
 
     [Test]
-    public async Task InvalidValue_ThrowsCommandParameterException()
+    public async Task InvalidValue_WritesError()
     {
         var app = CreateApp<ScalarCommand, ScalarParameters>("parse");
-        CommandParameterException? exception = null;
 
-        try
-        {
-            await TestAppHarness.RunAsync(app, ["parse", "nope", "true", Guid.Empty.ToString(), "2026-11-07", "fast"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
+        var result = await TestAppHarness.RunAsync(
+            app,
+            ["parse", "nope", "true", Guid.Empty.ToString(), "2026-11-07", "fast"]);
 
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'count'");
-        await Assert.That(exception.Message).Contains("nope");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'count'");
+        await Assert.That(result.Error).Contains("nope");
     }
 
     [Test]
@@ -102,20 +90,13 @@ public class TypedParameterValueParsingTests
             .ConfigureCommands(commands => commands.AddCommand<OneOrMoreCommand, OneOrMoreParameters>("tags"))
             .Build();
 
-        CommandParameterException? exception = null;
-        try
-        {
-            await TestAppHarness.RunAsync(app, ["tags"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
+        var failure = await TestAppHarness.RunAsync(app, ["tags"]);
 
         var result = await TestAppHarness.RunAsync(app, ["tags", "a", "b"]);
 
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'tags'");
+        await Assert.That(failure.ExitCode).IsEqualTo(2);
+        await Assert.That(failure.Output).IsEmpty();
+        await Assert.That(failure.Error).Contains("'tags'");
         await Assert.That(result.Output).IsEqualTo("a,b");
     }
 
@@ -150,23 +131,16 @@ public class TypedParameterValueParsingTests
     }
 
     [Test]
-    public async Task CustomParserFailure_ThrowsCommandParameterException()
+    public async Task CustomParserFailure_WritesError()
     {
         var app = CreateApp<WidgetCommand, WidgetParameters>("widget");
-        CommandParameterException? exception = null;
 
-        try
-        {
-            await TestAppHarness.RunAsync(app, ["widget", "nope"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
+        var result = await TestAppHarness.RunAsync(app, ["widget", "nope"]);
 
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'widget'");
-        await Assert.That(exception.Message).Contains("nope");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'widget'");
+        await Assert.That(result.Error).Contains("nope");
     }
 
     private static ConsoleApp CreateApp<TCommand, TParameters>(string name)

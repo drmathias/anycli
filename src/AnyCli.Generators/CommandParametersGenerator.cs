@@ -1483,7 +1483,13 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 .AppendLine(" Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
             source.Append(indent).AppendLine("    {");
             source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
-            EmitOptionBindings(source, indent, model.Options, "values", 0);
+            EmitOptionBindings(
+                source,
+                indent,
+                model.Options,
+                "values",
+                0,
+                "global::AnyCli.Errors.ParameterSource.GlobalOption");
             source.Append(indent).AppendLine("        return parameters;");
             source.Append(indent).AppendLine("    }");
             source.Append(indent).AppendLine("}");
@@ -1614,7 +1620,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .Append(GetParseExpression(
                         argument.ParsePlan,
                         rawLocal + "[" + indexLocal + "]",
-                        literalName))
+                        literalName,
+                        "global::AnyCli.Errors.ParameterSource.Argument"))
                     .AppendLine(";");
                 source.Append(indent).AppendLine("        }");
                 source.Append(indent)
@@ -1658,7 +1665,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .Append("            parameters.")
                     .Append(argument.PropertyName)
                     .Append(" = ")
-                    .Append(GetParseExpression(argument.ParsePlan, rawLocal + "!", literalName))
+                    .Append(GetParseExpression(
+                        argument.ParsePlan,
+                        rawLocal + "!",
+                        literalName,
+                        "global::AnyCli.Errors.ParameterSource.Argument"))
                     .AppendLine(";");
                 source.Append(indent).AppendLine("        }");
 
@@ -1684,16 +1695,29 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .Append(GetParseExpression(
                         argument.ParsePlan,
                         "parameterValues.Arguments.GetRequired(" + literalName + ")",
-                        literalName))
+                        literalName,
+                        "global::AnyCli.Errors.ParameterSource.Argument"))
                     .AppendLine(";");
             }
 
             localIndex++;
         }
 
-        EmitOptionBindings(source, indent, model.GlobalOptions, "globalOptionValues", localIndex);
+        EmitOptionBindings(
+            source,
+            indent,
+            model.GlobalOptions,
+            "globalOptionValues",
+            localIndex,
+            "global::AnyCli.Errors.ParameterSource.GlobalOption");
         localIndex += model.GlobalOptions.Count;
-        EmitOptionBindings(source, indent, model.Options, "parameterValues.Options", localIndex);
+        EmitOptionBindings(
+            source,
+            indent,
+            model.Options,
+            "parameterValues.Options",
+            localIndex,
+            "global::AnyCli.Errors.ParameterSource.Option");
 
         source.Append(indent).AppendLine("        return parameters;");
         source.Append(indent).AppendLine("    }");
@@ -1797,7 +1821,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         string indent,
         IReadOnlyList<OptionModel> options,
         string valuesExpression,
-        int localIndex)
+        int localIndex,
+        string parameterSource)
     {
         foreach (var option in options)
         {
@@ -1856,7 +1881,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .Append(GetParseExpression(
                         option.ParsePlan,
                         rawLocal + "[" + indexLocal + "]",
-                        literalName))
+                        literalName,
+                        parameterSource))
                     .AppendLine(";");
                 source.Append(indent).AppendLine("        }");
                 source.Append(indent)
@@ -1908,12 +1934,20 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         .AppendLine(" is null");
                     source.Append(indent).AppendLine("                ? true");
                     source.Append(indent).Append("                : ")
-                        .Append(GetParseExpression(option.ParsePlan, rawLocal, literalName))
+                        .Append(GetParseExpression(
+                            option.ParsePlan,
+                            rawLocal,
+                            literalName,
+                            parameterSource))
                         .AppendLine(";");
                 }
                 else
                 {
-                    source.Append(GetParseExpression(option.ParsePlan, rawLocal + "!", literalName))
+                    source.Append(GetParseExpression(
+                        option.ParsePlan,
+                        rawLocal + "!",
+                        literalName,
+                        parameterSource))
                         .AppendLine(";");
                 }
 
@@ -1991,26 +2025,27 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private static string GetParseExpression(
         ParsePlan parsePlan,
         string rawExpression,
-        string literalName) =>
+        string literalName,
+        string parameterSource) =>
         parsePlan.Kind switch
         {
             ParseKind.String => rawExpression,
             ParseKind.Enum =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseEnum<{parsePlan.ValueTypeFullName}>(" +
-                $"{rawExpression}, {literalName})",
+                $"{rawExpression}, {literalName}, {parameterSource})",
             ParseKind.EnumCustom =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseEnumCustom<{parsePlan.ValueTypeFullName}, " +
-                $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName})",
+                $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName}, {parameterSource})",
             ParseKind.SpanParsable =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseSpanParsable<{parsePlan.ValueTypeFullName}>(" +
-                $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
+                $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName}, {parameterSource})",
             ParseKind.Parsable =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseParsable<{parsePlan.ValueTypeFullName}>(" +
-                $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
+                $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName}, {parameterSource})",
             ParseKind.Custom =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseCustom<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, " +
-                $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName})",
+                $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName}, {parameterSource})",
             _ => throw new InvalidOperationException("Unknown parse kind."),
         };
 

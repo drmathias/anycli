@@ -57,124 +57,76 @@ public class OptionParsingTests
     }
 
     [Test]
-    public async Task RepeatedScalarOption_Throws()
+    public async Task RepeatedScalarOption_WritesError()
     {
-        CommandParameterException? exception = null;
+        var result = await Run<OptionParametersCommand, OptionParameters>(
+            "opts",
+            ["opts", "--config", "cfg", "--count", "1", "--count", "2"]);
 
-        try
-        {
-            _ = await Run<OptionParametersCommand, OptionParameters>(
-                "opts",
-                ["opts", "--config", "cfg", "--count", "1", "--count", "2"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'--count'");
-        await Assert.That(exception.Message).Contains("more than once");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'--count'");
+        await Assert.That(result.Error).Contains("more than once");
     }
 
     [Test]
-    public async Task RepeatedScalarOptionAlias_Throws()
+    public async Task RepeatedScalarOptionAlias_WritesError()
     {
-        CommandParameterException? exception = null;
+        var result = await Run<OptionParametersCommand, OptionParameters>(
+            "opts",
+            ["opts", "--config", "cfg", "--output", "out", "-o", "other"]);
 
-        try
-        {
-            _ = await Run<OptionParametersCommand, OptionParameters>(
-                "opts",
-                ["opts", "--config", "cfg", "--output", "out", "-o", "other"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'--output'");
-        await Assert.That(exception.Message).Contains("more than once");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'--output'");
+        await Assert.That(result.Error).Contains("more than once");
     }
 
     [Test]
-    public async Task RepeatedFlagOption_Throws()
+    public async Task RepeatedFlagOption_WritesError()
     {
-        CommandParameterException? exception = null;
+        var result = await Run<OptionParametersCommand, OptionParameters>(
+            "opts",
+            ["opts", "--config", "cfg", "-vv"]);
 
-        try
-        {
-            _ = await Run<OptionParametersCommand, OptionParameters>(
-                "opts",
-                ["opts", "--config", "cfg", "-vv"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'--verbose'");
-        await Assert.That(exception.Message).Contains("more than once");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'--verbose'");
+        await Assert.That(result.Error).Contains("more than once");
     }
 
     [Test]
     public async Task RequiredOption_IsEnforced()
     {
-        CommandParameterException? exception = null;
+        var result = await Run<OptionParametersCommand, OptionParameters>("opts", ["opts", "--output", "out"]);
 
-        try
-        {
-            _ = await Run<OptionParametersCommand, OptionParameters>("opts", ["opts", "--output", "out"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'--config'");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'--config'");
     }
 
     [Test]
-    public async Task UnknownOption_Throws()
+    public async Task UnknownOption_WritesError()
     {
-        CommandParameterException? exception = null;
+        var result = await Run<OptionParametersCommand, OptionParameters>(
+            "opts",
+            ["opts", "--config", "cfg", "--nope"]);
 
-        try
-        {
-            _ = await Run<OptionParametersCommand, OptionParameters>(
-                "opts",
-                ["opts", "--config", "cfg", "--nope"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("'--nope'");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("'--nope'");
     }
 
     [Test]
     public async Task AttachedShortValue_IsRejected()
     {
-        CommandParameterException? exception = null;
+        var result = await Run<OptionParametersCommand, OptionParameters>(
+            "opts",
+            ["opts", "--config", "cfg", "-oout"]);
 
-        try
-        {
-            _ = await Run<OptionParametersCommand, OptionParameters>(
-                "opts",
-                ["opts", "--config", "cfg", "-oout"]);
-        }
-        catch (CommandParameterException ex)
-        {
-            exception = ex;
-        }
-
-        await Assert.That(exception).IsNotNull();
-        await Assert.That(exception!.Message).Contains("separate value");
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("separate value");
     }
 
     [Test]

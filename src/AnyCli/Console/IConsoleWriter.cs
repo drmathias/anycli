@@ -7,15 +7,4 @@ namespace AnyCli.Console;
 /// <summary>
 /// Provides the standard output and error writers for a command.
 /// </summary>
-public interface IConsoleWriter
-{
-    /// <summary>
-    /// Gets the writer used for standard output.
-    /// </summary>
-    IOutputWriter Output { get; }
-
-    /// <summary>
-    /// Gets the writer used for standard error.
-    /// </summary>
-    IOutputWriter Error { get; }
-}
+public interface IConsoleWriter : IConsoleOutputWriter, IConsoleErrorWriter;

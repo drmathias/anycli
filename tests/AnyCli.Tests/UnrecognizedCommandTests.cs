@@ -40,19 +40,19 @@ public class UnrecognizedCommandTests
     }
 
     [Test]
-    public async Task CustomHandler_CanWriteToOutputAndUseCustomExitCode()
+    public async Task CustomHandler_WritesToErrorAndUsesCustomExitCode()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(_ => { })
-            .UseUnrecognizedCommandHandler<OutputUnrecognizedCommandHandler>(7)
+            .UseErrorHandler<OutputErrorHandler>()
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(7);
-        await Assert.That(result.Output).IsEqualTo($"custom:nope{Environment.NewLine}");
-        await Assert.That(result.Error).IsEmpty();
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).IsEqualTo($"custom:nope{Environment.NewLine}");
     }
 
     [Test]
@@ -61,7 +61,7 @@ public class UnrecognizedCommandTests
         var app = ConsoleAppBuilder.Create()
             .ConfigureCommands<UnrecognizedExitCode>(_ => { })
             .WithName("anycli")
-            .UseUnrecognizedCommandHandler<DefaultUnrecognizedCommandHandler>(UnrecognizedExitCode.UnknownCommand)
+            .UseErrorHandler<EnumErrorHandler>()
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
@@ -75,13 +75,13 @@ public class UnrecognizedCommandTests
     public async Task Handler_IsResolvedFromServiceProvider()
     {
         var serviceProvider = new StubServiceProvider();
-        serviceProvider.Add(() => new InjectedUnrecognizedCommandHandler("injected"));
+        serviceProvider.Add(() => new InjectedErrorHandler("injected"));
 
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .UseServiceProvider(serviceProvider)
             .ConfigureCommands(_ => { })
-            .UseUnrecognizedCommandHandler<InjectedUnrecognizedCommandHandler>(3)
+            .UseErrorHandler<InjectedErrorHandler>()
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
@@ -91,26 +91,49 @@ public class UnrecognizedCommandTests
         await Assert.That(result.Error).IsEqualTo($"injected{Environment.NewLine}");
     }
 
-
-    private sealed class OutputUnrecognizedCommandHandler : IUnrecognizedCommandHandler
+    private abstract class TestErrorHandler : ICommandErrorHandler
     {
-        public ValueTask HandleAsync(
-            UnrecognizedCommandContext context,
+        public abstract ValueTask<int> HandleAsync(
+            CommandErrorContext context,
+            CancellationToken cancellationToken);
+    }
+
+    private sealed class OutputErrorHandler : TestErrorHandler
+    {
+        public override ValueTask<int> HandleAsync(
+            CommandErrorContext context,
             CancellationToken cancellationToken)
         {
-            context.Console.Output.WriteLine($"custom:{context.AttemptedCommandPath}");
-            return ValueTask.CompletedTask;
+            var path = context.Error is UnknownCommandError unknown
+                ? unknown.AttemptedCommandPath
+                : context.CommandPath.Count == 0
+                    ? string.Empty
+                    : string.Join(' ', context.CommandPath);
+
+            context.Console.Error.WriteLine($"custom:{path}");
+            return ValueTask.FromResult(7);
         }
     }
 
-    private sealed class InjectedUnrecognizedCommandHandler(string message) : IUnrecognizedCommandHandler
+    private sealed class EnumErrorHandler : ICommandErrorHandler<UnrecognizedExitCode>
     {
-        public ValueTask HandleAsync(
-            UnrecognizedCommandContext context,
+        public ValueTask<UnrecognizedExitCode> HandleAsync(
+            CommandErrorContext context,
+            CancellationToken cancellationToken)
+        {
+            context.Console.Error.WriteLine("nope");
+            return ValueTask.FromResult(UnrecognizedExitCode.UnknownCommand);
+        }
+    }
+
+    private sealed class InjectedErrorHandler(string message) : ICommandErrorHandler
+    {
+        public ValueTask<int> HandleAsync(
+            CommandErrorContext context,
             CancellationToken cancellationToken)
         {
             context.Console.Error.WriteLine(message);
-            return ValueTask.CompletedTask;
+            return ValueTask.FromResult(3);
         }
     }
 }

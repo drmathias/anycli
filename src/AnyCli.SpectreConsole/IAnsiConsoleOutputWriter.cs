@@ -7,17 +7,12 @@ using Spectre.Console;
 namespace AnyCli.SpectreConsole;
 
 /// <summary>
-/// Provides ANSI consoles for standard output and standard error.
+/// Provides the ANSI console for standard output.
 /// </summary>
-public interface IAnsiConsoleContext
+public interface IAnsiConsoleOutputWriter
 {
     /// <summary>
     /// Gets the ANSI console for standard output.
     /// </summary>
     IAnsiConsole Output { get; }
-
-    /// <summary>
-    /// Gets the ANSI console for standard error.
-    /// </summary>
-    IAnsiConsole Error { get; }
 }

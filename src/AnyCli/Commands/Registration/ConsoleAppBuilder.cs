@@ -14,12 +14,14 @@ public sealed class ConsoleAppBuilder
 {
     private readonly GlobalOptionBuilder _globalOptions = new();
     private readonly List<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories = [];
+    private Func<IServiceProvider?, ICommandErrorHandler>? _errorHandlerFactory;
+    private Func<IServiceProvider?, ICommandErrorMessageProvider> _errorMessageProviderFactory =
+        static _ => new CommandErrorMessageProvider();
+    private Func<IServiceProvider?, ICommandErrorWriter> _errorWriterFactory =
+        static _ => new PlainCommandErrorWriter();
     private IGlobalOptionsDefinition? _globalOptionsDefinition;
     private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private IServiceProvider? _serviceProvider;
-    private Func<IServiceProvider?, IUnrecognizedCommandHandler> _unrecognizedCommandHandlerFactory =
-        static _ => new DefaultUnrecognizedCommandHandler();
-    private int _unrecognizedCommandExitCode = 2;
     private string? _name;
     private string? _version;
 
@@ -459,13 +461,54 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
-    internal ConsoleAppBuilder UseUnrecognizedCommandHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(
-        int exitCode)
-        where THandler : class, IUnrecognizedCommandHandler
+    /// <summary>
+    /// Registers the handler used for command-line errors.
+    /// </summary>
+    /// <typeparam name="THandler">The error handler type.</typeparam>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the handler is
+    /// resolved from it; otherwise, it is created with its public parameterless constructor.
+    /// </remarks>
+    public ConsoleAppBuilder UseErrorHandler<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>()
+        where THandler : class, ICommandErrorHandler
     {
-        _unrecognizedCommandHandlerFactory = (ResolveUnrecognizedCommandHandler<THandler>);
-        _unrecognizedCommandExitCode = exitCode;
+        _errorHandlerFactory = ResolveErrorHandler<THandler>;
+        return this;
+    }
+
+    /// <summary>
+    /// Registers the provider used to create command-line error messages.
+    /// </summary>
+    /// <typeparam name="TProvider">The message provider type.</typeparam>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the provider is
+    /// resolved from it; otherwise, it is created with its public parameterless constructor.
+    /// </remarks>
+    public ConsoleAppBuilder UseErrorMessageProvider<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
+        where TProvider : class, ICommandErrorMessageProvider
+    {
+        _errorMessageProviderFactory = ResolveErrorMessageProvider<TProvider>;
+        return this;
+    }
+
+    /// <summary>
+    /// Registers the writer used for command-line error messages.
+    /// </summary>
+    /// <typeparam name="TWriter">The error writer type.</typeparam>
+    /// <returns>The current builder.</returns>
+    /// <remarks>
+    /// If a service provider was set with <see cref="UseServiceProvider"/>, the writer is
+    /// resolved from it; otherwise, it is created with its public parameterless constructor.
+    /// </remarks>
+    public ConsoleAppBuilder UseErrorWriter<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>()
+        where TWriter : class, ICommandErrorWriter
+    {
+        _errorWriterFactory = ResolveErrorWriter<TWriter>;
         return this;
     }
 
@@ -506,10 +549,14 @@ public sealed class ConsoleAppBuilder
             _globalOptionsDefinition,
             _serviceProvider,
             _helpProviderFactory,
-            _unrecognizedCommandHandlerFactory,
-            _unrecognizedCommandExitCode,
+            _errorHandlerFactory ?? CreateDefaultErrorHandlerFactory(),
             [.. _interceptorFactories]);
     }
+
+    private Func<IServiceProvider?, ICommandErrorHandler> CreateDefaultErrorHandlerFactory() =>
+        serviceProvider => new DefaultCommandErrorHandler(
+            _errorMessageProviderFactory(serviceProvider),
+            _errorWriterFactory(serviceProvider));
 
     private static void ValidateCommandTree(CommandNode parent)
     {
@@ -637,18 +684,37 @@ public sealed class ConsoleAppBuilder
                     $"Service '{typeof(THelpProvider).FullName}' is not registered.");
     }
 
-    private static THandler ResolveUnrecognizedCommandHandler<
+    private static THandler ResolveErrorHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(
         IServiceProvider? serviceProvider)
-        where THandler : class, IUnrecognizedCommandHandler
+        where THandler : class, ICommandErrorHandler =>
+        ResolveErrorService<THandler>(serviceProvider, "command error handler");
+
+    private static TProvider ResolveErrorMessageProvider<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>(
+        IServiceProvider? serviceProvider)
+        where TProvider : class, ICommandErrorMessageProvider =>
+        ResolveErrorService<TProvider>(serviceProvider, "command error message provider");
+
+    private static TWriter ResolveErrorWriter<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>(
+        IServiceProvider? serviceProvider)
+        where TWriter : class, ICommandErrorWriter =>
+        ResolveErrorService<TWriter>(serviceProvider, "command error writer");
+
+    private static TService ResolveErrorService<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TService>(
+        IServiceProvider? serviceProvider,
+        string serviceDescription)
+        where TService : class
     {
         return serviceProvider is null
-            ? Activator.CreateInstance<THandler>()
+            ? Activator.CreateInstance<TService>()
                 ?? throw new InvalidOperationException(
-                    $"Could not create unrecognized command handler '{typeof(THandler).FullName}'.")
-            : serviceProvider.GetService(typeof(THandler)) as THandler
+                    $"Could not create {serviceDescription} '{typeof(TService).FullName}'.")
+            : serviceProvider.GetService(typeof(TService)) as TService
                 ?? throw new InvalidOperationException(
-                    $"Service '{typeof(THandler).FullName}' is not registered.");
+                    $"Service '{typeof(TService).FullName}' is not registered.");
     }
 
     private static TInterceptor ResolveInterceptor<
