@@ -16,7 +16,7 @@ public sealed class ConsoleAppBuilder
     private readonly List<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories = [];
     private Func<IServiceProvider?, ICommandErrorHandler>? _errorHandlerFactory;
     private Func<IServiceProvider?, ICommandErrorMessageProvider> _errorMessageProviderFactory =
-        static _ => new CommandErrorMessageProvider();
+        static _ => new LocalizedCommandErrorMessageProvider();
     private Func<IServiceProvider?, ICommandErrorWriter> _errorWriterFactory =
         static _ => new PlainCommandErrorWriter();
     private IGlobalOptionsDefinition? _globalOptionsDefinition;

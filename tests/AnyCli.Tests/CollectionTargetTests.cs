@@ -154,7 +154,7 @@ public class CollectionTargetTests
         await Assert.That(result.ExitCode).IsEqualTo(2);
         await Assert.That(result.Output).IsEmpty();
         await Assert.That(result.Error).Contains("'values'");
-        await Assert.That(result.Error).Contains("at most 2");
+        await Assert.That(result.Error).Contains("expected at most 2");
     }
 
     [Test]
@@ -238,7 +238,7 @@ public class CollectionTargetTests
         await Assert.That(failure.ExitCode).IsEqualTo(2);
         await Assert.That(failure.Output).IsEmpty();
         await Assert.That(failure.Error).Contains("'values'");
-        await Assert.That(failure.Error).Contains("at least 1");
+        await Assert.That(failure.Error).Contains("expected at least 1");
         await Assert.That(result.Output).IsEqualTo("1,2");
     }
 

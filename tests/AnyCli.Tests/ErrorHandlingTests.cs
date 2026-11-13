@@ -11,6 +11,93 @@ namespace AnyCli.Tests;
 public class ErrorHandlingTests
 {
     [Test]
+    public async Task DefaultResources_ContainAllEnglishMessages()
+    {
+        var resources = new System.Resources.ResourceManager(
+            "AnyCli.Errors.CommandErrorMessages",
+            typeof(LocalizedCommandErrorMessageProvider).Assembly);
+        var english = System.Globalization.CultureInfo.GetCultureInfo("en");
+
+        foreach (var key in new[]
+        {
+            "NoCommandSpecified",
+            "UnknownCommand",
+            "MissingSubcommand",
+            "UnknownOption",
+            "MalformedOption",
+            "OptionRequiresSeparateValue",
+            "MissingOptionValue",
+            "RepeatedOption",
+            "MissingRequiredOption",
+            "MissingRequiredArgument",
+            "UnexpectedArgument",
+            "TooFewVariadicValues",
+            "TooManyVariadicValues",
+            "InvalidParameterValue",
+        })
+        {
+            await Assert.That(resources.GetString(key, english)).IsNotNull();
+        }
+    }
+
+    [Test]
+    public async Task DefaultResources_FallBackToEnglishForUnknownCulture()
+    {
+        var resources = new System.Resources.ResourceManager(
+            "AnyCli.Errors.CommandErrorMessages",
+            typeof(LocalizedCommandErrorMessageProvider).Assembly);
+        var japanese = System.Globalization.CultureInfo.GetCultureInfo("ja-JP");
+
+        var message = resources.GetString("UnknownOption", japanese);
+
+        await Assert.That(message).IsEqualTo("Unknown option '{0}'.");
+    }
+
+    [Test]
+    public async Task DefaultResources_ContainTranslations()
+    {
+        var resources = new System.Resources.ResourceManager(
+            "AnyCli.Errors.CommandErrorMessages",
+            typeof(LocalizedCommandErrorMessageProvider).Assembly);
+
+        var expected = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["fr"] = "Option inconnue '{0}'.",
+            ["de"] = "Unbekannte Option '{0}'.",
+            ["es"] = "Opción desconocida '{0}'.",
+            ["pt-BR"] = "Opção desconhecida '{0}'.",
+            ["it"] = "Opzione sconosciuta '{0}'.",
+            ["nl"] = "Onbekende optie '{0}'.",
+        };
+
+        foreach (var (cultureName, expectedMessage) in expected)
+        {
+            var culture = System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+            var message = resources.GetString("UnknownOption", culture);
+
+            await Assert.That(message).IsEqualTo(expectedMessage);
+        }
+    }
+
+    [Test]
+    public async Task DefaultMessageProvider_UsesCultureSpecificMessage()
+    {
+        var provider = new FixedCultureMessageProvider(
+            System.Globalization.CultureInfo.GetCultureInfo("de"));
+        using var error = new StringWriter();
+        var console = new TextConsole(new StringReader(string.Empty), new StringWriter(), error);
+        var context = new CommandErrorContext(
+            "anycli",
+            [],
+            new UnknownOptionError("--nope"),
+            console);
+
+        var message = provider.GetMessage(context);
+
+        await Assert.That(message).IsEqualTo("Unbekannte Option '--nope'.");
+    }
+
+    [Test]
     public async Task CustomMessageProvider_OverridesIndividualError()
     {
         var app = ConsoleAppBuilder.Create()
@@ -153,7 +240,15 @@ public class ErrorHandlingTests
             .Build();
     }
 
-    private sealed class CustomMessageProvider : CommandErrorMessageProvider
+    private sealed class FixedCultureMessageProvider(
+        System.Globalization.CultureInfo culture) : LocalizedCommandErrorMessageProvider
+    {
+        protected override System.Globalization.CultureInfo GetUICulture(
+            CommandErrorContext context) =>
+            culture;
+    }
+
+    private sealed class CustomMessageProvider : LocalizedCommandErrorMessageProvider
     {
         protected override string GetMessage(
             CommandErrorContext context,

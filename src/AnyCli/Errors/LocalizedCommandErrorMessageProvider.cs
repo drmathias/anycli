@@ -2,16 +2,25 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Globalization;
+using System.Resources;
+
 namespace AnyCli.Errors;
 
 /// <summary>
-/// Provides default English messages for command-line errors.
+/// Provides resource-based, localized messages for command-line errors.
 /// </summary>
 /// <remarks>
 /// Derive from this class and override individual methods to customise or localise messages.
 /// </remarks>
-public class CommandErrorMessageProvider : ICommandErrorMessageProvider
+public class LocalizedCommandErrorMessageProvider : ICommandErrorMessageProvider
 {
+    private const string ResourceBaseName = "AnyCli.Errors.CommandErrorMessages";
+
+    private static readonly ResourceManager Resources = new(
+        ResourceBaseName,
+        typeof(LocalizedCommandErrorMessageProvider).Assembly);
+
     /// <inheritdoc/>
     public string GetMessage(CommandErrorContext context) =>
         context.Error switch
@@ -42,7 +51,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         NoCommandSpecifiedError error) =>
-        "No command was specified.";
+        Format(context, CommandErrorResourceKeys.NoCommandSpecified);
 
     /// <summary>
     /// Gets the message for an unknown command.
@@ -53,7 +62,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         UnknownCommandError error) =>
-        $"Unknown command '{error.AttemptedCommandPath}'.";
+        Format(context, CommandErrorResourceKeys.UnknownCommand, error.AttemptedCommandPath);
 
     /// <summary>
     /// Gets the message for a missing subcommand.
@@ -64,7 +73,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         MissingSubcommandError error) =>
-        $"Command '{error.CommandPath}' requires a subcommand.";
+        Format(context, CommandErrorResourceKeys.MissingSubcommand, error.CommandPath);
 
     /// <summary>
     /// Gets the message for an unknown option.
@@ -75,7 +84,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         UnknownOptionError error) =>
-        $"Unknown option '{error.OptionName}'.";
+        Format(context, CommandErrorResourceKeys.UnknownOption, error.OptionName);
 
     /// <summary>
     /// Gets the message for a malformed option.
@@ -86,7 +95,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         MalformedOptionError error) =>
-        $"Invalid option '{error.Token}'.";
+        Format(context, CommandErrorResourceKeys.MalformedOption, error.Token);
 
     /// <summary>
     /// Gets the message for a value-taking option in a short-option cluster.
@@ -97,8 +106,10 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         OptionRequiresSeparateValueError error) =>
-        $"Option '{error.OptionName}' requires a separate value; " +
-        $"use '{error.OptionName} value' or '{error.OptionName}=value'.";
+        Format(
+            context,
+            CommandErrorResourceKeys.OptionRequiresSeparateValue,
+            error.OptionName);
 
     /// <summary>
     /// Gets the message for a missing option value.
@@ -109,7 +120,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         MissingOptionValueError error) =>
-        $"Missing value for option '{error.OptionName}'.";
+        Format(context, CommandErrorResourceKeys.MissingOptionValue, error.OptionName);
 
     /// <summary>
     /// Gets the message for a repeated scalar option.
@@ -120,7 +131,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         RepeatedOptionError error) =>
-        $"Option '{error.OptionName}' cannot be specified more than once.";
+        Format(context, CommandErrorResourceKeys.RepeatedOption, error.OptionName);
 
     /// <summary>
     /// Gets the message for a missing required option.
@@ -131,7 +142,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         MissingRequiredOptionError error) =>
-        $"Missing required option '{error.OptionName}'.";
+        Format(context, CommandErrorResourceKeys.MissingRequiredOption, error.OptionName);
 
     /// <summary>
     /// Gets the message for a missing required argument.
@@ -142,7 +153,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         MissingRequiredArgumentError error) =>
-        $"Missing required argument '{error.ArgumentName}'.";
+        Format(context, CommandErrorResourceKeys.MissingRequiredArgument, error.ArgumentName);
 
     /// <summary>
     /// Gets the message for an unexpected argument.
@@ -153,7 +164,7 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         UnexpectedArgumentError error) =>
-        $"Unexpected argument '{error.Value}'.";
+        Format(context, CommandErrorResourceKeys.UnexpectedArgument, error.Value);
 
     /// <summary>
     /// Gets the message for too few variadic values.
@@ -164,8 +175,12 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         TooFewVariadicValuesError error) =>
-        $"Argument '{error.ArgumentName}' requires at least {error.Minimum} values; " +
-        $"received {error.Actual}.";
+        Format(
+            context,
+            CommandErrorResourceKeys.TooFewVariadicValues,
+            error.ArgumentName,
+            error.Minimum,
+            error.Actual);
 
     /// <summary>
     /// Gets the message for too many variadic values.
@@ -176,8 +191,12 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         TooManyVariadicValuesError error) =>
-        $"Argument '{error.ArgumentName}' accepts at most {error.Maximum} values; " +
-        $"received {error.Actual}.";
+        Format(
+            context,
+            CommandErrorResourceKeys.TooManyVariadicValues,
+            error.ArgumentName,
+            error.Maximum,
+            error.Actual);
 
     /// <summary>
     /// Gets the message for an invalid parameter value.
@@ -188,8 +207,12 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     protected virtual string GetMessage(
         CommandErrorContext context,
         InvalidParameterValueError error) =>
-        $"Invalid value '{error.Value}' for parameter '{error.ParameterName}'. " +
-        $"Expected {error.TargetType.Name}.";
+        Format(
+            context,
+            CommandErrorResourceKeys.InvalidParameterValue,
+            error.Value,
+            error.ParameterName,
+            error.TargetType.Name);
 
     /// <summary>
     /// Gets the fallback message for an unhandled error type.
@@ -198,4 +221,23 @@ public class CommandErrorMessageProvider : ICommandErrorMessageProvider
     /// <returns>The error message.</returns>
     protected virtual string GetFallbackMessage(CommandErrorContext context) =>
         context.Error.ToString() ?? "Unexpected error occurred.";
+
+    /// <summary>
+    /// Gets the UI culture used to select error messages.
+    /// </summary>
+    /// <param name="context">The error context.</param>
+    /// <returns>The UI culture.</returns>
+    protected virtual CultureInfo GetUICulture(CommandErrorContext context) =>
+        CultureInfo.CurrentUICulture;
+
+    private string Format(
+        CommandErrorContext context,
+        string resourceKey,
+        params object?[] arguments)
+    {
+        var template = Resources.GetString(resourceKey, GetUICulture(context))
+            ?? resourceKey;
+
+        return string.Format(CultureInfo.CurrentCulture, template, arguments);
+    }
 }

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NoCommandSpecified" xml:space="preserve">
+    <value>Non è stato specificato alcun comando.</value>
+  </data>
+  <data name="UnknownCommand" xml:space="preserve">
+    <value>Comando sconosciuto '{0}'.</value>
+  </data>
+  <data name="MissingSubcommand" xml:space="preserve">
+    <value>Il comando '{0}' richiede un sottocomando.</value>
+  </data>
+  <data name="UnknownOption" xml:space="preserve">
+    <value>Opzione sconosciuta '{0}'.</value>
+  </data>
+  <data name="MalformedOption" xml:space="preserve">
+    <value>Opzione non valida '{0}'.</value>
+  </data>
+  <data name="OptionRequiresSeparateValue" xml:space="preserve">
+    <value>L'opzione '{0}' richiede un valore separato; usare '{0} valore' o '{0}=valore'.</value>
+  </data>
+  <data name="MissingOptionValue" xml:space="preserve">
+    <value>Valore mancante per l'opzione '{0}'.</value>
+  </data>
+  <data name="RepeatedOption" xml:space="preserve">
+    <value>L'opzione '{0}' non può essere specificata più di una volta.</value>
+  </data>
+  <data name="MissingRequiredOption" xml:space="preserve">
+    <value>Manca l'opzione obbligatoria '{0}'.</value>
+  </data>
+  <data name="MissingRequiredArgument" xml:space="preserve">
+    <value>Manca l'argomento obbligatorio '{0}'.</value>
+  </data>
+  <data name="UnexpectedArgument" xml:space="preserve">
+    <value>Argomento imprevisto '{0}'.</value>
+  </data>
+  <data name="TooFewVariadicValues" xml:space="preserve">
+    <value>Argomento '{0}': atteso almeno {1}, ricevuto {2}.</value>
+  </data>
+  <data name="TooManyVariadicValues" xml:space="preserve">
+    <value>Argomento '{0}': atteso al massimo {1}, ricevuto {2}.</value>
+  </data>
+  <data name="InvalidParameterValue" xml:space="preserve">
+    <value>Valore non valido '{0}' per il parametro '{1}'. Atteso: {2}.</value>
+  </data>
+</root>

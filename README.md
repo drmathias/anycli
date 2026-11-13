@@ -33,11 +33,13 @@ AnyCli is optimised for both utility and extensibility. It is mildly opinionated
 - Nested command groups
 - Custom value parsers
 - Dependency injection support
+- Typed enum exit codes
 - Typed global options
 - Interceptor middleware
 - Cancellation support for async commands and interceptors
-- Fully customisable help provider
-- Optional Spectre.Console adapter for rich, styled terminal output (tables, markup, progress bars etc.)
+- Fully customisable help and error handling
+- Built in internationalisation - localized error messages for English, French, German, Spanish, Brazilian Portuguese, Italian, and Dutch
+- Optional Spectre.Console adapter for rich, styled terminal output and error messages (tables, markup, progress bars etc.)
 
 ## Installation
 
