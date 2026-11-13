@@ -10,13 +10,13 @@ namespace AnyCli.Parameters.Arguments;
 public sealed class CommandArgumentValues
 {
     private readonly IReadOnlyDictionary<string, ArgumentArity> _arities;
-    private readonly IReadOnlySet<string> _supplied;
+    private readonly IReadOnlySet<string>? _supplied;
     private readonly IReadOnlyDictionary<string, object?> _values;
 
     internal CommandArgumentValues(
         IReadOnlyDictionary<string, ArgumentArity> arities,
         IReadOnlyDictionary<string, object?> values,
-        IReadOnlySet<string> supplied)
+        IReadOnlySet<string>? supplied)
     {
         _arities = arities;
         _values = values;
@@ -73,7 +73,7 @@ public sealed class CommandArgumentValues
         }
 
         value = (string?)_values[name];
-        return _supplied.Contains(name);
+        return _supplied?.Contains(name) == true;
     }
 
     /// <summary>

@@ -532,6 +532,7 @@ public sealed class ConsoleAppBuilder
 
         var globalOptions = _globalOptions.Build();
         ValidateGlobalOptions(globalOptions);
+        ConfigureOptionLookups(globalOptions);
 
         return new ConsoleApp(
             _name,
@@ -544,6 +545,14 @@ public sealed class ConsoleAppBuilder
             _errorHandlerFactory ?? CreateDefaultErrorHandlerFactory(),
             _errorExitCodeProvider,
             [.. _interceptorFactories]);
+    }
+
+    private void ConfigureOptionLookups(IReadOnlyList<OptionDefinition> globalOptions)
+    {
+        foreach (var (_, command) in EnumerateCommands(Root, string.Empty))
+        {
+            command.OptionLookup = OptionLookup.Create(command.Options, globalOptions);
+        }
     }
 
     private Func<IServiceProvider?, ICommandErrorHandler> CreateDefaultErrorHandlerFactory() =>

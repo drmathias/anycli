@@ -7,7 +7,7 @@ namespace AnyCli.Parameters.Parsing;
 internal static class CommandParameterParser
 {
     public static int ParseLeadingGlobalOptions(
-        IReadOnlyList<OptionDefinition> globalOptionDefinitions,
+        OptionLookup optionLookup,
         ReadOnlySpan<string> tokens,
         IDictionary<string, OptionValue> globalValues,
         bool hasHelp,
@@ -15,9 +15,6 @@ internal static class CommandParameterParser
         out bool helpRequested,
         out bool versionRequested)
     {
-        var optionLookup = CreateOptionLookup([], globalOptionDefinitions);
-        var commandValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
-
         helpRequested = false;
         versionRequested = false;
 
@@ -49,7 +46,7 @@ internal static class CommandParameterParser
                     tokens,
                     index,
                     optionLookup,
-                    commandValues,
+                    commandValues: null,
                     globalValues);
                 continue;
             }
@@ -61,7 +58,7 @@ internal static class CommandParameterParser
                     tokens,
                     ref index,
                     optionLookup,
-                    commandValues,
+                    commandValues: null,
                     globalValues);
                 continue;
             }
@@ -73,7 +70,7 @@ internal static class CommandParameterParser
     }
 
     public static int FindFirstNonGlobalOption(
-        IReadOnlyList<OptionDefinition> globalOptionDefinitions,
+        OptionLookup optionLookup,
         ReadOnlySpan<string> tokens,
         IDictionary<string, OptionValue> globalValues,
         bool hasHelp,
@@ -81,9 +78,6 @@ internal static class CommandParameterParser
         out bool helpRequested,
         out bool versionRequested)
     {
-        var optionLookup = CreateOptionLookup([], globalOptionDefinitions);
-        var commandValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
-
         helpRequested = false;
         versionRequested = false;
 
@@ -120,7 +114,7 @@ internal static class CommandParameterParser
                     tokens,
                     index,
                     optionLookup,
-                    commandValues,
+                    commandValues: null,
                     globalValues);
                 continue;
             }
@@ -137,7 +131,7 @@ internal static class CommandParameterParser
                     tokens,
                     ref index,
                     optionLookup,
-                    commandValues,
+                    commandValues: null,
                     globalValues);
                 continue;
             }
@@ -151,7 +145,7 @@ internal static class CommandParameterParser
     public static ParsedCommandParameters? Parse(
         IReadOnlyList<ArgumentDefinition> definitions,
         IReadOnlyList<OptionDefinition> optionDefinitions,
-        IReadOnlyList<OptionDefinition> globalOptionDefinitions,
+        OptionLookup optionLookup,
         ReadOnlySpan<string> tokens,
         IDictionary<string, OptionValue> globalValues,
         bool hasHelp,
@@ -159,8 +153,9 @@ internal static class CommandParameterParser
         out bool helpRequested,
         out bool versionRequested)
     {
-        var optionLookup = CreateOptionLookup(optionDefinitions, globalOptionDefinitions);
-        var commandOptionValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
+        var commandOptionValues = new Dictionary<string, OptionValue>(
+            optionDefinitions.Count,
+            StringComparer.Ordinal);
         var positionalValues = new List<string>();
         var endOfOptions = false;
 
@@ -231,9 +226,13 @@ internal static class CommandParameterParser
             }
         }
 
-        var arities = new Dictionary<string, ArgumentArity>(StringComparer.Ordinal);
-        var values = new Dictionary<string, object?>(StringComparer.Ordinal);
-        var supplied = new HashSet<string>(StringComparer.Ordinal);
+        var arities = new Dictionary<string, ArgumentArity>(
+            definitions.Count,
+            StringComparer.Ordinal);
+        var values = new Dictionary<string, object?>(
+            definitions.Count,
+            StringComparer.Ordinal);
+        HashSet<string>? supplied = null;
         var position = 0;
 
         foreach (var definition in definitions)
@@ -289,6 +288,7 @@ internal static class CommandParameterParser
                 values[definition.Name] = positionalValues[position++];
                 if (definition.Arity.Minimum == 0)
                 {
+                    supplied ??= new HashSet<string>(StringComparer.Ordinal);
                     supplied.Add(definition.Name);
                 }
             }
@@ -309,33 +309,9 @@ internal static class CommandParameterParser
             new CommandOptionValues(commandOptionValues));
     }
 
-    private static Dictionary<string, OptionBinding> CreateOptionLookup(
-        IReadOnlyList<OptionDefinition> optionDefinitions,
-        IReadOnlyList<OptionDefinition> globalOptionDefinitions)
-    {
-        var optionLookup = new Dictionary<string, OptionBinding>(StringComparer.Ordinal);
-        foreach (var option in globalOptionDefinitions)
-        {
-            foreach (var name in option.Names)
-            {
-                optionLookup[name] = new OptionBinding(option, IsGlobal: true);
-            }
-        }
-
-        foreach (var option in optionDefinitions)
-        {
-            foreach (var name in option.Names)
-            {
-                optionLookup[name] = new OptionBinding(option, IsGlobal: false);
-            }
-        }
-
-        return optionLookup;
-    }
-
     private static bool IsShortGlobalOption(
         string token,
-        IReadOnlyDictionary<string, OptionBinding> optionLookup)
+        OptionLookup optionLookup)
     {
         var equalsIndex = token.IndexOf('=');
         if (equalsIndex >= 0)
@@ -363,7 +339,7 @@ internal static class CommandParameterParser
 
     private static bool IsLongGlobalOption(
         string token,
-        IReadOnlyDictionary<string, OptionBinding> optionLookup)
+        OptionLookup optionLookup)
     {
         var equalsIndex = token.IndexOf('=');
         var name = equalsIndex >= 0 ? token[..equalsIndex] : token;
@@ -378,8 +354,8 @@ internal static class CommandParameterParser
         string token,
         ReadOnlySpan<string> tokens,
         int index,
-        IReadOnlyDictionary<string, OptionBinding> optionLookup,
-        IDictionary<string, OptionValue> commandValues,
+        OptionLookup optionLookup,
+        IDictionary<string, OptionValue>? commandValues,
         IDictionary<string, OptionValue> globalValues)
     {
         var equalsIndex = token.IndexOf('=');
@@ -451,8 +427,8 @@ internal static class CommandParameterParser
         string token,
         ReadOnlySpan<string> tokens,
         ref int index,
-        IReadOnlyDictionary<string, OptionBinding> optionLookup,
-        IDictionary<string, OptionValue> commandValues,
+        OptionLookup optionLookup,
+        IDictionary<string, OptionValue>? commandValues,
         IDictionary<string, OptionValue> globalValues)
     {
         var equalsIndex = token.IndexOf('=');
@@ -491,12 +467,15 @@ internal static class CommandParameterParser
     }
 
     private static void AddOptionValue(
-        IDictionary<string, OptionValue> commandValues,
+        IDictionary<string, OptionValue>? commandValues,
         IDictionary<string, OptionValue> globalValues,
         OptionBinding binding,
         string? value)
     {
-        var optionValues = binding.IsGlobal ? globalValues : commandValues;
+        var optionValues = binding.IsGlobal
+            ? globalValues
+            : commandValues ?? throw new InvalidOperationException(
+                "Command options are not supported during global option parsing.");
         if (optionValues.TryGetValue(binding.Definition.Name, out var optionValue))
         {
             if (!binding.Definition.IsCollection)
@@ -513,9 +492,7 @@ internal static class CommandParameterParser
 
         if (value is not null)
         {
-            optionValue.Values.Add(value);
+            optionValue.Add(value, binding.Definition.IsCollection);
         }
     }
-
-    private readonly record struct OptionBinding(OptionDefinition Definition, bool IsGlobal);
 }

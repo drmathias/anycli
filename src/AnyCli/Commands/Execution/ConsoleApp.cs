@@ -14,6 +14,7 @@ public sealed class ConsoleApp
 {
     private readonly IGlobalOptionsDefinition? _globalOptionsDefinition;
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
+    private readonly OptionLookup _globalOptionLookup;
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
     private readonly Func<CommandErrorContext, int> _errorExitCodeProvider;
     private readonly Func<IServiceProvider?, ICommandErrorHandler> _errorHandlerFactory;
@@ -39,6 +40,7 @@ public sealed class ConsoleApp
         _version = version;
         _root = root;
         _globalOptions = globalOptions;
+        _globalOptionLookup = OptionLookup.Create([], globalOptions);
         _globalOptionsDefinition = globalOptionsDefinition;
         _serviceProvider = serviceProvider;
         _helpProviderFactory = helpProviderFactory;
@@ -127,7 +129,7 @@ public sealed class ConsoleApp
         var outputWriter = console.Output;
         var globalOptionValues = new Dictionary<string, OptionValue>(StringComparer.Ordinal);
         var commandIndex = CommandParameterParser.ParseLeadingGlobalOptions(
-            _globalOptions,
+            _globalOptionLookup,
             args,
             globalOptionValues,
             _helpProviderFactory is not null,
@@ -212,7 +214,7 @@ public sealed class ConsoleApp
             if (child.Command is not null)
             {
                 var childRelativeIndex = CommandParameterParser.FindFirstNonGlobalOption(
-                    _globalOptions,
+                    _globalOptionLookup,
                     args.AsSpan(index + 1),
                     globalOptionValues,
                     _helpProviderFactory is not null,
@@ -275,7 +277,7 @@ public sealed class ConsoleApp
             }
 
             var relativeIndex = CommandParameterParser.ParseLeadingGlobalOptions(
-                _globalOptions,
+                _globalOptionLookup,
                 args.AsSpan(index + 1),
                 globalOptionValues,
                 _helpProviderFactory is not null,
@@ -350,7 +352,7 @@ public sealed class ConsoleApp
         var arguments = CommandParameterParser.Parse(
             command.Arguments,
             command.Options,
-            _globalOptions,
+            command.OptionLookup,
             args.AsSpan(startIndex),
             globalOptionValues,
             _helpProviderFactory is not null,
@@ -381,6 +383,16 @@ public sealed class ConsoleApp
                 suppliedGlobalOptionValues);
 
         cancellationToken.ThrowIfCancellationRequested();
+
+        if (_interceptorFactories.Count == 0)
+        {
+            return await command.Execute.Invoke(
+                _serviceProvider,
+                context,
+                arguments!,
+                suppliedGlobalOptionValues,
+                cancellationToken).ConfigureAwait(false);
+        }
 
         return await ExecuteWithInterceptorsAsync(
                 context,

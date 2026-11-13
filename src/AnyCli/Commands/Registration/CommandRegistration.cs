@@ -28,5 +28,7 @@ internal sealed class CommandRegistration(
 
     public IReadOnlyList<OptionDefinition> Options { get; } = options;
 
+    public OptionLookup OptionLookup { get; set; } = OptionLookup.Empty;
+
     public Type? ParametersType { get; init; }
 }

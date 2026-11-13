@@ -9,6 +9,9 @@ namespace AnyCli.Parameters.Options;
 /// </summary>
 public sealed class CommandOptionValues
 {
+    private static readonly IReadOnlyDictionary<string, OptionValue> EmptyDefaults =
+        new Dictionary<string, OptionValue>(StringComparer.Ordinal);
+
     private readonly IReadOnlyDictionary<string, OptionValue> _defaults;
     private readonly IReadOnlyDictionary<string, OptionValue> _values;
 
@@ -17,7 +20,7 @@ public sealed class CommandOptionValues
         IReadOnlyDictionary<string, OptionValue>? defaults = null)
     {
         _values = values;
-        _defaults = defaults ?? new Dictionary<string, OptionValue>(StringComparer.Ordinal);
+        _defaults = defaults ?? EmptyDefaults;
     }
 
     /// <summary>
@@ -52,7 +55,7 @@ public sealed class CommandOptionValues
             return false;
         }
 
-        value = option.Values.Count == 0 ? null : option.Values[^1];
+        value = option.LastValue;
         return true;
     }
 
@@ -67,12 +70,9 @@ public sealed class CommandOptionValues
     public IReadOnlyList<string> GetValues(string name)
     {
         var normalizedName = NormalizeName(name);
-        if (_values.TryGetValue(normalizedName, out var option))
-        {
-            return option.Values;
-        }
-
-        return _defaults.TryGetValue(normalizedName, out option) ? option.Values : [];
+        return _values.TryGetValue(normalizedName, out var option)
+            ? option.Values
+            : _defaults.TryGetValue(normalizedName, out option) ? option.Values : [];
     }
 
     private static string NormalizeName(string name)
