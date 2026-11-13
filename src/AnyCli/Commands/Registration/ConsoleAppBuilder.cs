@@ -14,6 +14,7 @@ public sealed class ConsoleAppBuilder
 {
     private readonly GlobalOptionBuilder _globalOptions = new();
     private readonly List<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories = [];
+    private Func<CommandErrorContext, int> _errorExitCodeProvider = static _ => 2;
     private Func<IServiceProvider?, ICommandErrorHandler>? _errorHandlerFactory;
     private Func<IServiceProvider?, ICommandErrorMessageProvider> _errorMessageProviderFactory =
         static _ => new LocalizedCommandErrorMessageProvider();
@@ -462,54 +463,45 @@ public sealed class ConsoleAppBuilder
     }
 
     /// <summary>
-    /// Registers the handler used for command-line errors.
+    /// Configures command-line error handling.
     /// </summary>
-    /// <typeparam name="THandler">The error handler type.</typeparam>
+    /// <param name="configure">The configuration callback.</param>
     /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the handler is
-    /// resolved from it; otherwise, it is created with its public parameterless constructor.
-    /// </remarks>
-    public ConsoleAppBuilder UseErrorHandler<
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configure"/> is <see langword="null"/>.
+    /// </exception>
+    public ConsoleAppBuilder ConfigureErrorHandling(
+        Action<CommandErrorHandlingBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(new CommandErrorHandlingBuilder(this));
+        return this;
+    }
+
+    internal void UseErrorHandlerCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>()
         where THandler : class, ICommandErrorHandler
     {
         _errorHandlerFactory = ResolveErrorHandler<THandler>;
-        return this;
     }
 
-    /// <summary>
-    /// Registers the provider used to create command-line error messages.
-    /// </summary>
-    /// <typeparam name="TProvider">The message provider type.</typeparam>
-    /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the provider is
-    /// resolved from it; otherwise, it is created with its public parameterless constructor.
-    /// </remarks>
-    public ConsoleAppBuilder UseErrorMessageProvider<
+    internal void UseErrorMessageProviderCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
         where TProvider : class, ICommandErrorMessageProvider
     {
         _errorMessageProviderFactory = ResolveErrorMessageProvider<TProvider>;
-        return this;
     }
 
-    /// <summary>
-    /// Registers the writer used for command-line error messages.
-    /// </summary>
-    /// <typeparam name="TWriter">The error writer type.</typeparam>
-    /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the writer is
-    /// resolved from it; otherwise, it is created with its public parameterless constructor.
-    /// </remarks>
-    public ConsoleAppBuilder UseErrorWriter<
+    internal void UseErrorWriterCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>()
         where TWriter : class, ICommandErrorWriter
     {
         _errorWriterFactory = ResolveErrorWriter<TWriter>;
-        return this;
+    }
+
+    internal void SetErrorExitCodeProvider(Func<CommandErrorContext, int> exitCodeProvider)
+    {
+        _errorExitCodeProvider = exitCodeProvider;
     }
 
     internal void ValidateGlobalOptionsBase(Type globalOptionsType)
@@ -550,6 +542,7 @@ public sealed class ConsoleAppBuilder
             _serviceProvider,
             _helpProviderFactory,
             _errorHandlerFactory ?? CreateDefaultErrorHandlerFactory(),
+            _errorExitCodeProvider,
             [.. _interceptorFactories]);
     }
 

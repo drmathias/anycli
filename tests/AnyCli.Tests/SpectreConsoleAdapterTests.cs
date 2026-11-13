@@ -69,7 +69,8 @@ public class SpectreConsoleAdapterTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(_ => { })
-            .UseErrorWriter<SpectreCommandErrorWriter>()
+            .ConfigureErrorHandling(errors => errors
+                .UseWriter<SpectreCommandErrorWriter>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);

@@ -99,53 +99,14 @@ public class ConfiguredConsoleAppBuilder
     }
 
     /// <summary>
-    /// Registers the handler used for command-line errors.
+    /// Configures command-line error handling.
     /// </summary>
-    /// <typeparam name="THandler">The error handler type.</typeparam>
+    /// <param name="configure">The configuration callback.</param>
     /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// The handler is resolved from the service provider when one is configured; otherwise, it is
-    /// created with its public parameterless constructor.
-    /// </remarks>
-    public virtual ConfiguredConsoleAppBuilder UseErrorHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>()
-        where THandler : class, ICommandErrorHandler
+    public virtual ConfiguredConsoleAppBuilder ConfigureErrorHandling(
+        Action<CommandErrorHandlingBuilder> configure)
     {
-        _builder.UseErrorHandler<THandler>();
-        return this;
-    }
-
-    /// <summary>
-    /// Registers the provider used to create command-line error messages.
-    /// </summary>
-    /// <typeparam name="TProvider">The message provider type.</typeparam>
-    /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// The provider is resolved from the service provider when one is configured; otherwise, it is
-    /// created with its public parameterless constructor.
-    /// </remarks>
-    public virtual ConfiguredConsoleAppBuilder UseErrorMessageProvider<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
-        where TProvider : class, ICommandErrorMessageProvider
-    {
-        _builder.UseErrorMessageProvider<TProvider>();
-        return this;
-    }
-
-    /// <summary>
-    /// Registers the writer used for command-line error messages.
-    /// </summary>
-    /// <typeparam name="TWriter">The error writer type.</typeparam>
-    /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// The writer is resolved from the service provider when one is configured; otherwise, it is
-    /// created with its public parameterless constructor.
-    /// </remarks>
-    public virtual ConfiguredConsoleAppBuilder UseErrorWriter<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>()
-        where TWriter : class, ICommandErrorWriter
-    {
-        _builder.UseErrorWriter<TWriter>();
+        _builder.ConfigureErrorHandling(configure);
         return this;
     }
 

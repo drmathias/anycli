@@ -102,7 +102,8 @@ public class ErrorHandlingTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .UseErrorMessageProvider<CustomMessageProvider>()
+            .ConfigureErrorHandling(errors => errors
+                .UseMessageProvider<CustomMessageProvider>())
             .ConfigureCommands(commands => commands.AddCommand<NoOpCommand>("run"))
             .Build();
 
@@ -118,7 +119,8 @@ public class ErrorHandlingTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .UseErrorWriter<PrefixErrorWriter>()
+            .ConfigureErrorHandling(errors => errors
+                .UseWriter<PrefixErrorWriter>())
             .ConfigureCommands(_ => { })
             .Build();
 
@@ -235,7 +237,9 @@ public class ErrorHandlingTests
         return ConsoleAppBuilder.Create()
             .WithName("anycli")
             .UseServiceProvider(serviceProvider)
-            .UseErrorHandler<CapturingErrorHandler>()
+            .ConfigureErrorHandling(errors => errors
+                .UseHandler<CapturingErrorHandler>()
+                .UseExitCode(5))
             .ConfigureCommands(configureCommands)
             .Build();
     }
@@ -272,12 +276,12 @@ public class ErrorHandlingTests
     {
         public CommandError? Error { get; private set; }
 
-        public ValueTask<int> HandleAsync(
+        public ValueTask HandleAsync(
             CommandErrorContext context,
             CancellationToken cancellationToken)
         {
             Error = context.Error;
-            return ValueTask.FromResult(5);
+            return ValueTask.CompletedTask;
         }
     }
 

@@ -40,12 +40,47 @@ public class UnrecognizedCommandTests
     }
 
     [Test]
+    public async Task DefaultHandler_UsesConfiguredExitCode()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureCommands(_ => { })
+            .ConfigureErrorHandling(errors => errors.UseExitCode(4))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(4);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).IsEqualTo($"Unknown command 'nope'.{Environment.NewLine}");
+    }
+
+    [Test]
+    public async Task ExitCodeSelector_CanChoosePerError()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureCommands(_ => { })
+            .ConfigureErrorHandling(errors => errors.UseExitCode(context =>
+                context.Error is UnknownCommandError ? 42 : 2))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(42);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("Unknown command");
+    }
+
+    [Test]
     public async Task CustomHandler_WritesToErrorAndUsesCustomExitCode()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(_ => { })
-            .UseErrorHandler<OutputErrorHandler>()
+            .ConfigureErrorHandling(errors => errors
+                .UseHandler<OutputErrorHandler>()
+                .UseExitCode(7))
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
@@ -61,7 +96,9 @@ public class UnrecognizedCommandTests
         var app = ConsoleAppBuilder.Create()
             .ConfigureCommands<UnrecognizedExitCode>(_ => { })
             .WithName("anycli")
-            .UseErrorHandler<EnumErrorHandler>()
+            .ConfigureErrorHandling(errors => errors
+                .UseHandler<EnumErrorHandler>()
+                .UseExitCode(UnrecognizedExitCode.UnknownCommand))
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
@@ -81,7 +118,9 @@ public class UnrecognizedCommandTests
             .WithName("anycli")
             .UseServiceProvider(serviceProvider)
             .ConfigureCommands(_ => { })
-            .UseErrorHandler<InjectedErrorHandler>()
+            .ConfigureErrorHandling(errors => errors
+                .UseHandler<InjectedErrorHandler>()
+                .UseExitCode(3))
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
@@ -93,14 +132,14 @@ public class UnrecognizedCommandTests
 
     private abstract class TestErrorHandler : ICommandErrorHandler
     {
-        public abstract ValueTask<int> HandleAsync(
+        public abstract ValueTask HandleAsync(
             CommandErrorContext context,
             CancellationToken cancellationToken);
     }
 
     private sealed class OutputErrorHandler : TestErrorHandler
     {
-        public override ValueTask<int> HandleAsync(
+        public override ValueTask HandleAsync(
             CommandErrorContext context,
             CancellationToken cancellationToken)
         {
@@ -111,29 +150,29 @@ public class UnrecognizedCommandTests
                     : string.Join(' ', context.CommandPath);
 
             context.Console.Error.WriteLine($"custom:{path}");
-            return ValueTask.FromResult(7);
+            return ValueTask.CompletedTask;
         }
     }
 
-    private sealed class EnumErrorHandler : ICommandErrorHandler<UnrecognizedExitCode>
+    private sealed class EnumErrorHandler : ICommandErrorHandler
     {
-        public ValueTask<UnrecognizedExitCode> HandleAsync(
+        public ValueTask HandleAsync(
             CommandErrorContext context,
             CancellationToken cancellationToken)
         {
             context.Console.Error.WriteLine("nope");
-            return ValueTask.FromResult(UnrecognizedExitCode.UnknownCommand);
+            return ValueTask.CompletedTask;
         }
     }
 
     private sealed class InjectedErrorHandler(string message) : ICommandErrorHandler
     {
-        public ValueTask<int> HandleAsync(
+        public ValueTask HandleAsync(
             CommandErrorContext context,
             CancellationToken cancellationToken)
         {
             context.Console.Error.WriteLine(message);
-            return ValueTask.FromResult(3);
+            return ValueTask.CompletedTask;
         }
     }
 }

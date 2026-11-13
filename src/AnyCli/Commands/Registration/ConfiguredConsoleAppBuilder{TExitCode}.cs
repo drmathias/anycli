@@ -59,26 +59,10 @@ public sealed class ConfiguredConsoleAppBuilder<TExitCode> : ConfiguredConsoleAp
     }
 
     /// <inheritdoc/>
-    public override ConfiguredConsoleAppBuilder<TExitCode> UseErrorHandler<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>()
+    public override ConfiguredConsoleAppBuilder<TExitCode> ConfigureErrorHandling(
+        Action<CommandErrorHandlingBuilder> configure)
     {
-        base.UseErrorHandler<THandler>();
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public override ConfiguredConsoleAppBuilder<TExitCode> UseErrorMessageProvider<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
-    {
-        base.UseErrorMessageProvider<TProvider>();
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public override ConfiguredConsoleAppBuilder<TExitCode> UseErrorWriter<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>()
-    {
-        base.UseErrorWriter<TWriter>();
+        base.ConfigureErrorHandling(configure);
         return this;
     }
 }

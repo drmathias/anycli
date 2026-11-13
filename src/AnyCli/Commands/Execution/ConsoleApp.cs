@@ -15,6 +15,7 @@ public sealed class ConsoleApp
     private readonly IGlobalOptionsDefinition? _globalOptionsDefinition;
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
+    private readonly Func<CommandErrorContext, int> _errorExitCodeProvider;
     private readonly Func<IServiceProvider?, ICommandErrorHandler> _errorHandlerFactory;
     private readonly IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories;
     private readonly string? _name;
@@ -31,6 +32,7 @@ public sealed class ConsoleApp
         IServiceProvider? serviceProvider,
         Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
         Func<IServiceProvider?, ICommandErrorHandler> errorHandlerFactory,
+        Func<CommandErrorContext, int> errorExitCodeProvider,
         IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> interceptorFactories)
     {
         _name = name;
@@ -41,6 +43,7 @@ public sealed class ConsoleApp
         _serviceProvider = serviceProvider;
         _helpProviderFactory = helpProviderFactory;
         _errorHandlerFactory = errorHandlerFactory;
+        _errorExitCodeProvider = errorExitCodeProvider;
         _interceptorFactories = interceptorFactories;
     }
 
@@ -478,9 +481,11 @@ public sealed class ConsoleApp
             error,
             console);
 
-        return await _errorHandlerFactory(_serviceProvider)
+        await _errorHandlerFactory(_serviceProvider)
             .HandleAsync(context, cancellationToken)
             .ConfigureAwait(false);
+
+        return _errorExitCodeProvider(context);
     }
 
     private Task WriteRootHelpAsync(IConsole console, CancellationToken cancellationToken)
