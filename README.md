@@ -62,27 +62,27 @@ _Environment: macOS Tahoe 26.2, Intel Core i7-9750H, 12 logical cores, .NET SDK 
 
 | Rank | Framework | Mean | Median | Ratio | Allocated |
 | ---: | --- | ---: | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 2.687 ns | 2.684 ns | 0.002 | 0 B |
-| **2** | **AnyCli** | **1,135.054 ns** | **1,132.913 ns** | **1.000** | **2232 B** |
-| 3 | System.CommandLine | 3,407.234 ns | 3,306.526 ns | 3.002 | 4864 B |
-| 4 | Spectre.Console.Cli | 193,474.041 ns | 127,191.680 ns | 170.458 | 45920 B |
+| 1 | ConsoleAppFramework | 3.079 ns | 2.967 ns | 0.003 | 0 B |
+| **2** | **AnyCli** | **1,217.472 ns** | **1,203.887 ns** | **1.001** | **2232 B** |
+| 3 | System.CommandLine | 3,358.920 ns | 3,303.343 ns | 2.762 | 4864 B |
+| 4 | Spectre.Console.Cli | 101,930.850 ns | 101,060.884 ns | 83.828 | 45920 B |
 
 ### Cold start (JIT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 276.1 ms | 274.8 ms | 0.98 |
-| **1** | **AnyCli** | **282.9 ms** | **282.4 ms** | **1.00** |
-| 2 | System.CommandLine | 297.2 ms | 295.9 ms | 1.05 |
-| 3 | Spectre.Console.Cli | 414.2 ms | 413.7 ms | 1.46 |
+| 1 | ConsoleAppFramework | 284.5 ms | 284.8 ms | 0.80 |
+| 2 | System.CommandLine | 318.7 ms | 319.6 ms | 0.90 |
+| **3** | **AnyCli** | **354.7 ms** | **357.3 ms** | **1.00** |
+| 4 | Spectre.Console.Cli | 469.5 ms | 470.4 ms | 1.33 |
 
 ### Cold start (NativeAOT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 228.9 ms | 222.7 ms | 0.91 |
-| **2** | **AnyCli** | **252.8 ms** | **252.7 ms** | **1.00** |
-| 2 | System.CommandLine | 269.2 ms | 273.4 ms | 1.06 |
+| 1 | ConsoleAppFramework | 206.8 ms | 197.4 ms | 0.74 |
+| 2 | System.CommandLine | 254.3 ms | 253.0 ms | 0.90 |
+| **2** | **AnyCli** | **290.1 ms** | **283.3 ms** | **1.03** |
 
 _Ranks are BenchmarkDotNet statistical ranks; ties indicate statistically similar results._
 <!-- benchmarks:end -->
