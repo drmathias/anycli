@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "build": {
+    "content": [
+      {
+        "files": [
+          "*.md",
+          "*.yml"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern",
+      "template"
+    ],
+    "globalMetadata": {
+      "_appName": "anycli",
+      "_appTitle": "AnyCli Documentation",
+      "_appFooter": "Licensed under the MIT license",
+      "_enableSearch": true,
+      "_gitContribute": {
+        "repo": "https://github.com/drmathias/anycli",
+        "branch": "main"
+      },
+      "_lang": "en"
+    }
+  }
+}

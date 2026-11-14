@@ -10,6 +10,8 @@ path = [
     ".gitignore",
     "AnyCli.slnx",
     "global.json",
+    ".config/dotnet-tools.json",
+    "docs/docfx.json",
     "src/AnyCli.Generators/AnalyzerReleases.Shipped.md",
     "src/AnyCli.Generators/AnalyzerReleases.Unshipped.md",
     "**/packages.lock.json",

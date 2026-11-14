@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Benchmark output
 benchmarks/results/
+
+# DocFX output
+docs/_site/
+docs/obj/
