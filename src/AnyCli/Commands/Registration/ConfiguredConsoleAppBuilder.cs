@@ -81,20 +81,26 @@ public class ConfiguredConsoleAppBuilder
     }
 
     /// <summary>
-    /// Registers the help provider used by <c>-h</c> and <c>--help</c>.
+    /// Configures localization for built-in command-line messages.
     /// </summary>
-    /// <typeparam name="THelpProvider">The help provider type.</typeparam>
+    /// <param name="localization">The localization options.</param>
     /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// No default help provider is supplied. A provider must be registered to enable help.
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the help provider is
-    /// resolved from it; otherwise, it is created with its public parameterless constructor.
-    /// </remarks>
-    public virtual ConfiguredConsoleAppBuilder AddHelp<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
-        where THelpProvider : class, IHelpProvider
+    public virtual ConfiguredConsoleAppBuilder ConfigureLocalization(
+        LocalizationOptions localization)
     {
-        _builder.AddHelp<THelpProvider>();
+        _builder.ConfigureLocalization(localization);
+        return this;
+    }
+
+    /// <summary>
+    /// Configures command-line help output.
+    /// </summary>
+    /// <param name="configure">The configuration callback.</param>
+    /// <returns>The current builder.</returns>
+    public virtual ConfiguredConsoleAppBuilder ConfigureHelp(
+        Action<HelpConfigurationBuilder> configure)
+    {
+        _builder.ConfigureHelp(configure);
         return this;
     }
 

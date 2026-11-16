@@ -39,7 +39,8 @@ AnyCli is optimised for both utility and extensibility. It is mildly opinionated
 - Interceptor middleware
 - Cancellation support for async commands and interceptors
 - Fully customisable help and error handling
-- Built in internationalisation - localized error messages for English, French, German, Spanish, Brazilian Portuguese, Italian, and Dutch
+- Built in internationalisation - localized error messages and help for English, French, German, Spanish, Brazilian Portuguese, Italian, and Dutch
+- Configurable localization
 - Optional Spectre.Console adapter for rich, styled terminal output and error messages (tables, markup, progress bars etc.)
 
 ## Installation

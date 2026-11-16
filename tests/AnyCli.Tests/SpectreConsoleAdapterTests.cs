@@ -53,7 +53,7 @@ public class SpectreConsoleAdapterTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .AddHelp<AnsiHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<AnsiHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["--help"]);

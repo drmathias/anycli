@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 //
 // SPDX-License-Identifier: MIT
@@ -202,7 +204,7 @@ public class GlobalOptionTests
     {
         var app = ConsoleAppBuilder.Create()
             .AddGlobalOptions<TestGlobalOptions>()
-            .AddHelp<GlobalHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<GlobalHelpProvider>())
             .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand, TestGlobalEchoParameters>("run"))
             .Build();
 
@@ -218,7 +220,7 @@ public class GlobalOptionTests
     {
         var app = ConsoleAppBuilder.Create()
             .AddGlobalOptions<RequiredGlobalOptions>()
-            .AddHelp<GlobalHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<GlobalHelpProvider>())
             .ConfigureCommands(commands => commands.AddCommand<RequiredEchoCommand, RequiredEchoParameters>("run"))
             .Build();
 
@@ -273,7 +275,7 @@ public class GlobalOptionTests
         {
             _ = ConsoleAppBuilder.Create()
                 .AddGlobalOptions<BuiltInConflictGlobalOptions>()
-                .AddHelp<GlobalHelpProvider>()
+                .ConfigureHelp(help => help.UseProvider<GlobalHelpProvider>())
                 .Build();
         }
         catch (InvalidOperationException ex)
@@ -480,10 +482,12 @@ public class GlobalOptionTests
 [GlobalOptions]
 public partial class TestGlobalOptions
 {
-    [Option("--log-level", "-l", Description = "Log level")]
+    [Option("--log-level", "-l")]
+    [Description("Log level")]
     public string LogLevel { get; set; } = "none";
 
-    [Option("--tag", Description = "Tag")]
+    [Option("--tag")]
+    [Description("Tag")]
     public string[] Tags { get; set; } = [];
 
     [Option("--quiet")]

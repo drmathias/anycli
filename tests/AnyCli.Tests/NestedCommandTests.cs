@@ -58,7 +58,7 @@ public class NestedCommandTests
                     group.AddCommand<NestedPathCommand>("add", "Add a remote");
                 });
             })
-            .AddHelp<TreeHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<TreeHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["--help"]);
@@ -81,7 +81,7 @@ public class NestedCommandTests
                     group.AddCommand<NestedPathCommand>("remove", "Remove a remote");
                 });
             })
-            .AddHelp<TreeHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<TreeHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["remote", "--help"]);
@@ -102,7 +102,7 @@ public class NestedCommandTests
                     group.AddCommand<NestedPathCommand>("add", "Add a remote");
                 });
             })
-            .AddHelp<TreeHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<TreeHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["remote", "add", "--help"]);
@@ -255,7 +255,7 @@ public class NestedCommandTests
                     "Manage remotes",
                     group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
             })
-            .AddHelp<ExecutableGroupHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<ExecutableGroupHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["remote", "--help"]);

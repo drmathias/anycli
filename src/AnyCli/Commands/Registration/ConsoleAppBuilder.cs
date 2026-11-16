@@ -4,6 +4,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Resources;
 
 namespace AnyCli.Commands.Registration;
 
@@ -16,12 +17,13 @@ public sealed class ConsoleAppBuilder
     private readonly List<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories = [];
     private Func<CommandErrorContext, int> _errorExitCodeProvider = static _ => 2;
     private Func<IServiceProvider?, ICommandErrorHandler>? _errorHandlerFactory;
-    private Func<IServiceProvider?, ICommandErrorMessageProvider> _errorMessageProviderFactory =
-        static _ => new LocalizedCommandErrorMessageProvider();
+    private Func<IServiceProvider?, ICommandErrorMessageProvider>? _errorMessageProviderFactory;
     private Func<IServiceProvider?, ICommandErrorWriter> _errorWriterFactory =
         static _ => new PlainCommandErrorWriter();
     private IGlobalOptionsDefinition? _globalOptionsDefinition;
     private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
+    private Func<IServiceProvider?, IHelpTextProvider>? _helpTextProviderFactory;
+    private LocalizationOptions _localization = LocalizationOptions.Default;
     private IServiceProvider? _serviceProvider;
     private string? _name;
     private string? _version;
@@ -126,7 +128,7 @@ public sealed class ConsoleAppBuilder
     internal CommandNode AddNoParametersCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         CommandNode parent, string name,
-        string description = "")
+        HelpText description = default)
         where TCommand : NoParametersCommand
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -159,7 +161,7 @@ public sealed class ConsoleAppBuilder
     internal CommandNode AddNoParametersAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         CommandNode parent, string name,
-        string description = "")
+        HelpText description = default)
         where TCommand : NoParametersAsyncCommand
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -188,7 +190,7 @@ public sealed class ConsoleAppBuilder
     /// </exception>
     internal CommandNode AddNoParametersExitCodeCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TExitCode>(CommandNode parent, string name, string description = "")
+        TExitCode>(CommandNode parent, string name, HelpText description = default)
         where TCommand : NoParametersCommand<TExitCode>
         where TExitCode : struct, Enum
     {
@@ -220,7 +222,7 @@ public sealed class ConsoleAppBuilder
     /// </exception>
     internal CommandNode AddNoParametersExitCodeAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TExitCode>(CommandNode parent, string name, string description = "")
+        TExitCode>(CommandNode parent, string name, HelpText description = default)
         where TCommand : NoParametersAsyncCommand<TExitCode>
         where TExitCode : struct, Enum
     {
@@ -250,7 +252,7 @@ public sealed class ConsoleAppBuilder
     /// </exception>
     internal CommandNode AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(CommandNode parent, string name, string description = "")
+        TParameters>(CommandNode parent, string name, HelpText description = default)
         where TCommand : class, ICommand<TParameters>
         where TParameters : class, ICommandParameters<TParameters>
     {
@@ -290,7 +292,7 @@ public sealed class ConsoleAppBuilder
     internal CommandNode AddExitCodeCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters,
-        TExitCode>(CommandNode parent, string name, string description = "")
+        TExitCode>(CommandNode parent, string name, HelpText description = default)
         where TCommand : class, ICommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
         where TExitCode : struct, Enum
@@ -329,7 +331,7 @@ public sealed class ConsoleAppBuilder
     /// </exception>
     internal CommandNode AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(CommandNode parent, string name, string description = "")
+        TParameters>(CommandNode parent, string name, HelpText description = default)
         where TCommand : class, IAsyncCommand<TParameters>
         where TParameters : class, ICommandParameters<TParameters>
     {
@@ -368,7 +370,7 @@ public sealed class ConsoleAppBuilder
     internal CommandNode AddExitCodeAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters,
-        TExitCode>(CommandNode parent, string name, string description = "")
+        TExitCode>(CommandNode parent, string name, HelpText description = default)
         where TCommand : class, IAsyncCommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
         where TExitCode : struct, Enum
@@ -445,21 +447,63 @@ public sealed class ConsoleAppBuilder
     }
 
     /// <summary>
-    /// Registers the help provider used by <c>-h</c> and <c>--help</c>.
+    /// Configures localization for built-in command-line messages.
     /// </summary>
-    /// <typeparam name="THelpProvider">The help provider type.</typeparam>
+    /// <param name="localization">The localization options.</param>
     /// <returns>The current builder.</returns>
-    /// <remarks>
-    /// No default help provider is supplied. A provider must be registered to enable help.
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the help provider is
-    /// resolved from it; otherwise, it is created with its public parameterless constructor.
-    /// </remarks>
-    public ConsoleAppBuilder AddHelp<
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="localization"/> is <see langword="null"/>.
+    /// </exception>
+    public ConsoleAppBuilder ConfigureLocalization(LocalizationOptions localization)
+    {
+        ArgumentNullException.ThrowIfNull(localization);
+        _localization = localization;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures command-line help output.
+    /// </summary>
+    /// <param name="configure">The configuration callback.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="configure"/> is <see langword="null"/>.
+    /// </exception>
+    public ConsoleAppBuilder ConfigureHelp(Action<HelpConfigurationBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(new HelpConfigurationBuilder(this));
+        return this;
+    }
+
+    internal void UseHelpProviderCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
         where THelpProvider : class, IHelpProvider
     {
         _helpProviderFactory = serviceProvider => ResolveHelpProvider<THelpProvider>(serviceProvider);
-        return this;
+    }
+
+    internal void UseHelpTextProviderCore<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
+        where TProvider : class, IHelpTextProvider
+    {
+        _helpTextProviderFactory = ResolveHelpTextProvider<TProvider>;
+    }
+
+    internal void UseLocalizedHelpTextProviderCore(
+        IEnumerable<ResourceManager> descriptionResources)
+    {
+        _helpTextProviderFactory = _ => new LocalizedHelpTextProvider(
+            descriptionResources,
+            _localization);
+    }
+
+    internal void UseLocalizedHelpTextProviderCore(
+        Func<IServiceProvider?, IEnumerable<ResourceManager>> descriptionResourcesFactory)
+    {
+        _helpTextProviderFactory = serviceProvider => new LocalizedHelpTextProvider(
+            descriptionResourcesFactory(serviceProvider),
+            _localization);
     }
 
     /// <summary>
@@ -490,6 +534,22 @@ public sealed class ConsoleAppBuilder
         where TProvider : class, ICommandErrorMessageProvider
     {
         _errorMessageProviderFactory = ResolveErrorMessageProvider<TProvider>;
+    }
+
+    internal void UseLocalizedErrorMessageProviderCore(
+        IEnumerable<ResourceManager> messageResources)
+    {
+        _errorMessageProviderFactory = _ => new LocalizedCommandErrorMessageProvider(
+            messageResources,
+            _localization);
+    }
+
+    internal void UseLocalizedErrorMessageProviderCore(
+        Func<IServiceProvider?, IEnumerable<ResourceManager>> messageResourcesFactory)
+    {
+        _errorMessageProviderFactory = serviceProvider => new LocalizedCommandErrorMessageProvider(
+            messageResourcesFactory(serviceProvider),
+            _localization);
     }
 
     internal void UseErrorWriterCore<
@@ -541,7 +601,7 @@ public sealed class ConsoleAppBuilder
             globalOptions,
             _globalOptionsDefinition,
             _serviceProvider,
-            _helpProviderFactory,
+            _helpProviderFactory ?? CreateDefaultHelpProviderFactory(),
             _errorHandlerFactory ?? CreateDefaultErrorHandlerFactory(),
             _errorExitCodeProvider,
             [.. _interceptorFactories]);
@@ -555,19 +615,26 @@ public sealed class ConsoleAppBuilder
         }
     }
 
+    private Func<IServiceProvider?, IHelpProvider> CreateDefaultHelpProviderFactory() =>
+        serviceProvider => new DefaultHelpProvider(
+            _helpTextProviderFactory?.Invoke(serviceProvider) ??
+            new LocalizedHelpTextProvider(
+                descriptionResources: null,
+                _localization));
+
     private Func<IServiceProvider?, ICommandErrorHandler> CreateDefaultErrorHandlerFactory() =>
         serviceProvider => new DefaultCommandErrorHandler(
-            _errorMessageProviderFactory(serviceProvider),
+            _errorMessageProviderFactory?.Invoke(serviceProvider) ??
+            new LocalizedCommandErrorMessageProvider(
+                messageResources: null,
+                _localization),
             _errorWriterFactory(serviceProvider));
 
     private static void ValidateCommandTree(CommandNode parent)
     {
         foreach (var child in parent.Children)
         {
-            if (child.Children.Count > 0)
-            {
-                EnsureCanHaveSubcommands(child);
-            }
+            if (child.Children.Count > 0) EnsureCanHaveSubcommands(child);
 
             ValidateCommandTree(child);
         }
@@ -575,10 +642,7 @@ public sealed class ConsoleAppBuilder
 
     private void ValidateGlobalOptions(IReadOnlyList<OptionDefinition> globalOptions)
     {
-        if (globalOptions.Count == 0)
-        {
-            return;
-        }
+        if (globalOptions.Count == 0) return;
 
         var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (var option in globalOptions)
@@ -587,7 +651,7 @@ public sealed class ConsoleAppBuilder
             {
                 names.Add(name);
 
-                if (_helpProviderFactory is not null && (name is "-h" or "--help"))
+                if (name is "-h" or "--help")
                 {
                     throw new InvalidOperationException(
                         $"Global option '{name}' conflicts with a built-in help option.");
@@ -636,7 +700,7 @@ public sealed class ConsoleAppBuilder
         }
     }
 
-    internal CommandNode AddGroup(CommandNode parent, string name, string description)
+    internal CommandNode AddGroup(CommandNode parent, string name, HelpText description)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
@@ -671,6 +735,20 @@ public sealed class ConsoleAppBuilder
     private static async Task<int> ConvertExitCodeAsync<TExitCode>(Task<TExitCode> exitCode)
         where TExitCode : struct, Enum =>
         Convert.ToInt32(await exitCode.ConfigureAwait(false), CultureInfo.InvariantCulture);
+
+    private static TProvider ResolveHelpTextProvider<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>(
+        IServiceProvider? serviceProvider)
+        where TProvider : class, IHelpTextProvider
+    {
+        return serviceProvider is null
+            ? Activator.CreateInstance<TProvider>()
+                ?? throw new InvalidOperationException(
+                    $"Could not create help text provider '{typeof(TProvider).FullName}'.")
+            : serviceProvider.GetService(typeof(TProvider)) as TProvider
+                ?? throw new InvalidOperationException(
+                    $"Service '{typeof(TProvider).FullName}' is not registered.");
+    }
 
     private static THelpProvider ResolveHelpProvider<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>(

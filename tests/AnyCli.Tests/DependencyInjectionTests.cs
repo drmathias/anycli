@@ -77,7 +77,7 @@ public class DependencyInjectionTests
             .WithName("anycli")
             .UseServiceProvider(serviceProvider)
             .ConfigureCommands(_ => { })
-            .AddHelp<InjectedHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<InjectedHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["--help"]);

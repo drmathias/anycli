@@ -253,6 +253,7 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System.Collections.Generic;
+            using System.ComponentModel;
             using AnyCli.Parameters.Arguments;
             using AnyCli.Parameters.Options;
             using AnyCli.Parameters.Parsing;
@@ -711,6 +712,7 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System.Collections.Generic;
+            using System.ComponentModel;
             using AnyCli.Parameters.Arguments;
             using AnyCli.Parameters.Options;
             using AnyCli.Parameters.Parsing;
@@ -720,7 +722,8 @@ public class GeneratorDiagnosticTests
                 [RequiredOption("--config")]
                 public string Config { get; set; } = "";
 
-                [Option("--output", "-o", Description = "Output path")]
+                [Option("--output", "-o")]
+                [Description("Output path")]
                 public string Output { get; set; } = "";
 
                 [Option("--verbose", "-v")]
@@ -807,12 +810,14 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
+            using System.ComponentModel;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
             public sealed partial class AppOptions
             {
-                [Option("--log-level", "-l", Description = "Log level")]
+                [Option("--log-level", "-l")]
+                [Description("Log level")]
                 public string LogLevel { get; set; } = "information";
 
                 [Option("--verbose")]
@@ -843,6 +848,7 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
+            using System.ComponentModel;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
@@ -871,6 +877,7 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using AnyCli.Parameters.Arguments;
+            using System.ComponentModel;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
@@ -907,6 +914,7 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
+            using System.ComponentModel;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
@@ -931,6 +939,7 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using AnyCli.Parameters.Arguments;
+            using System.ComponentModel;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]

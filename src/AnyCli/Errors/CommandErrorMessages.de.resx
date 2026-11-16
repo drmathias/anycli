@@ -100,4 +100,7 @@
   <data name="InvalidParameterValue" xml:space="preserve">
     <value>Ungültiger Wert '{0}' für Parameter '{1}'. Erwartet: {2}.</value>
   </data>
+  <data name="UnexpectedError" xml:space="preserve">
+    <value>Ein unerwarteter Fehler ist aufgetreten.</value>
+  </data>
 </root>

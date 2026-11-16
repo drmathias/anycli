@@ -33,7 +33,7 @@ public sealed class CommandRegistrar
     public CommandRegistrar AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description = "")
+        HelpText description = default)
         where TCommand : NoParametersCommand
     {
         _builder.AddNoParametersCommand<TCommand>(_target, name, description);
@@ -53,7 +53,7 @@ public sealed class CommandRegistrar
     /// </exception>
     public CommandRegistrar AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, ICommand<TParameters>
         where TParameters : class, ICommandParameters<TParameters>
     {
@@ -74,7 +74,7 @@ public sealed class CommandRegistrar
     public CommandRegistrar AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description = "")
+        HelpText description = default)
         where TCommand : NoParametersAsyncCommand
     {
         _builder.AddNoParametersAsyncCommand<TCommand>(_target, name, description);
@@ -94,7 +94,7 @@ public sealed class CommandRegistrar
     /// </exception>
     public CommandRegistrar AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, IAsyncCommand<TParameters>
         where TParameters : class, ICommandParameters<TParameters>
     {
@@ -119,7 +119,7 @@ public sealed class CommandRegistrar
     public CommandRegistrar AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar> configureChildren)
         where TCommand : NoParametersCommand
     {
@@ -146,7 +146,7 @@ public sealed class CommandRegistrar
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar> configureChildren)
         where TCommand : class, ICommand<TParameters>
         where TParameters : class, ICommandParameters<TParameters>
@@ -172,7 +172,7 @@ public sealed class CommandRegistrar
     public CommandRegistrar AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar> configureChildren)
         where TCommand : NoParametersAsyncCommand
     {
@@ -199,7 +199,7 @@ public sealed class CommandRegistrar
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar> configureChildren)
         where TCommand : class, IAsyncCommand<TParameters>
         where TParameters : class, ICommandParameters<TParameters>
@@ -223,7 +223,7 @@ public sealed class CommandRegistrar
     /// </exception>
     public CommandRegistrar AddGroup(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);

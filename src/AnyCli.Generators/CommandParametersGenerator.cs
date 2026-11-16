@@ -22,6 +22,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private const string OptionAttributeName = "AnyCli.Parameters.Options.OptionAttribute";
     private const string RequiredOptionAttributeName = "AnyCli.Parameters.Options.RequiredOptionAttribute";
     private const string GlobalOptionsAttributeName = "AnyCli.Parameters.Options.GlobalOptionsAttribute";
+    private const string DescriptionAttributeName = "System.ComponentModel.DescriptionAttribute";
+    private const string ResourceDescriptionAttributeName = "AnyCli.Help.ResourceDescriptionAttribute";
     private const string ParametersInterfaceName = "ICommandParameters`1";
     private const string GlobalOptionsInterfaceName = "IGlobalOptions`1";
     private const string ParameterValueParserAttributeName = "ParameterValueParserAttribute`2";
@@ -408,7 +410,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 argumentPositions.Add((position, location, property.Name));
 
                 var name = ToCamelCase(property.Name);
-                var description = string.Empty;
+                var helpText = GetHelpText(property);
                 var optional = isOptionalArgument;
                 var minimumCount = 0;
                 var maximumCount = int.MaxValue;
@@ -418,11 +420,6 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     if (namedArgument.Key == "Name" && namedArgument.Value.Value is string customName)
                     {
                         name = customName;
-                    }
-                    else if (namedArgument.Key == "Description" &&
-                             namedArgument.Value.Value is string customDescription)
-                    {
-                        description = customDescription;
                     }
                     else if (namedArgument.Key == "Parser" &&
                              namedArgument.Value.Value is ITypeSymbol customParserType)
@@ -557,7 +554,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
                 arguments.Add(new ArgumentModel(
                     name,
-                    description,
+                    helpText,
                     property.Name,
                     property.SetMethod!.IsInitOnly,
                     position,
@@ -618,6 +615,50 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             expectedPosition++;
         }
     }
+
+    private static HelpTextModel GetHelpText(IPropertySymbol property)
+    {
+        string? text = null;
+        string? resourceKey = null;
+
+        for (var current = property; current is not null; current = current.OverriddenProperty)
+        {
+            foreach (var attribute in current.GetAttributes())
+            {
+                var attributeName = attribute.AttributeClass?.ToDisplayString();
+                if (attribute.ConstructorArguments.Length == 0 ||
+                    attribute.ConstructorArguments[0].Value is not string value)
+                {
+                    continue;
+                }
+
+                if (text is null && attributeName == DescriptionAttributeName)
+                {
+                    text = value;
+                }
+                else if (resourceKey is null &&
+                         attributeName == ResourceDescriptionAttributeName &&
+                         !string.IsNullOrWhiteSpace(value))
+                {
+                    resourceKey = value;
+                }
+            }
+
+            if (text is not null && resourceKey is not null)
+            {
+                break;
+            }
+        }
+
+        return new HelpTextModel(text, resourceKey);
+    }
+
+    private static string GetHelpTextExpression(HelpTextModel helpText) =>
+        $"new global::AnyCli.Help.HelpText({FormatNullableLiteral(helpText.Text)}, " +
+        $"{FormatNullableLiteral(helpText.ResourceKey)})";
+
+    private static string FormatNullableLiteral(string? value) =>
+        value is null ? "null" : SymbolDisplay.FormatLiteral(value, true);
 
     private static IReadOnlyList<AttributeData> GetParameterAttributes(IPropertySymbol property)
     {
@@ -767,17 +808,12 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             return null;
         }
 
-        var description = string.Empty;
+        var helpText = GetHelpText(property);
         ITypeSymbol? parserType = null;
         foreach (var namedArgument in attribute.NamedArguments)
         {
-            if (namedArgument.Key == "Description" &&
-                namedArgument.Value.Value is string customDescription)
-            {
-                description = customDescription;
-            }
-            else if (namedArgument.Key == "Parser" &&
-                     namedArgument.Value.Value is ITypeSymbol customParserType)
+            if (namedArgument.Key == "Parser" &&
+                namedArgument.Value.Value is ITypeSymbol customParserType)
             {
                 parserType = customParserType;
             }
@@ -849,7 +885,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         return new OptionModel(
             name,
             aliases,
-            description,
+            helpText,
             property.Name,
             property.SetMethod!.IsInitOnly,
             required,
@@ -1622,11 +1658,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .AppendLine(");");
             }
 
-            if (argument.Description.Length > 0)
+            if (!argument.HelpText.IsEmpty)
             {
                 source.Append(indent)
                     .Append("        parameters.Arguments.Describe(")
-                    .Append(SymbolDisplay.FormatLiteral(argument.Description, true))
+                    .Append(GetHelpTextExpression(argument.HelpText))
                     .AppendLine(");");
             }
 
@@ -1901,13 +1937,13 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .AppendLine(");");
             }
 
-            if (option.Description.Length > 0)
+            if (!option.HelpText.IsEmpty)
             {
                 source.Append(indent)
                     .Append("        ")
                     .Append(local)
                     .Append(".SetDescription(")
-                    .Append(SymbolDisplay.FormatLiteral(option.Description, true))
+                    .Append(GetHelpTextExpression(option.HelpText))
                     .AppendLine(");");
             }
 
@@ -2289,10 +2325,20 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             _ => throw new InvalidOperationException("Unknown parse kind."),
         };
 
+    private sealed class HelpTextModel(string? text, string? resourceKey)
+    {
+        public string? Text { get; } = text;
+
+        public string? ResourceKey { get; } = resourceKey;
+
+        public bool IsEmpty =>
+            string.IsNullOrEmpty(Text) && string.IsNullOrEmpty(ResourceKey);
+    }
+
     private sealed class OptionModel(
         string name,
         IReadOnlyList<string> aliases,
-        string description,
+        HelpTextModel helpText,
         string propertyName,
         bool isInitOnly,
         bool required,
@@ -2309,7 +2355,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         public IReadOnlyList<string> Names { get; } = [name, .. aliases];
 
-        public string Description { get; } = description;
+        public HelpTextModel HelpText { get; } = helpText;
 
         public string PropertyName { get; } = propertyName;
 
@@ -2397,7 +2443,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     {
         public ArgumentModel(
             string name,
-            string description,
+            HelpTextModel helpText,
             string propertyName,
             bool isInitOnly,
             int position,
@@ -2412,7 +2458,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             ParsePlan parsePlan)
         {
             Name = name;
-            Description = description;
+            HelpText = helpText;
             PropertyName = propertyName;
             IsInitOnly = isInitOnly;
             Position = position;
@@ -2429,7 +2475,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         public string Name { get; }
 
-        public string Description { get; }
+        public HelpTextModel HelpText { get; }
 
         public string PropertyName { get; }
 

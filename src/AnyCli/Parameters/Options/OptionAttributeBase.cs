@@ -41,11 +41,6 @@ public abstract class OptionAttributeBase : Attribute
     public string[] Aliases { get; } = [];
 
     /// <summary>
-    /// Gets or sets the description shown in help output.
-    /// </summary>
-    public string? Description { get; set; }
-
-    /// <summary>
     /// Gets or sets a custom parser type implementing
     /// <see cref="IParameterParser{T}"/> for the option value type.
     /// </summary>

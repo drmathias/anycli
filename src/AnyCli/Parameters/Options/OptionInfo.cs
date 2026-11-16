@@ -14,7 +14,7 @@ namespace AnyCli.Parameters.Options;
 /// <param name="DeclaredType">The declared option value or collection type.</param>
 public sealed record OptionInfo(
     IReadOnlyList<string> Names,
-    string Description,
+    HelpText Description,
     bool IsRequired = false,
     bool TakesValue = false,
     Type? DeclaredType = null)

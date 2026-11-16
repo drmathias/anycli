@@ -138,7 +138,7 @@ public class DefaultValueTests
         var app = ConsoleAppBuilder.Create()
             .ConfigureCommands(commands =>
                 commands.AddCommand<DefaultOptionsCommand, DefaultOptionsParameters>("opts"))
-            .AddHelp<DefaultHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<DefaultHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["opts", "--help"]);

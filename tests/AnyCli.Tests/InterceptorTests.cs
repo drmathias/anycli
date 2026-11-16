@@ -156,7 +156,7 @@ public class InterceptorTests
         var app = ConsoleAppBuilder.Create()
             .WithVersion("1.0.0")
             .ConfigureCommands(commands => commands.AddCommand<OutputCommand>("run"))
-            .AddHelp<NoopHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<NoopHelpProvider>())
             .AddInterceptor<MarkerInterceptor>()
             .Build();
 

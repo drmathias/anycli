@@ -33,7 +33,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
     public CommandGroupRegistrarWithExitCode<TExitCode> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description = "")
+        HelpText description = default)
         where TCommand : NoParametersCommand<TExitCode>
     {
         _commands.AddCommand<TCommand>(name, description);
@@ -53,7 +53,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
     /// </exception>
     public CommandGroupRegistrarWithExitCode<TExitCode> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, ICommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
     {
@@ -74,7 +74,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
     public CommandGroupRegistrarWithExitCode<TExitCode> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description = "")
+        HelpText description = default)
         where TCommand : NoParametersAsyncCommand<TExitCode>
     {
         _commands.AddAsyncCommand<TCommand>(name, description);
@@ -94,7 +94,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
     /// </exception>
     public CommandGroupRegistrarWithExitCode<TExitCode> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, IAsyncCommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
     {
@@ -113,7 +113,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
     public CommandGroupRegistrarWithExitCode<TExitCode> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
         where TCommand : NoParametersCommand<TExitCode>
     {
@@ -134,7 +134,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
         where TCommand : class, ICommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
@@ -154,7 +154,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
     public CommandGroupRegistrarWithExitCode<TExitCode> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
         where TCommand : NoParametersAsyncCommand<TExitCode>
     {
@@ -175,7 +175,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrarWithExitCode<TExitCode>> configureChildren)
         where TCommand : class, IAsyncCommand<TParameters, TExitCode>
         where TParameters : class, ICommandParameters<TParameters>
@@ -199,7 +199,7 @@ public sealed class CommandGroupRegistrarWithExitCode<TExitCode>
     /// </exception>
     public CommandGroupRegistrarWithExitCode<TExitCode> AddGroup(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrarWithExitCode<TExitCode>> configure)
     {
         _commands.AddGroup(name, description, configure);

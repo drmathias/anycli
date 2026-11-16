@@ -9,7 +9,7 @@ namespace AnyCli.Commands.Metadata;
 /// </summary>
 /// <param name="Name">The command name.</param>
 /// <param name="Description">A short description of the command.</param>
-public sealed record CommandInfo(string Name, string Description)
+public sealed record CommandInfo(string Name, HelpText Description)
 {
     /// <summary>
     /// Gets the command path, starting at the root command.

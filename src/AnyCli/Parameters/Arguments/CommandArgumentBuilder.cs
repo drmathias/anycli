@@ -191,16 +191,11 @@ public sealed class CommandArgumentBuilder
     /// </summary>
     /// <param name="description">The argument description.</param>
     /// <returns>The current builder.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="description"/> is <see langword="null"/>.
-    /// </exception>
     /// <exception cref="InvalidOperationException">
     /// No argument has been added.
     /// </exception>
-    public CommandArgumentBuilder Describe(string description)
+    public CommandArgumentBuilder Describe(HelpText description)
     {
-        ArgumentNullException.ThrowIfNull(description);
-
         if (_arguments.Count == 0)
         {
             throw new InvalidOperationException("No argument has been added.");

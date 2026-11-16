@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 //
 // SPDX-License-Identifier: MIT
@@ -75,7 +77,7 @@ public class HelpCommandTests
             .ConfigureCommands(commands => commands.AddCommand<ThrowCommand, ThrowParameters>(
                 "throw",
                 "Opens a Jvln HTTP tunnel"))
-            .AddHelp<ThrowHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<ThrowHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["throw", flag]);
@@ -91,7 +93,7 @@ public class HelpCommandTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<TypeCommand, TypeMetadataParameters>("types"))
-            .AddHelp<TypeHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<TypeHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["types", "--help"]);
@@ -110,7 +112,7 @@ public class HelpCommandTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<OneOrMoreCommand, OneOrMoreParameters>("tags"))
-            .AddHelp<TypeHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<TypeHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["tags", "--help"]);
@@ -127,7 +129,7 @@ public class HelpCommandTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<OptionMetadataCommand, OptionParameters>("opts"))
-            .AddHelp<OptionHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<OptionHelpProvider>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, "opts", "--help");
@@ -153,7 +155,7 @@ public class HelpCommandTests
                 commands.AddCommand<NoOpCommand>("throw", "Opens a Jvln tunnel");
                 commands.AddCommand<NoOpCommand>("retrieve", "Closes a Jvln tunnel");
             })
-            .AddHelp<StubHelpProvider>()
+            .ConfigureHelp(help => help.UseProvider<StubHelpProvider>())
             .Build();
 
         return await TestAppHarness.RunAsync(app, args);
@@ -316,7 +318,8 @@ public class HelpCommandTests
 
 public sealed partial class ThrowParameters
 {
-    [Argument(0, Description = "Destination for HTTP traffic")]
+    [Argument(0)]
+    [Description("Destination for HTTP traffic")]
     public string Upstream { get; set; } = "";
 }
 

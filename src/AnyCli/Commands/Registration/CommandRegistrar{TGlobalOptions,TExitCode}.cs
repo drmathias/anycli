@@ -30,7 +30,7 @@ public sealed class CommandRegistrar<TGlobalOptions, TExitCode>
     /// </summary>
     public CommandRegistrar<TGlobalOptions, TExitCode> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, ICommand<TParameters, TExitCode>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
     {
@@ -43,7 +43,7 @@ public sealed class CommandRegistrar<TGlobalOptions, TExitCode>
     /// </summary>
     public CommandRegistrar<TGlobalOptions, TExitCode> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, IAsyncCommand<TParameters, TExitCode>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
     {
@@ -58,7 +58,7 @@ public sealed class CommandRegistrar<TGlobalOptions, TExitCode>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions, TExitCode>> configureChildren)
         where TCommand : class, ICommand<TParameters, TExitCode>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
@@ -74,7 +74,7 @@ public sealed class CommandRegistrar<TGlobalOptions, TExitCode>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions, TExitCode>> configureChildren)
         where TCommand : class, IAsyncCommand<TParameters, TExitCode>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
@@ -88,7 +88,7 @@ public sealed class CommandRegistrar<TGlobalOptions, TExitCode>
     /// </summary>
     public CommandRegistrar<TGlobalOptions, TExitCode> AddGroup(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions, TExitCode>> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);

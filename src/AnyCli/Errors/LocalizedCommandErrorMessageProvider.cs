@@ -21,6 +21,26 @@ public class LocalizedCommandErrorMessageProvider : ICommandErrorMessageProvider
         ResourceBaseName,
         typeof(LocalizedCommandErrorMessageProvider).Assembly);
 
+    private readonly LocalizationOptions _localization;
+    private readonly IReadOnlyList<ResourceManager> _messageResources;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LocalizedCommandErrorMessageProvider"/> class.
+    /// </summary>
+    /// <param name="messageResources">
+    /// Additional resource managers used to resolve built-in message keys, in priority order.
+    /// </param>
+    /// <param name="localization">
+    /// The localization options, or <see langword="null"/> to use the default options.
+    /// </param>
+    public LocalizedCommandErrorMessageProvider(
+        IEnumerable<ResourceManager>? messageResources = null,
+        LocalizationOptions? localization = null)
+    {
+        _messageResources = [.. messageResources ?? [], Resources];
+        _localization = localization ?? LocalizationOptions.Default;
+    }
+
     /// <inheritdoc/>
     public string GetMessage(CommandErrorContext context) =>
         context.Error switch
@@ -220,24 +240,61 @@ public class LocalizedCommandErrorMessageProvider : ICommandErrorMessageProvider
     /// <param name="context">The error context.</param>
     /// <returns>The error message.</returns>
     protected virtual string GetFallbackMessage(CommandErrorContext context) =>
-        context.Error.ToString() ?? "Unexpected error occurred.";
+        Format(context, CommandErrorResourceKeys.UnexpectedError);
 
     /// <summary>
     /// Gets the UI culture used to select error messages.
     /// </summary>
-    /// <param name="context">The error context.</param>
     /// <returns>The UI culture.</returns>
-    protected virtual CultureInfo GetUICulture(CommandErrorContext context) =>
-        CultureInfo.CurrentUICulture;
+    protected virtual CultureInfo GetUICulture() =>
+        _localization.GetUICulture();
+
+    /// <summary>
+    /// Gets the culture used to format values in error messages.
+    /// </summary>
+    /// <returns>The formatting culture.</returns>
+    protected virtual CultureInfo GetFormatCulture() =>
+        _localization.GetFormatCulture();
 
     private string Format(
         CommandErrorContext context,
         string resourceKey,
         params object?[] arguments)
     {
-        var template = Resources.GetString(resourceKey, GetUICulture(context))
-            ?? resourceKey;
+        var culture = GetUICulture();
+        string? template = null;
 
-        return string.Format(CultureInfo.CurrentCulture, template, arguments);
+        foreach (var resources in _messageResources)
+        {
+            template = TryGetString(resources, resourceKey, culture);
+            if (template is not null)
+            {
+                break;
+            }
+        }
+
+        return string.Format(
+            GetFormatCulture(),
+            template ?? resourceKey,
+            arguments);
+    }
+
+    private static string? TryGetString(
+        ResourceManager resources,
+        string resourceKey,
+        CultureInfo culture)
+    {
+        try
+        {
+            return resources.GetString(resourceKey, culture);
+        }
+        catch (MissingManifestResourceException)
+        {
+            return null;
+        }
+        catch (MissingSatelliteAssemblyException)
+        {
+            return null;
+        }
     }
 }

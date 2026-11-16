@@ -34,6 +34,7 @@ public class ErrorHandlingTests
             "TooFewVariadicValues",
             "TooManyVariadicValues",
             "InvalidParameterValue",
+            "UnexpectedError",
         })
         {
             await Assert.That(resources.GetString(key, english)).IsNotNull();
@@ -129,6 +130,66 @@ public class ErrorHandlingTests
         await Assert.That(result.ExitCode).IsEqualTo(2);
         await Assert.That(result.Output).IsEmpty();
         await Assert.That(result.Error).IsEqualTo($"written: Unknown command 'nope'.{Environment.NewLine}");
+    }
+
+    [Test]
+    public async Task LocalizedErrorMessageProvider_LocalizesFallbackError()
+    {
+        var provider = new LocalizedCommandErrorMessageProvider(
+            localization: new AnyCli.Localization.LocalizationOptions
+            {
+                UICultureProvider = () => System.Globalization.CultureInfo.GetCultureInfo("fr"),
+            });
+        using var error = new StringWriter();
+        var console = new TextConsole(new StringReader(string.Empty), new StringWriter(), error);
+        var context = new CommandErrorContext(
+            "anycli",
+            [],
+            new CustomError(),
+            console);
+
+        var message = provider.GetMessage(context);
+
+        await Assert.That(message).IsEqualTo("Une erreur inattendue s'est produite.");
+    }
+
+    [Test]
+    public async Task LocalizedErrorMessageProvider_UsesConfiguredResourcesAndCulture()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureLocalization(LocalizationOptions.FromCulture("fr"))
+            .ConfigureErrorHandling(errors => errors.UseLocalizedMessageProvider(
+                AnyCli.Tests.Resources.ErrorMessages.ResourceManager))
+            .ConfigureCommands(commands => commands.AddCommand<NoOpCommand>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["run", "--nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).IsEqualTo(
+            $"Option personnalisée inconnue : --nope{Environment.NewLine}");
+    }
+
+    [Test]
+    public async Task LocalizedErrorMessageProvider_FallsBackToBuiltInResources()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureLocalization(LocalizationOptions.FromCulture("fr"))
+            .ConfigureErrorHandling(errors => errors.UseLocalizedMessageProvider(
+                new System.Resources.ResourceManager(
+                    "AnyCli.Tests.Resources.MissingErrorMessages",
+                    typeof(ErrorHandlingTests).Assembly)))
+            .ConfigureCommands(commands => commands.AddCommand<NoOpCommand>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["run", "--nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).IsEqualTo($"Option inconnue '--nope'.{Environment.NewLine}");
     }
 
     [Test]
@@ -247,10 +308,11 @@ public class ErrorHandlingTests
     private sealed class FixedCultureMessageProvider(
         System.Globalization.CultureInfo culture) : LocalizedCommandErrorMessageProvider
     {
-        protected override System.Globalization.CultureInfo GetUICulture(
-            CommandErrorContext context) =>
+        protected override System.Globalization.CultureInfo GetUICulture() =>
             culture;
     }
+
+    private sealed record CustomError : CommandError;
 
     private sealed class CustomMessageProvider : LocalizedCommandErrorMessageProvider
     {

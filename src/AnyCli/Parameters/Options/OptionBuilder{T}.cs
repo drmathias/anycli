@@ -39,10 +39,7 @@ public sealed class OptionBuilder<T>
     /// </summary>
     /// <param name="description">The option description.</param>
     /// <returns>The current option builder.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="description"/> is <see langword="null"/>.
-    /// </exception>
-    public OptionBuilder<T> SetDescription(string description)
+    public OptionBuilder<T> SetDescription(HelpText description)
     {
         SetDescriptionCore(_option, description);
         return this;
@@ -79,9 +76,8 @@ public sealed class OptionBuilder<T>
 
     internal static void SetDescriptionCore(
         OptionDefinition option,
-        string description)
+        HelpText description)
     {
-        ArgumentNullException.ThrowIfNull(description);
         option.Description = description;
     }
 }
@@ -115,7 +111,7 @@ public sealed class RequiredOptionBuilder<T>
     /// </summary>
     /// <param name="description">The option description.</param>
     /// <returns>The current option builder.</returns>
-    public RequiredOptionBuilder<T> SetDescription(string description)
+    public RequiredOptionBuilder<T> SetDescription(HelpText description)
     {
         OptionBuilder<T>.SetDescriptionCore(_option, description);
         return this;
@@ -151,7 +147,7 @@ public sealed class DefaultValueOptionBuilder<T>
     /// </summary>
     /// <param name="description">The option description.</param>
     /// <returns>The current option builder.</returns>
-    public DefaultValueOptionBuilder<T> SetDescription(string description)
+    public DefaultValueOptionBuilder<T> SetDescription(HelpText description)
     {
         OptionBuilder<T>.SetDescriptionCore(_option, description);
         return this;

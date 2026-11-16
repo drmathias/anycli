@@ -9,6 +9,7 @@ global using AnyCli.Console;
 global using AnyCli.Errors;
 global using AnyCli.Help;
 global using AnyCli.Interceptors;
+global using AnyCli.Localization;
 global using AnyCli.Parameters.Arguments;
 global using AnyCli.Parameters.Binding;
 global using AnyCli.Parameters.Options;

@@ -50,11 +50,18 @@ public sealed class ConfiguredConsoleAppBuilder<TExitCode> : ConfiguredConsoleAp
     }
 
     /// <inheritdoc/>
-    public override ConfiguredConsoleAppBuilder<TExitCode> AddHelp<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
-        where THelpProvider : class
+    public override ConfiguredConsoleAppBuilder<TExitCode> ConfigureLocalization(
+        LocalizationOptions localization)
     {
-        base.AddHelp<THelpProvider>();
+        base.ConfigureLocalization(localization);
+        return this;
+    }
+
+    /// <inheritdoc/>
+    public override ConfiguredConsoleAppBuilder<TExitCode> ConfigureHelp(
+        Action<HelpConfigurationBuilder> configure)
+    {
+        base.ConfigureHelp(configure);
         return this;
     }
 

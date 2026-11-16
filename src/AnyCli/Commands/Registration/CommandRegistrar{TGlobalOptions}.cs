@@ -32,7 +32,7 @@ public sealed class CommandRegistrar<TGlobalOptions>
     /// <returns>The current configurator.</returns>
     public CommandRegistrar<TGlobalOptions> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, ICommand<TParameters>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
     {
@@ -50,7 +50,7 @@ public sealed class CommandRegistrar<TGlobalOptions>
     /// <returns>The current configurator.</returns>
     public CommandRegistrar<TGlobalOptions> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, IAsyncCommand<TParameters>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
     {
@@ -65,7 +65,7 @@ public sealed class CommandRegistrar<TGlobalOptions>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions>> configureChildren)
         where TCommand : class, ICommand<TParameters>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
@@ -81,7 +81,7 @@ public sealed class CommandRegistrar<TGlobalOptions>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions>> configureChildren)
         where TCommand : class, IAsyncCommand<TParameters>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
@@ -95,7 +95,7 @@ public sealed class CommandRegistrar<TGlobalOptions>
     /// </summary>
     public CommandRegistrar<TGlobalOptions> AddGroup(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions>> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);

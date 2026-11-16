@@ -15,6 +15,9 @@ SPDX-License-Identifier: MIT
 
   <ItemGroup>
     <PackageReference Include="TUnit" Version="1.*" />
+    <PackageReference Include="Microsoft.CodeAnalysis.ResxSourceGenerator"
+                      Version="5.0.0-1.25277.114"
+                      PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

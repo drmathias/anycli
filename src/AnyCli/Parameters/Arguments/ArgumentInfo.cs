@@ -13,7 +13,7 @@ namespace AnyCli.Parameters.Arguments;
 /// <param name="Arity">The number of values the argument accepts.</param>
 public sealed record ArgumentInfo(
     string Name,
-    string Description,
+    HelpText Description,
     Type DeclaredType,
     ArgumentArity Arity)
 {

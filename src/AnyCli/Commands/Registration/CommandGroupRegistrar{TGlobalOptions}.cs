@@ -26,7 +26,7 @@ public sealed class CommandGroupRegistrar<TGlobalOptions>
     /// </summary>
     public CommandGroupRegistrar<TGlobalOptions> AddCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, ICommand<TParameters>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
     {
@@ -39,7 +39,7 @@ public sealed class CommandGroupRegistrar<TGlobalOptions>
     /// </summary>
     public CommandGroupRegistrar<TGlobalOptions> AddAsyncCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
-        TParameters>(string name, string description = "")
+        TParameters>(string name, HelpText description = default)
         where TCommand : class, IAsyncCommand<TParameters>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
     {
@@ -54,7 +54,7 @@ public sealed class CommandGroupRegistrar<TGlobalOptions>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions>> configureChildren)
         where TCommand : class, ICommand<TParameters>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
@@ -70,7 +70,7 @@ public sealed class CommandGroupRegistrar<TGlobalOptions>
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand,
         TParameters>(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions>> configureChildren)
         where TCommand : class, IAsyncCommand<TParameters>
         where TParameters : class, TGlobalOptions, ICommandParameters<TParameters>
@@ -84,7 +84,7 @@ public sealed class CommandGroupRegistrar<TGlobalOptions>
     /// </summary>
     public CommandGroupRegistrar<TGlobalOptions> AddGroup(
         string name,
-        string description,
+        HelpText description,
         Action<CommandGroupRegistrar<TGlobalOptions>> configure)
     {
         _commands.AddGroup(name, description, configure);

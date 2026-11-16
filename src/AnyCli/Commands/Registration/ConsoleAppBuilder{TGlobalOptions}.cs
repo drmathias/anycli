@@ -67,15 +67,26 @@ public sealed class ConsoleAppBuilder<TGlobalOptions>
     }
 
     /// <summary>
-    /// Registers the help provider used by <c>-h</c> and <c>--help</c>.
+    /// Configures localization for built-in command-line messages.
     /// </summary>
-    /// <typeparam name="THelpProvider">The help provider type.</typeparam>
+    /// <param name="localization">The localization options.</param>
     /// <returns>The current builder.</returns>
-    public ConsoleAppBuilder<TGlobalOptions> AddHelp<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
-        where THelpProvider : class, IHelpProvider
+    public ConsoleAppBuilder<TGlobalOptions> ConfigureLocalization(
+        LocalizationOptions localization)
     {
-        _builder.AddHelp<THelpProvider>();
+        _builder.ConfigureLocalization(localization);
+        return this;
+    }
+
+    /// <summary>
+    /// Configures command-line help output.
+    /// </summary>
+    /// <param name="configure">The configuration callback.</param>
+    /// <returns>The current builder.</returns>
+    public ConsoleAppBuilder<TGlobalOptions> ConfigureHelp(
+        Action<HelpConfigurationBuilder> configure)
+    {
+        _builder.ConfigureHelp(configure);
         return this;
     }
 

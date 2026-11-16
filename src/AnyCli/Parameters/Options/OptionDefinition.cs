@@ -7,7 +7,7 @@ namespace AnyCli.Parameters.Options;
 internal sealed class OptionDefinition(
     string name,
     IReadOnlyList<string> aliases,
-    string description,
+    HelpText description,
     Type valueType,
     Type declaredType,
     bool required,
@@ -20,7 +20,7 @@ internal sealed class OptionDefinition(
 
     public IReadOnlyList<string> Names { get; private set; } = [name, .. aliases];
 
-    public string Description { get; set; } = description;
+    public HelpText Description { get; set; } = description;
 
     public Type ValueType { get; } = valueType;
 

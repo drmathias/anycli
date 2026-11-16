@@ -4,14 +4,14 @@
 
 namespace AnyCli.Commands.Registration;
 
-internal sealed class CommandNode(string name, string description)
+internal sealed class CommandNode(string name, HelpText description)
 {
     private readonly List<CommandNode> _children = [];
     private readonly Dictionary<string, CommandNode> _childrenByName = new(StringComparer.Ordinal);
 
     public string Name { get; } = name;
 
-    public string Description { get; } = description;
+    public HelpText Description { get; } = description;
 
     public IReadOnlyList<CommandNode> Children => _children;
 

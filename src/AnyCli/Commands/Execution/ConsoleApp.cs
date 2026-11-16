@@ -15,7 +15,7 @@ public sealed class ConsoleApp
     private readonly IGlobalOptionsDefinition? _globalOptionsDefinition;
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly OptionLookup _globalOptionLookup;
-    private readonly Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
+    private readonly Func<IServiceProvider?, IHelpProvider> _helpProviderFactory;
     private readonly Func<CommandErrorContext, int> _errorExitCodeProvider;
     private readonly Func<IServiceProvider?, ICommandErrorHandler> _errorHandlerFactory;
     private readonly IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories;
@@ -31,7 +31,7 @@ public sealed class ConsoleApp
         IReadOnlyList<OptionDefinition> globalOptions,
         IGlobalOptionsDefinition? globalOptionsDefinition,
         IServiceProvider? serviceProvider,
-        Func<IServiceProvider?, IHelpProvider>? helpProviderFactory,
+        Func<IServiceProvider?, IHelpProvider> helpProviderFactory,
         Func<IServiceProvider?, ICommandErrorHandler> errorHandlerFactory,
         Func<CommandErrorContext, int> errorExitCodeProvider,
         IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> interceptorFactories)
@@ -132,7 +132,7 @@ public sealed class ConsoleApp
             _globalOptionLookup,
             args,
             globalOptionValues,
-            _helpProviderFactory is not null,
+            true,
             _version is not null,
             out var leadingHelpRequested,
             out var leadingVersionRequested);
@@ -217,7 +217,7 @@ public sealed class ConsoleApp
                     _globalOptionLookup,
                     args.AsSpan(index + 1),
                     globalOptionValues,
-                    _helpProviderFactory is not null,
+                    true,
                     _version is not null,
                     out var commandHelpRequested,
                     out var commandVersionRequested);
@@ -280,7 +280,7 @@ public sealed class ConsoleApp
                 _globalOptionLookup,
                 args.AsSpan(index + 1),
                 globalOptionValues,
-                _helpProviderFactory is not null,
+                true,
                 _version is not null,
                 out var groupHelpRequested,
                 out var groupVersionRequested);
@@ -355,7 +355,7 @@ public sealed class ConsoleApp
             command.OptionLookup,
             args.AsSpan(startIndex),
             globalOptionValues,
-            _helpProviderFactory is not null,
+            true,
             _version is not null,
             out var helpRequested,
             out var versionRequested);
@@ -502,7 +502,7 @@ public sealed class ConsoleApp
 
     private Task WriteRootHelpAsync(IConsole console, CancellationToken cancellationToken)
     {
-        return _helpProviderFactory!(_serviceProvider).WriteRootHelpAsync(
+        return _helpProviderFactory(_serviceProvider).WriteRootHelpAsync(
             new RootHelpContext(
                 _name ?? string.Empty,
                 console,
@@ -517,7 +517,7 @@ public sealed class ConsoleApp
         IReadOnlyList<string> commandPath,
         CancellationToken cancellationToken)
     {
-        return _helpProviderFactory!(_serviceProvider).WriteCommandHelpAsync(
+        return _helpProviderFactory(_serviceProvider).WriteCommandHelpAsync(
             new CommandHelpContext(
                 _name ?? string.Empty,
                 console,
@@ -557,8 +557,20 @@ public sealed class ConsoleApp
             });
         }
 
-        if (_helpProviderFactory is not null) options.Add(new OptionInfo(["-h", "--help"], "Prints help information"));
-        if (_version is not null) options.Add(new OptionInfo(["-v", "--version"], "Prints version information"));
+        options.Add(new OptionInfo(
+            ["-h", "--help"],
+            new HelpText(
+                "Prints help information",
+                HelpTextResourceKeys.HelpOptionDescription)));
+
+        if (_version is not null)
+        {
+            options.Add(new OptionInfo(
+                ["-v", "--version"],
+                new HelpText(
+                    "Prints version information",
+                    HelpTextResourceKeys.VersionOptionDescription)));
+        }
 
         return options;
     }
