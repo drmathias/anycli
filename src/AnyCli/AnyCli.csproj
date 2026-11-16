@@ -11,7 +11,7 @@ SPDX-License-Identifier: MIT
     <Title>AnyCli</Title>
     <Description>A source-generated, AOT-friendly command-line framework for .NET</Description>
     <PackageTags>cli;command-line;parser;source-generator;aot;roslyn;dependency-injection</PackageTags>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsAotCompatible>true</IsAotCompatible>
@@ -26,7 +26,7 @@ SPDX-License-Identifier: MIT
                       PrivateAssets="all" />
   </ItemGroup>
 
-  <Target Name="PackAnyCliGenerator">
+  <Target Name="PackAnyCliGenerator" Condition="'$(TargetFramework)' == 'net10.0'">
     <MSBuild Projects="..\AnyCli.Generators\AnyCli.Generators.csproj"
              Targets="GetTargetPath"
              Properties="Configuration=$(Configuration)"

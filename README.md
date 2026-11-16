@@ -10,7 +10,8 @@ AnyCli is a source-generated, AOT-friendly command-line framework for .NET with 
 
 [![Tests](https://github.com/drmathias/anycli/actions/workflows/test.yml/badge.svg)](https://github.com/drmathias/anycli/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/drmathias/anycli/blob/main/LICENSES/MIT.txt)
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
+[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
+[![.NET 11](https://img.shields.io/badge/.NET-11-512BD4)](https://dotnet.microsoft.com/)
 [![AOT ready](https://img.shields.io/badge/AOT-ready-brightgreen)](https://learn.microsoft.com/dotnet/core/deploying/native-aot/)
 
 ## Philosophy
@@ -56,33 +57,33 @@ dotnet add package AnyCli.SpectreConsole
 ## Benchmarks
 
 <!-- benchmarks:start -->
-_Environment: macOS Tahoe 26.2, Intel Core i7-9750H, 12 logical cores, .NET SDK 10.0.403, .NET 10.0.14, X64._
+_Environment: macOS Tahoe 26.2, Intel Core i7-9750H, 12 logical cores, .NET SDK 11.0.100, .NET 11.0.0, X64._
 
 ### Invocation
 
 | Rank | Framework | Mean | Median | Ratio | Allocated |
 | ---: | --- | ---: | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 2.419 ns | 2.416 ns | 0.002 | 0 B |
-| **2** | **AnyCli** | **982.343 ns** | **977.405 ns** | **1.002** | **1320 B** |
-| 3 | System.CommandLine | 3,561.501 ns | 3,535.342 ns | 3.634 | 4864 B |
-| 4 | Spectre.Console.Cli | 105,122.998 ns | 104,549.279 ns | 107.252 | 45920 B |
+| 1 | ConsoleAppFramework | 7.883 ns | 7.878 ns | 0.008 | 0 B |
+| **2** | **AnyCli** | **943.142 ns** | **941.392 ns** | **1.000** | **1320 B** |
+| 3 | System.CommandLine | 3,672.458 ns | 3,656.365 ns | 3.894 | 4864 B |
+| 4 | Spectre.Console.Cli | 109,217.958 ns | 109,294.233 ns | 115.803 | 45646 B |
 
 ### Cold start (JIT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 358.2 ms | 362.9 ms | 0.93 |
-| 1 | System.CommandLine | 384.9 ms | 383.7 ms | 1.00 |
-| **1** | **AnyCli** | **385.4 ms** | **390.3 ms** | **1.00** |
-| 2 | Spectre.Console.Cli | 503.8 ms | 501.0 ms | 1.31 |
+| 1 | ConsoleAppFramework | 62.51 ms | 62.54 ms | 0.62 |
+| **2** | **AnyCli** | **100.50 ms** | **100.22 ms** | **1.00** |
+| 2 | System.CommandLine | 101.05 ms | 101.10 ms | 1.01 |
+| 3 | Spectre.Console.Cli | 215.81 ms | 215.78 ms | 2.15 |
 
 ### Cold start (NativeAOT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 243.4 ms | 242.0 ms | 0.84 |
-| 2 | System.CommandLine | 276.7 ms | 269.4 ms | 0.96 |
-| **2** | **AnyCli** | **289.4 ms** | **280.6 ms** | **1.00** |
+| 1 | ConsoleAppFramework | 11.58 ms | 11.58 ms | 0.97 |
+| **1** | **AnyCli** | **11.88 ms** | **11.84 ms** | **1.00** |
+| 2 | System.CommandLine | 13.38 ms | 13.36 ms | 1.13 |
 
 _Ranks are BenchmarkDotNet statistical ranks; ties indicate statistically similar results._
 <!-- benchmarks:end -->
