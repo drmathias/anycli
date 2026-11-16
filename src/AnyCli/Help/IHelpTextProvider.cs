@@ -40,6 +40,18 @@ public interface IHelpTextProvider
     string GetOptionsHeading();
 
     /// <summary>
+    /// Gets the localized options placeholder used in usage syntax.
+    /// </summary>
+    /// <returns>The options placeholder.</returns>
+    string GetOptionsPlaceholder();
+
+    /// <summary>
+    /// Gets the localized command placeholder used in usage syntax.
+    /// </summary>
+    /// <returns>The command placeholder.</returns>
+    string GetCommandPlaceholder();
+
+    /// <summary>
     /// Gets a localized description for a command, option, or argument.
     /// </summary>
     /// <param name="context">The description context.</param>

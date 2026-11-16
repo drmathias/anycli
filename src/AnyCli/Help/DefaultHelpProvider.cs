@@ -34,9 +34,10 @@ public sealed class DefaultHelpProvider : IHelpProvider
 
         var output = context.Console.Output;
         var hasCommands = context.Commands.Count > 0;
+        var options = GetOptionsUsage();
         var usage = hasCommands
-            ? $"{context.AppName} [OPTIONS] <COMMAND>"
-            : $"{context.AppName} [OPTIONS]";
+            ? $"{context.AppName} {options} {GetCommandUsage()}"
+            : $"{context.AppName} {options}";
 
         WriteUsage(output, _textProvider.GetUsageHeading(), usage);
 
@@ -108,7 +109,7 @@ public sealed class DefaultHelpProvider : IHelpProvider
         return ValueTask.CompletedTask;
     }
 
-    private static string CreateCommandUsage(string appName, CommandInfo command)
+    private string CreateCommandUsage(string appName, CommandInfo command)
     {
         var parts = new List<string>(5)
         {
@@ -121,15 +122,21 @@ public sealed class DefaultHelpProvider : IHelpProvider
             parts.Add(GetArgumentSyntax(argument));
         }
 
-        parts.Add("[OPTIONS]");
+        parts.Add(GetOptionsUsage());
 
         if (command.Children.Count > 0)
         {
-            parts.Add("<COMMAND>");
+            parts.Add(GetCommandUsage());
         }
 
         return string.Join(' ', parts);
     }
+
+    private string GetOptionsUsage() =>
+        $"[{_textProvider.GetOptionsPlaceholder()}]";
+
+    private string GetCommandUsage() =>
+        $"<{_textProvider.GetCommandPlaceholder()}>";
 
     private static string GetArgumentSyntax(ArgumentInfo argument)
     {

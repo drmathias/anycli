@@ -79,7 +79,7 @@ public class DefaultHelpProviderTests
     private const string ExpectedSpanishRootHelp =
         """
         Uso:
-            anycli [OPTIONS] <COMMAND>
+            anycli [OPCIONES] <COMANDO>
 
         Opciones:
             -h, --help     Muestra la información de ayuda
@@ -96,7 +96,7 @@ public class DefaultHelpProviderTests
             Ejecuta el comando
 
         Uso:
-            anycli run <input> [OPTIONS]
+            anycli run <input> [OPCIONES]
 
         Argumentos:
             <input>  Archivo de entrada

@@ -35,6 +35,16 @@ public static class HelpTextResourceKeys
     public const string Options = nameof(Options);
 
     /// <summary>
+    /// The options placeholder in usage syntax.
+    /// </summary>
+    public const string OptionsPlaceholder = nameof(OptionsPlaceholder);
+
+    /// <summary>
+    /// The command placeholder in usage syntax.
+    /// </summary>
+    public const string CommandPlaceholder = nameof(CommandPlaceholder);
+
+    /// <summary>
     /// The built-in help option description.
     /// </summary>
     public const string HelpOptionDescription = nameof(HelpOptionDescription);

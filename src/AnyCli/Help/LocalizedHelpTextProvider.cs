@@ -57,6 +57,12 @@ public class LocalizedHelpTextProvider : IHelpTextProvider
     public string GetOptionsHeading() => Format(HelpTextResourceKeys.Options);
 
     /// <inheritdoc/>
+    public string GetOptionsPlaceholder() => Format(HelpTextResourceKeys.OptionsPlaceholder);
+
+    /// <inheritdoc/>
+    public string GetCommandPlaceholder() => Format(HelpTextResourceKeys.CommandPlaceholder);
+
+    /// <inheritdoc/>
     public virtual string GetDescription(HelpDescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);

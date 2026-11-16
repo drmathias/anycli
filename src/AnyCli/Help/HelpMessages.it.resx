@@ -73,6 +73,12 @@
   <data name="Options" xml:space="preserve">
     <value>Opzioni</value>
   </data>
+  <data name="OptionsPlaceholder" xml:space="preserve">
+    <value>OPZIONI</value>
+  </data>
+  <data name="CommandPlaceholder" xml:space="preserve">
+    <value>COMANDO</value>
+  </data>
   <data name="HelpOptionDescription" xml:space="preserve">
     <value>Mostra le informazioni di aiuto</value>
   </data>

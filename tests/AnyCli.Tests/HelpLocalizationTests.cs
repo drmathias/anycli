@@ -158,6 +158,34 @@ public class HelpLocalizationTests
         }
     }
 
+    [Test]
+    public async Task HelpResources_ContainUsagePlaceholderTranslations()
+    {
+        var resources = new System.Resources.ResourceManager(
+            "AnyCli.Help.HelpMessages",
+            typeof(LocalizedHelpTextProvider).Assembly);
+
+        var expected = new Dictionary<string, (string Options, string Command)>(StringComparer.Ordinal)
+        {
+            ["fr"] = ("OPTIONS", "COMMANDE"),
+            ["de"] = ("OPTIONEN", "BEFEHL"),
+            ["es"] = ("OPCIONES", "COMANDO"),
+            ["pt-BR"] = ("OPÇÕES", "COMANDO"),
+            ["it"] = ("OPZIONI", "COMANDO"),
+            ["nl"] = ("OPTIES", "OPDRACHT"),
+        };
+
+        foreach (var (cultureName, expectedPlaceholders) in expected)
+        {
+            var culture = System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+            var options = resources.GetString("OptionsPlaceholder", culture);
+            var command = resources.GetString("CommandPlaceholder", culture);
+
+            await Assert.That(options).IsEqualTo(expectedPlaceholders.Options);
+            await Assert.That(command).IsEqualTo(expectedPlaceholders.Command);
+        }
+    }
+
     private sealed class NoOpCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context) => 0;
