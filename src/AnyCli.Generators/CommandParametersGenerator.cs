@@ -29,6 +29,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private const string ParameterParserInterfaceName = "IParameterParser`1";
     private const string ParsableInterfaceName = "IParsable`1";
     private const string SpanParsableInterfaceName = "ISpanParsable`1";
+    private const string SetsRequiredMembersAttributeName =
+        "System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute";
 
     private static readonly DiagnosticDescriptor UnsupportedParameterTypeDiagnostic = new(
         id: "ANYCLI001",
@@ -282,6 +284,30 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         var globalOptions = new List<OptionModel>();
         var optionNames = new HashSet<string>(StringComparer.Ordinal);
         var diagnostics = new List<DiagnosticModel>();
+        var parameterlessConstructors = type.InstanceConstructors
+            .Where(constructor =>
+                constructor.Parameters.Length == 0 &&
+                !constructor.IsStatic &&
+                compilation.IsSymbolAccessibleWithin(constructor, type, type))
+            .ToArray();
+        var hasParameterlessConstructor = parameterlessConstructors.Length > 0;
+        var hasRequiredMembers = HasRequiredMembers(type);
+        var hasSetsRequiredMembersConstructor = parameterlessConstructors.Any(
+            HasSetsRequiredMembersAttribute);
+        var hasExplicitParameterlessConstructor = parameterlessConstructors.Any(
+            constructor => !constructor.IsImplicitlyDeclared);
+        var needsSetsRequiredMembersConstructor =
+            hasRequiredMembers &&
+            !hasSetsRequiredMembersConstructor &&
+            !hasExplicitParameterlessConstructor;
+        if (hasRequiredMembers &&
+            (!hasParameterlessConstructor ||
+             (hasExplicitParameterlessConstructor && !hasSetsRequiredMembersConstructor)))
+        {
+            return null;
+        }
+
+        var supportsInitOnly = hasParameterlessConstructor;
         if (isGlobalOptions && ImplementsParametersInterface(type))
         {
             diagnostics.Add(new DiagnosticModel(
@@ -292,15 +318,16 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         foreach (var property in GetParameterProperties(type, compilation))
         {
-            if (property.SetMethod is null || property.SetMethod.IsInitOnly)
-            {
-                return null;
-            }
+            var parameterAttributes = GetParameterAttributes(property);
+            if (parameterAttributes.Count == 0) continue;
+
+            if (property.SetMethod is null ||
+                (property.SetMethod.IsInitOnly && !supportsInitOnly)) return null;
 
             var isGlobalOptionProperty = globalOptionsBase is not null &&
                 IsDeclaredInTypeOrBase(globalOptionsBase, property.ContainingType);
 
-            foreach (var attribute in GetParameterAttributes(property))
+            foreach (var attribute in parameterAttributes)
             {
                 var attributeName = attribute.AttributeClass?.ToDisplayString();
                 if (attributeName == OptionAttributeName ||
@@ -532,6 +559,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     name,
                     description,
                     property.Name,
+                    property.SetMethod!.IsInitOnly,
                     position,
                     optional,
                     isVariadic,
@@ -560,6 +588,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 GetAccessibility(type.DeclaredAccessibility),
                 type.IsSealed,
                 type.IsRecord,
+                needsSetsRequiredMembersConstructor,
                 isGlobalOptions,
                 ImplementsGlobalOptionsInterface(type),
                 ImplementsParametersInterface(type),
@@ -822,6 +851,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             aliases,
             description,
             property.Name,
+            property.SetMethod!.IsInitOnly,
             required,
             isFlag,
             isCollection,
@@ -1366,6 +1396,27 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 currentInterface.TypeArguments.Length == 1 &&
                 SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], type));
 
+    private static bool HasRequiredMembers(INamedTypeSymbol type)
+    {
+        for (var current = type;
+             current is not null && current.SpecialType != SpecialType.System_Object;
+             current = current.BaseType)
+        {
+            if (current.GetMembers().Any(member =>
+                    member is IPropertySymbol { IsRequired: true } ||
+                    member is IFieldSymbol { IsRequired: true }))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasSetsRequiredMembersAttribute(IMethodSymbol constructor) =>
+        constructor.GetAttributes().Any(attribute =>
+            attribute.AttributeClass?.ToDisplayString() == SetsRequiredMembersAttributeName);
+
     private static bool HasGlobalOptionsAttribute(INamedTypeSymbol type) =>
         type.GetAttributes().Any(
             attribute => attribute.AttributeClass?.ToDisplayString() == GlobalOptionsAttributeName);
@@ -1469,6 +1520,25 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         source.AppendLine();
         source.Append(indent).AppendLine("{");
 
+        if (model.NeedsSetsRequiredMembersConstructor)
+        {
+            EmitSetsRequiredMembersConstructor(source, indent, model);
+        }
+
+        var hasInitOnlyProperties =
+            model.Arguments.Any(argument => argument.IsInitOnly) ||
+            model.GlobalOptions.Any(option => option.IsInitOnly) ||
+            model.Options.Any(option => option.IsInitOnly);
+        var useInitializerTargets = !model.IsRecord && hasInitOnlyProperties;
+        var initializerProperties = new List<string>();
+        var initializerLocals = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (useInitializerTargets)
+        {
+            AddInitializerTargets(initializerProperties, initializerLocals, model.Arguments.Select(argument => argument.PropertyName));
+            AddInitializerTargets(initializerProperties, initializerLocals, model.GlobalOptions.Select(option => option.PropertyName));
+            AddInitializerTargets(initializerProperties, initializerLocals, model.Options.Select(option => option.PropertyName));
+        }
+
         if (model.IsGlobalOptions)
         {
             source.Append(indent).AppendLine("    public static void Configure(global::AnyCli.Parameters.Options.GlobalOptionBuilder options)");
@@ -1482,15 +1552,35 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 .Append(model.FullTypeName)
                 .AppendLine(" Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
             source.Append(indent).AppendLine("    {");
-            source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
+            if (useInitializerTargets)
+            {
+                EmitInitializerPreamble(
+                    source,
+                    indent,
+                    model,
+                    initializerProperties,
+                    initializerLocals);
+            }
+            else
+            {
+                source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
+            }
+
             EmitOptionBindings(
                 source,
                 indent,
                 model.Options,
                 "values",
                 0,
-                "global::AnyCli.Errors.ParameterSource.GlobalOption");
-            source.Append(indent).AppendLine("        return parameters;");
+                "global::AnyCli.Errors.ParameterSource.GlobalOption",
+                useInitializerTargets ? initializerLocals : null);
+            EmitBindResult(
+                source,
+                indent,
+                model,
+                useInitializerTargets,
+                initializerProperties,
+                initializerLocals);
             source.Append(indent).AppendLine("    }");
             source.Append(indent).AppendLine("}");
 
@@ -1565,7 +1655,19 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             .Append(indent)
             .AppendLine("        global::AnyCli.Parameters.Options.CommandOptionValues globalOptionValues)");
         source.Append(indent).AppendLine("    {");
-        source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
+        if (useInitializerTargets)
+        {
+            EmitInitializerPreamble(
+                source,
+                indent,
+                model,
+                initializerProperties,
+                initializerLocals);
+        }
+        else
+        {
+            source.Append(indent).Append("        var parameters = new ").Append(model.FullTypeName).AppendLine("();");
+        }
 
         var localIndex = 0;
         foreach (var argument in model.Arguments)
@@ -1624,30 +1726,32 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         "global::AnyCli.Errors.ParameterSource.Argument"))
                     .AppendLine(";");
                 source.Append(indent).AppendLine("        }");
-                source.Append(indent)
-                    .Append("        parameters.")
-                    .Append(argument.PropertyName)
-                    .Append(" = ")
-                    .Append(GetCollectionExpression(
+                EmitAssignment(
+                    source,
+                    indent,
+                    argument.PropertyName,
+                    argument.IsInitOnly,
+                    GetCollectionExpression(
                         argument.CollectionKind,
                         argument.ElementTypeFullName,
-                        valuesLocal))
-                    .AppendLine(";");
+                        valuesLocal),
+                    GetInitializerLocal(initializerLocals, argument.PropertyName));
 
                 if (argument.DefaultValueExpression is not null)
                 {
                     source.Append(indent).AppendLine("        }");
                     source.Append(indent).AppendLine("        else");
                     source.Append(indent).AppendLine("        {");
-                    source.Append(indent)
-                        .Append("        parameters.")
-                        .Append(argument.PropertyName)
-                        .Append(" = ")
-                        .Append(GetCollectionExpression(
+                    EmitAssignment(
+                        source,
+                        indent,
+                        argument.PropertyName,
+                        argument.IsInitOnly,
+                        GetCollectionExpression(
                             argument.CollectionKind,
                             argument.ElementTypeFullName,
-                            argument.DefaultValueExpression))
-                        .AppendLine(";");
+                            argument.DefaultValueExpression),
+                        GetInitializerLocal(initializerLocals, argument.PropertyName));
                     source.Append(indent).AppendLine("        }");
                 }
             }
@@ -1661,43 +1765,46 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .Append(rawLocal)
                     .AppendLine("))");
                 source.Append(indent).AppendLine("        {");
-                source.Append(indent)
-                    .Append("            parameters.")
-                    .Append(argument.PropertyName)
-                    .Append(" = ")
-                    .Append(GetParseExpression(
+                EmitAssignment(
+                    source,
+                    indent,
+                    argument.PropertyName,
+                    argument.IsInitOnly,
+                    GetParseExpression(
                         argument.ParsePlan,
                         rawLocal + "!",
                         literalName,
-                        "global::AnyCli.Errors.ParameterSource.Argument"))
-                    .AppendLine(";");
+                        "global::AnyCli.Errors.ParameterSource.Argument"),
+                    GetInitializerLocal(initializerLocals, argument.PropertyName));
                 source.Append(indent).AppendLine("        }");
 
                 if (argument.DefaultValueExpression is not null)
                 {
                     source.Append(indent).AppendLine("        else");
                     source.Append(indent).AppendLine("        {");
-                    source.Append(indent)
-                        .Append("            parameters.")
-                        .Append(argument.PropertyName)
-                        .Append(" = ")
-                        .Append(argument.DefaultValueExpression)
-                        .AppendLine(";");
+                    EmitAssignment(
+                        source,
+                        indent,
+                        argument.PropertyName,
+                        argument.IsInitOnly,
+                        argument.DefaultValueExpression,
+                        GetInitializerLocal(initializerLocals, argument.PropertyName));
                     source.Append(indent).AppendLine("        }");
                 }
             }
             else
             {
-                source.Append(indent)
-                    .Append("        parameters.")
-                    .Append(argument.PropertyName)
-                    .Append(" = ")
-                    .Append(GetParseExpression(
+                EmitAssignment(
+                    source,
+                    indent,
+                    argument.PropertyName,
+                    argument.IsInitOnly,
+                    GetParseExpression(
                         argument.ParsePlan,
                         "parameterValues.Arguments.GetRequired(" + literalName + ")",
                         literalName,
-                        "global::AnyCli.Errors.ParameterSource.Argument"))
-                    .AppendLine(";");
+                        "global::AnyCli.Errors.ParameterSource.Argument"),
+                    GetInitializerLocal(initializerLocals, argument.PropertyName));
             }
 
             localIndex++;
@@ -1709,7 +1816,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             model.GlobalOptions,
             "globalOptionValues",
             localIndex,
-            "global::AnyCli.Errors.ParameterSource.GlobalOption");
+            "global::AnyCli.Errors.ParameterSource.GlobalOption",
+            useInitializerTargets ? initializerLocals : null);
         localIndex += model.GlobalOptions.Count;
         EmitOptionBindings(
             source,
@@ -1717,9 +1825,16 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             model.Options,
             "parameterValues.Options",
             localIndex,
-            "global::AnyCli.Errors.ParameterSource.Option");
+            "global::AnyCli.Errors.ParameterSource.Option",
+            useInitializerTargets ? initializerLocals : null);
 
-        source.Append(indent).AppendLine("        return parameters;");
+        EmitBindResult(
+            source,
+            indent,
+            model,
+            useInitializerTargets,
+            initializerProperties,
+            initializerLocals);
         source.Append(indent).AppendLine("    }");
         source.Append(indent).AppendLine("}");
 
@@ -1816,18 +1931,149 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         }
     }
 
+    private static void EmitSetsRequiredMembersConstructor(
+        StringBuilder source,
+        string indent,
+        ParametersModel model)
+    {
+        source.AppendLine("#pragma warning disable CS8618");
+        source.Append(indent).AppendLine("    [global::System.Diagnostics.CodeAnalysis.SetsRequiredMembers]");
+        source.Append(indent).Append("    public ").Append(model.TypeName).AppendLine("()");
+        source.Append(indent).AppendLine("    {");
+        source.Append(indent).AppendLine("    }");
+        source.AppendLine("#pragma warning restore CS8618");
+        source.AppendLine();
+    }
+
+    private static void AddInitializerTargets(
+        List<string> properties,
+        Dictionary<string, string> locals,
+        IEnumerable<string> propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            if (locals.ContainsKey(propertyName))
+            {
+                continue;
+            }
+
+            locals.Add(propertyName, "__value" + locals.Count);
+            properties.Add(propertyName);
+        }
+    }
+
+    private static void EmitInitializerPreamble(
+        StringBuilder source,
+        string indent,
+        ParametersModel model,
+        IReadOnlyList<string> properties,
+        IReadOnlyDictionary<string, string> locals)
+    {
+        source.Append(indent)
+            .Append("        var __defaults = new ")
+            .Append(model.FullTypeName)
+            .AppendLine("();");
+
+        foreach (var property in properties)
+        {
+            source.Append(indent)
+                .Append("        var ")
+                .Append(locals[property])
+                .Append(" = __defaults.")
+                .Append(property)
+                .AppendLine(";");
+        }
+    }
+
+    private static string? GetInitializerLocal(
+        IReadOnlyDictionary<string, string>? locals,
+        string propertyName) =>
+        locals is not null && locals.TryGetValue(propertyName, out var local)
+            ? local
+            : null;
+
+    private static void EmitBindResult(
+        StringBuilder source,
+        string indent,
+        ParametersModel model,
+        bool useInitializerTargets,
+        IReadOnlyList<string> properties,
+        IReadOnlyDictionary<string, string> locals)
+    {
+        if (!useInitializerTargets)
+        {
+            source.Append(indent).AppendLine("        return parameters;");
+            return;
+        }
+
+        source.Append(indent)
+            .Append("        return new ")
+            .Append(model.FullTypeName)
+            .AppendLine();
+        source.Append(indent).AppendLine("        {");
+
+        foreach (var property in properties)
+        {
+            source.Append(indent)
+                .Append("            ")
+                .Append(property)
+                .Append(" = ")
+                .Append(locals[property])
+                .AppendLine(",");
+        }
+
+        source.Append(indent).AppendLine("        };");
+    }
+
+    private static void EmitAssignment(
+        StringBuilder source,
+        string indent,
+        string propertyName,
+        bool isInitOnly,
+        string valueExpression,
+        string? initializerLocal = null)
+    {
+        source.Append(indent).Append("        ");
+
+        if (initializerLocal is not null)
+        {
+            source.Append(initializerLocal)
+                .Append(" = ")
+                .Append(valueExpression)
+                .AppendLine(";");
+        }
+        else if (isInitOnly)
+        {
+            source.Append("parameters = parameters with { ")
+                .Append(propertyName)
+                .Append(" = ")
+                .Append(valueExpression)
+                .AppendLine(" };");
+        }
+        else
+        {
+            source.Append("parameters.")
+                .Append(propertyName)
+                .Append(" = ")
+                .Append(valueExpression)
+                .AppendLine(";");
+        }
+    }
+
     private static void EmitOptionBindings(
         StringBuilder source,
         string indent,
         IReadOnlyList<OptionModel> options,
         string valuesExpression,
         int localIndex,
-        string parameterSource)
+        string parameterSource,
+        IReadOnlyDictionary<string, string>? initializerLocals = null)
     {
         foreach (var option in options)
         {
             var literalName = SymbolDisplay.FormatLiteral(option.Name, true);
             var rawLocal = "__raw" + localIndex;
+            var initializerLocal = GetInitializerLocal(initializerLocals, option.PropertyName);
 
             if (option.IsCollection)
             {
@@ -1885,30 +2131,32 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         parameterSource))
                     .AppendLine(";");
                 source.Append(indent).AppendLine("        }");
-                source.Append(indent)
-                    .Append("        parameters.")
-                    .Append(option.PropertyName)
-                    .Append(" = ")
-                    .Append(GetCollectionExpression(
+                EmitAssignment(
+                    source,
+                    indent,
+                    option.PropertyName,
+                    option.IsInitOnly,
+                    GetCollectionExpression(
                         option.CollectionKind,
                         option.ElementTypeFullName,
-                        valuesLocal))
-                    .AppendLine(";");
+                        valuesLocal),
+                    initializerLocal);
 
                 if (option.DefaultValueExpression is not null)
                 {
                     source.Append(indent).AppendLine("        }");
                     source.Append(indent).AppendLine("        else");
                     source.Append(indent).AppendLine("        {");
-                    source.Append(indent)
-                        .Append("        parameters.")
-                        .Append(option.PropertyName)
-                        .Append(" = ")
-                        .Append(GetCollectionExpression(
+                    EmitAssignment(
+                        source,
+                        indent,
+                        option.PropertyName,
+                        option.IsInitOnly,
+                        GetCollectionExpression(
                             option.CollectionKind,
                             option.ElementTypeFullName,
-                            option.DefaultValueExpression))
-                        .AppendLine(";");
+                            option.DefaultValueExpression),
+                        initializerLocal);
                     source.Append(indent).AppendLine("        }");
                 }
             }
@@ -1923,33 +2171,24 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .Append(rawLocal)
                     .AppendLine("))");
                 source.Append(indent).AppendLine("        {");
-                source.Append(indent)
-                    .Append("            parameters.")
-                    .Append(option.PropertyName)
-                    .Append(" = ");
-
-                if (option.IsFlag)
-                {
-                    source.Append(rawLocal)
-                        .AppendLine(" is null");
-                    source.Append(indent).AppendLine("                ? true");
-                    source.Append(indent).Append("                : ")
-                        .Append(GetParseExpression(
-                            option.ParsePlan,
-                            rawLocal,
-                            literalName,
-                            parameterSource))
-                        .AppendLine(";");
-                }
-                else
-                {
-                    source.Append(GetParseExpression(
+                var valueExpression = option.IsFlag
+                    ? $"({rawLocal} is null ? true : {GetParseExpression(
+                        option.ParsePlan,
+                        rawLocal,
+                        literalName,
+                        parameterSource)})"
+                    : GetParseExpression(
                         option.ParsePlan,
                         rawLocal + "!",
                         literalName,
-                        parameterSource))
-                        .AppendLine(";");
-                }
+                        parameterSource);
+                EmitAssignment(
+                    source,
+                    indent,
+                    option.PropertyName,
+                    option.IsInitOnly,
+                    valueExpression,
+                    initializerLocal);
 
                 source.Append(indent).AppendLine("        }");
 
@@ -1957,12 +2196,13 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 {
                     source.Append(indent).AppendLine("        else");
                     source.Append(indent).AppendLine("        {");
-                    source.Append(indent)
-                        .Append("            parameters.")
-                        .Append(option.PropertyName)
-                        .Append(" = ")
-                        .Append(option.DefaultValueExpression)
-                        .AppendLine(";");
+                    EmitAssignment(
+                        source,
+                        indent,
+                        option.PropertyName,
+                        option.IsInitOnly,
+                        option.DefaultValueExpression,
+                        initializerLocal);
                     source.Append(indent).AppendLine("        }");
                 }
             }
@@ -2054,6 +2294,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         IReadOnlyList<string> aliases,
         string description,
         string propertyName,
+        bool isInitOnly,
         bool required,
         bool isFlag,
         bool isCollection,
@@ -2071,6 +2312,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         public string Description { get; } = description;
 
         public string PropertyName { get; } = propertyName;
+
+        public bool IsInitOnly { get; } = isInitOnly;
 
         public bool Required { get; } = required;
 
@@ -2096,6 +2339,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             string accessibility,
             bool isSealed,
             bool isRecord,
+            bool needsSetsRequiredMembersConstructor,
             bool isGlobalOptions,
             bool implementsGlobalOptionsInterface,
             bool implementsParametersInterface,
@@ -2110,6 +2354,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             Accessibility = accessibility;
             IsSealed = isSealed;
             IsRecord = isRecord;
+            NeedsSetsRequiredMembersConstructor = needsSetsRequiredMembersConstructor;
             IsGlobalOptions = isGlobalOptions;
             ImplementsGlobalOptionsInterface = implementsGlobalOptionsInterface;
             ImplementsParametersInterface = implementsParametersInterface;
@@ -2130,6 +2375,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         public bool IsSealed { get; }
 
         public bool IsRecord { get; }
+
+        public bool NeedsSetsRequiredMembersConstructor { get; }
 
         public bool IsGlobalOptions { get; }
 
@@ -2152,6 +2399,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             string name,
             string description,
             string propertyName,
+            bool isInitOnly,
             int position,
             bool optional,
             bool variadic,
@@ -2166,6 +2414,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             Name = name;
             Description = description;
             PropertyName = propertyName;
+            IsInitOnly = isInitOnly;
             Position = position;
             Optional = optional;
             Variadic = variadic;
@@ -2183,6 +2432,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         public string Description { get; }
 
         public string PropertyName { get; }
+
+        public bool IsInitOnly { get; }
 
         public int Position { get; }
 
