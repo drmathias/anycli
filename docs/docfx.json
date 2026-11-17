@@ -4,8 +4,13 @@
     "content": [
       {
         "files": [
-          "*.md",
-          "*.yml"
+          "**/*.md",
+          "**/*.yml"
+        ],
+        "exclude": [
+          "_site/**",
+          "node_modules/**",
+          "obj/**"
         ]
       }
     ],
@@ -20,11 +25,22 @@
       "_appTitle": "AnyCli Documentation",
       "_appFooter": "Licensed under the MIT license",
       "_enableSearch": true,
+      "_disableToc": false,
+      "_disableAffix": false,
+      "_disableBreadcrumb": true,
+      "_disableNextArticle": true,
       "_gitContribute": {
         "repo": "https://github.com/drmathias/anycli",
         "branch": "main"
       },
       "_lang": "en"
-    }
+    },
+    "resource": [
+      {
+        "files": [
+          "images/**"
+        ]
+      }
+    ]
   }
 }

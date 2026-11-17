@@ -4,3 +4,14 @@
 
 - name: Home
   href: index.md
+- name: Getting Started
+  expanded: true
+  items:
+    - name: Your First CLI App
+      href: getting-started/your-first-cli-app.md
+    - name: Arguments and Options
+      href: getting-started/arguments-and-options.md
+    - name: Styled Output With Spectre.Console
+      href: getting-started/styled-output-with-spectreconsole.md
+    - name: Typed Exit Codes
+      href: getting-started/typed-exit-codes.md
