@@ -87,8 +87,10 @@ Update the app registration to use `ConfigureCommands<FsInspectExitCode>` and se
 ```csharp
 var app = ConsoleAppBuilder.Create()
     .WithName("fsinspect")
+    .ConfigureHelp(help => help
+        .UseSpectreHelp())
     .ConfigureErrorHandling(errors => errors
-        .UseWriter<SpectreCommandErrorWriter>()
+        .UseSpectreErrors()
         .UseExitCode(FsInspectExitCode.CommandLineError))
     .ConfigureCommands<FsInspectExitCode>(commands => commands
         .AddCommand<InspectCommand>("info", "Show information about the current directory")

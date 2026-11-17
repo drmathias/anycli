@@ -38,6 +38,22 @@ public sealed class HelpConfigurationBuilder
     }
 
     /// <summary>
+    /// Registers the factory used to create the help provider.
+    /// </summary>
+    /// <param name="factory">The factory that creates the help provider.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="factory"/> is <see langword="null"/>.
+    /// </exception>
+    public HelpConfigurationBuilder UseProvider(
+        Func<HelpProviderContext, IHelpProvider> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        _builder.UseHelpProviderCore(factory);
+        return this;
+    }
+
+    /// <summary>
     /// Registers the provider used for localized help text.
     /// </summary>
     /// <typeparam name="TProvider">The help text provider type.</typeparam>

@@ -64,15 +64,17 @@ public sealed class PreviewCommand : IAsyncCommand<PreviewParameters>
 
 `context.AnsiConsole.Output` is a Spectre console for standard output. The command builds a table with one row per preview line and writes the finished table. `Markup.Escape` keeps file content from being interpreted as Spectre markup.
 
-## Style command-line errors
+## Use Spectre help and errors
 
-AnyCLI's own command-line errors can use Spectre styling too. Update the app registration:
+Configure the default Spectre help provider and the Spectre error writer together:
 
 ```csharp
 var app = ConsoleAppBuilder.Create()
     .WithName("fsinspect")
+    .ConfigureHelp(help => help
+        .UseSpectreHelp())
     .ConfigureErrorHandling(errors => errors
-        .UseWriter<SpectreCommandErrorWriter>())
+        .UseSpectreErrors())
     .ConfigureCommands(commands => commands
         .AddCommand<InspectCommand>("info", "Show information about the current directory")
         .AddAsyncCommand<PreviewCommand, PreviewParameters>("preview", "Preview the first lines of a file"))

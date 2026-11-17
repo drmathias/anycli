@@ -132,6 +132,22 @@ public sealed class CommandErrorHandlingBuilder
     }
 
     /// <summary>
+    /// Registers the factory used to create the writer for command-line error messages.
+    /// </summary>
+    /// <param name="factory">The factory that creates the error writer.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="factory"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandErrorHandlingBuilder UseWriter(
+        Func<IServiceProvider?, ICommandErrorWriter> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        _builder.UseErrorWriterCore(factory);
+        return this;
+    }
+
+    /// <summary>
     /// Sets the exit code returned after a command-line error is handled.
     /// </summary>
     /// <param name="exitCode">The process exit code.</param>

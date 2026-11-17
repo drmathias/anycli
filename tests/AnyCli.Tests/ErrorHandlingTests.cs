@@ -280,7 +280,10 @@ public class ErrorHandlingTests
             [],
             new UnknownCommandError("nope", []),
             console);
-        var writer = new SpectreCommandErrorWriter(SpectreConsoleOptions.ForTesting);
+        var writer = new SpectreCommandErrorWriter(new SpectreErrorOptions
+        {
+            ConsoleOptions = SpectreConsoleOptions.ForTesting,
+        });
 
         await writer.WriteAsync(context, "Unknown command 'nope'.", CancellationToken.None);
 

@@ -10,10 +10,12 @@ namespace AnyCli.SpectreConsole;
 /// Writes command-line errors using Spectre.Console styling to standard error.
 /// </summary>
 /// <param name="options">
-/// The console options, or <see langword="null"/> to use defaults.
+/// The error output options, or <see langword="null"/> to use defaults.
 /// </param>
-public sealed class SpectreCommandErrorWriter(SpectreConsoleOptions? options = null) : ICommandErrorWriter
+public sealed class SpectreCommandErrorWriter(SpectreErrorOptions? options = null) : ICommandErrorWriter
 {
+    private readonly SpectreErrorOptions _options = options ?? new SpectreErrorOptions();
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SpectreCommandErrorWriter"/> class.
     /// </summary>
@@ -30,10 +32,12 @@ public sealed class SpectreCommandErrorWriter(SpectreConsoleOptions? options = n
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var console = options is null
+        var console = _options.ConsoleOptions is null
             ? context.AnsiConsole.Error
-            : SpectreConsoleAdapter.Create(context.Console.Error, options);
-        console.MarkupLineInterpolated($"[red]{Markup.Escape(message)}[/]");
+            : SpectreConsoleAdapter.Create(context.Console.Error, _options.ConsoleOptions);
+
+        console.Write(new Text(message, _options.ErrorStyle));
+        console.WriteLine();
 
         return ValueTask.CompletedTask;
     }

@@ -21,7 +21,7 @@ public sealed class ConsoleAppBuilder
     private Func<IServiceProvider?, ICommandErrorWriter> _errorWriterFactory =
         static _ => new PlainCommandErrorWriter();
     private IGlobalOptionsDefinition? _globalOptionsDefinition;
-    private Func<IServiceProvider?, IHelpProvider>? _helpProviderFactory;
+    private Func<HelpProviderContext, IHelpProvider>? _helpProviderFactory;
     private Func<IServiceProvider?, IHelpTextProvider>? _helpTextProviderFactory;
     private LocalizationOptions _localization = LocalizationOptions.Default;
     private IServiceProvider? _serviceProvider;
@@ -480,7 +480,12 @@ public sealed class ConsoleAppBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
         where THelpProvider : class, IHelpProvider
     {
-        _helpProviderFactory = serviceProvider => ResolveHelpProvider<THelpProvider>(serviceProvider);
+        _helpProviderFactory = context => ResolveHelpProvider<THelpProvider>(context.ServiceProvider);
+    }
+
+    internal void UseHelpProviderCore(Func<HelpProviderContext, IHelpProvider> factory)
+    {
+        _helpProviderFactory = factory;
     }
 
     internal void UseHelpTextProviderCore<
@@ -559,6 +564,11 @@ public sealed class ConsoleAppBuilder
         _errorWriterFactory = ResolveErrorWriter<TWriter>;
     }
 
+    internal void UseErrorWriterCore(Func<IServiceProvider?, ICommandErrorWriter> factory)
+    {
+        _errorWriterFactory = factory;
+    }
+
     internal void SetErrorExitCodeProvider(Func<CommandErrorContext, int> exitCodeProvider)
     {
         _errorExitCodeProvider = exitCodeProvider;
@@ -601,7 +611,7 @@ public sealed class ConsoleAppBuilder
             globalOptions,
             _globalOptionsDefinition,
             _serviceProvider,
-            _helpProviderFactory ?? CreateDefaultHelpProviderFactory(),
+            CreateHelpProviderFactory(),
             _errorHandlerFactory ?? CreateDefaultErrorHandlerFactory(),
             _errorExitCodeProvider,
             [.. _interceptorFactories]);
@@ -615,12 +625,18 @@ public sealed class ConsoleAppBuilder
         }
     }
 
-    private Func<IServiceProvider?, IHelpProvider> CreateDefaultHelpProviderFactory() =>
-        serviceProvider => new DefaultHelpProvider(
-            _helpTextProviderFactory?.Invoke(serviceProvider) ??
-            new LocalizedHelpTextProvider(
-                descriptionResources: null,
-                _localization));
+    private Func<IServiceProvider?, IHelpProvider> CreateHelpProviderFactory() =>
+        serviceProvider =>
+        {
+            var textProvider = _helpTextProviderFactory?.Invoke(serviceProvider) ??
+                new LocalizedHelpTextProvider(
+                    descriptionResources: null,
+                    _localization);
+
+            return _helpProviderFactory is null
+                ? new DefaultHelpProvider(textProvider)
+                : _helpProviderFactory(new HelpProviderContext(serviceProvider, textProvider));
+        };
 
     private Func<IServiceProvider?, ICommandErrorHandler> CreateDefaultErrorHandlerFactory() =>
         serviceProvider => new DefaultCommandErrorHandler(
