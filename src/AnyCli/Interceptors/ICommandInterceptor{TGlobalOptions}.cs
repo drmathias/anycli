@@ -14,21 +14,21 @@ public interface ICommandInterceptor<TGlobalOptions> : ICommandInterceptor
     /// <summary>
     /// Intercepts command execution.
     /// </summary>
-    /// <param name="context">The command context with typed global options.</param>
+    /// <param name="context">The interceptor context with typed global options.</param>
     /// <param name="next">The next interceptor or the command execution delegate.</param>
     /// <param name="cancellationToken">The cancellation token for the command.</param>
     /// <returns>The command exit code.</returns>
     Task<int> InterceptAsync(
-        CommandContext<TGlobalOptions> context,
+        CommandInterceptorContext<TGlobalOptions> context,
         Func<CancellationToken, Task<int>> next,
         CancellationToken cancellationToken);
 
     Task<int> ICommandInterceptor.InterceptAsync(
-        CommandContext context,
+        CommandInterceptorContext context,
         Func<CancellationToken, Task<int>> next,
         CancellationToken cancellationToken) =>
         InterceptAsync(
-            (CommandContext<TGlobalOptions>)context,
+            (CommandInterceptorContext<TGlobalOptions>)context,
             next,
             cancellationToken);
 }

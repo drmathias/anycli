@@ -151,6 +151,26 @@ public class InterceptorTests
     }
 
     [Test]
+    public async Task Interceptor_ReceivesRawCommandAndParsedParameters()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("todo")
+            .ConfigureCommands(commands => commands
+                .AddCommand<InterceptorContextCommand, InterceptorContextParameters>("run"))
+            .AddInterceptor<ContextCapturingInterceptor>()
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(
+            app,
+            ["run", "Ada Lovelace", "--count", "3", "--tag", "docs", "--tag", "release"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo(
+            "todo run \"Ada Lovelace\" --count 3 --tag docs --tag release|" +
+            "Ada Lovelace|3|docs,release");
+    }
+
+    [Test]
     public async Task Interceptors_DoNotRunForFrameworkLevelOutcomes()
     {
         var app = ConsoleAppBuilder.Create()
@@ -213,7 +233,7 @@ public class InterceptorTests
 
     private sealed class FirstInterceptor : ICommandInterceptor
     {
-        public async Task<int> InterceptAsync(CommandContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
+        public async Task<int> InterceptAsync(CommandInterceptorContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
         {
             context.Console.Output.Write("A>");
             var exitCode = await next(cancellationToken).ConfigureAwait(false);
@@ -224,7 +244,7 @@ public class InterceptorTests
 
     private sealed class SecondInterceptor : ICommandInterceptor
     {
-        public async Task<int> InterceptAsync(CommandContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
+        public async Task<int> InterceptAsync(CommandInterceptorContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
         {
             context.Console.Output.Write("B>");
             var exitCode = await next(cancellationToken).ConfigureAwait(false);
@@ -236,7 +256,7 @@ public class InterceptorTests
     private sealed class CancelDownstreamInterceptor : ICommandInterceptor
     {
         public Task<int> InterceptAsync(
-            CommandContext context,
+            CommandInterceptorContext context,
             Func<CancellationToken, Task<int>> next,
             CancellationToken cancellationToken) =>
             next(new CancellationToken(canceled: true));
@@ -256,7 +276,7 @@ public class InterceptorTests
     private sealed class TokenInterceptor : ICommandInterceptor
     {
         public Task<int> InterceptAsync(
-            CommandContext context,
+            CommandInterceptorContext context,
             Func<CancellationToken, Task<int>> next,
             CancellationToken cancellationToken)
         {
@@ -268,7 +288,7 @@ public class InterceptorTests
     private sealed class GlobalOptionInterceptor : ICommandInterceptor<TestGlobalOptions>
     {
         public Task<int> InterceptAsync(
-            CommandContext<TestGlobalOptions> context,
+            CommandInterceptorContext<TestGlobalOptions> context,
             Func<CancellationToken, Task<int>> next,
             CancellationToken cancellationToken)
         {
@@ -279,7 +299,7 @@ public class InterceptorTests
 
     private sealed class ShortCircuitInterceptor : ICommandInterceptor
     {
-        public Task<int> InterceptAsync(CommandContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
+        public Task<int> InterceptAsync(CommandInterceptorContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
         {
             context.Console.Output.Write("short-circuit");
             return Task.FromResult(7);
@@ -288,14 +308,14 @@ public class InterceptorTests
 
     private sealed class AddTenInterceptor : ICommandInterceptor
     {
-        public async Task<int> InterceptAsync(CommandContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken) =>
+        public async Task<int> InterceptAsync(CommandInterceptorContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken) =>
             await next(cancellationToken).ConfigureAwait(false) + 10;
     }
 
     private sealed class EnumInterceptor : ICommandInterceptorWithExitCode<InterceptorExitCode>
     {
         public async Task<InterceptorExitCode> InterceptAsync(
-            CommandContext context,
+            CommandInterceptorContext context,
             Func<CancellationToken, Task<InterceptorExitCode>> next,
             CancellationToken cancellationToken)
         {
@@ -308,7 +328,7 @@ public class InterceptorTests
 
     private sealed class MarkerInterceptor : ICommandInterceptor
     {
-        public Task<int> InterceptAsync(CommandContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
+        public Task<int> InterceptAsync(CommandInterceptorContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
         {
             context.Console.Output.Write("intercepted");
             return next(cancellationToken);
@@ -319,7 +339,7 @@ public class InterceptorTests
 
     private sealed class InjectedInterceptor(InterceptorService service) : ICommandInterceptor
     {
-        public Task<int> InterceptAsync(CommandContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
+        public Task<int> InterceptAsync(CommandInterceptorContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
         {
             context.Console.Output.Write($"{service.Message}|");
             return next(cancellationToken);
@@ -331,6 +351,30 @@ public class InterceptorTests
         None = 0,
         Succeeded = 1,
         Failed = 4,
+    }
+
+    private sealed class InterceptorContextCommand : ICommand<InterceptorContextParameters>
+    {
+        public int Execute(CommandContext context, InterceptorContextParameters parameters) => 0;
+    }
+
+    private sealed class ContextCapturingInterceptor : ICommandInterceptor
+    {
+        public Task<int> InterceptAsync(
+            CommandInterceptorContext context,
+            Func<CancellationToken, Task<int>> next,
+            CancellationToken cancellationToken)
+        {
+            var tags = context.ParsedOptions.TryGetValue("--tag", out var parsedTagOption)
+                && parsedTagOption is IReadOnlyList<string> tagValues
+                    ? string.Join(",", tagValues)
+                    : "";
+
+            context.Console.Output.Write(
+                $"{context.RawCommand}|{context.ParsedArguments["name"]}|{context.ParsedOptions["--count"]}|{tags}");
+
+            return next.Invoke(cancellationToken);
+        }
     }
 
     private sealed class NoopHelpProvider : IHelpProvider
@@ -351,4 +395,16 @@ public class InterceptorTests
             return ValueTask.CompletedTask;
         }
     }
+}
+
+public sealed partial record InterceptorContextParameters
+{
+    [Argument(0)]
+    public string Name { get; set; } = "";
+
+    [Option("--count")]
+    public int Count { get; set; }
+
+    [Option("--tag")]
+    public string[] Tags { get; set; } = [];
 }

@@ -23,6 +23,19 @@ public sealed class CommandOptionValues
         _defaults = defaults ?? EmptyDefaults;
     }
 
+    internal IReadOnlyDictionary<string, object?> ToDictionary()
+    {
+        var values = new Dictionary<string, object?>(
+            _defaults.Count + _values.Count,
+            StringComparer.Ordinal);
+
+        foreach (var (name, option) in _defaults) values[name] = GetValue(option);
+
+        foreach (var (name, option) in _values) values[name] = GetValue(option);
+
+        return values;
+    }
+
     /// <summary>
     /// Gets a value indicating whether the option was supplied.
     /// </summary>
@@ -74,6 +87,14 @@ public sealed class CommandOptionValues
             ? option.Values
             : _defaults.TryGetValue(normalizedName, out option) ? option.Values : [];
     }
+
+    private static object? GetValue(OptionValue option) =>
+        option.Values.Count switch
+        {
+            0 => true,
+            1 => option.Values[0],
+            _ => option.Values,
+        };
 
     private static string NormalizeName(string name)
     {

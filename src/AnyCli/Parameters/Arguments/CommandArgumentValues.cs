@@ -23,6 +23,9 @@ public sealed class CommandArgumentValues
         _supplied = supplied;
     }
 
+    internal IReadOnlyDictionary<string, object?> ToDictionary() =>
+        new Dictionary<string, object?>(_values, StringComparer.Ordinal);
+
     /// <summary>
     /// Gets the value of a required argument.
     /// </summary>

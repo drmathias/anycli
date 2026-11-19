@@ -10,6 +10,12 @@ internal interface IGlobalOptionsDefinition
         IReadOnlyList<string> commandPath,
         IConsole console,
         CommandOptionValues values);
+
+    CommandInterceptorContext CreateInterceptorContext(
+        CommandContext context,
+        string rawCommand,
+        IReadOnlyDictionary<string, object?> parsedArguments,
+        IReadOnlyDictionary<string, object?> parsedOptions);
 }
 
 internal sealed class GlobalOptionsDefinition<TGlobalOptions> : IGlobalOptionsDefinition
@@ -23,4 +29,15 @@ internal sealed class GlobalOptionsDefinition<TGlobalOptions> : IGlobalOptionsDe
             commandPath,
             console,
             TGlobalOptions.Bind(values));
+
+    public CommandInterceptorContext CreateInterceptorContext(
+        CommandContext context,
+        string rawCommand,
+        IReadOnlyDictionary<string, object?> parsedArguments,
+        IReadOnlyDictionary<string, object?> parsedOptions) =>
+        new CommandInterceptorContext<TGlobalOptions>(
+            (CommandContext<TGlobalOptions>)context,
+            rawCommand,
+            parsedArguments,
+            parsedOptions);
 }

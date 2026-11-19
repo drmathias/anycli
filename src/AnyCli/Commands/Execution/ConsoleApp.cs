@@ -394,8 +394,13 @@ public sealed class ConsoleApp
                 cancellationToken).ConfigureAwait(false);
         }
 
+        var interceptorContext = CreateInterceptorContext(
+            context,
+            arguments!,
+            CreateRawCommand(args));
+
         return await ExecuteWithInterceptorsAsync(
-                context,
+                interceptorContext,
                 token => command.Execute.Invoke(
                     _serviceProvider,
                     context,
@@ -406,15 +411,54 @@ public sealed class ConsoleApp
             .ConfigureAwait(false);
     }
 
-    private Task<int> ExecuteWithInterceptorsAsync(
+    private CommandInterceptorContext CreateInterceptorContext(
         CommandContext context,
+        ParsedCommandParameters parameters,
+        string rawCommand)
+    {
+        var parsedArguments = parameters.Arguments.ToDictionary();
+        var parsedOptions = parameters.Options.ToDictionary();
+
+        return _globalOptionsDefinition is null
+            ? new CommandInterceptorContext(
+                context,
+                rawCommand,
+                parsedArguments,
+                parsedOptions)
+            : _globalOptionsDefinition.CreateInterceptorContext(
+                context,
+                rawCommand,
+                parsedArguments,
+                parsedOptions);
+    }
+
+    private string CreateRawCommand(string[] args)
+    {
+        var parts = new List<string>(args.Length + 1);
+
+        if (!string.IsNullOrEmpty(_name)) parts.Add(_name);
+
+        foreach (var arg in args) parts.Add(QuoteRawCommandArgument(arg));
+
+        return string.Join(' ', parts);
+    }
+
+    private static string QuoteRawCommandArgument(string value)
+    {
+        return value.Length > 0 &&
+            !value.Any(char.IsWhiteSpace) &&
+            !value.Contains('"') &&
+            !value.Contains('\\')
+            ? value
+            : $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"";
+    }
+
+    private Task<int> ExecuteWithInterceptorsAsync(
+        CommandInterceptorContext context,
         Func<CancellationToken, Task<int>> next,
         CancellationToken cancellationToken)
     {
-        if (_interceptorFactories.Count == 0)
-        {
-            return next(cancellationToken);
-        }
+        if (_interceptorFactories.Count == 0) return next.Invoke(cancellationToken);
 
         var interceptors = new ICommandInterceptor[_interceptorFactories.Count];
         for (var index = 0; index < interceptors.Length; index++)
@@ -435,7 +479,7 @@ public sealed class ConsoleApp
 
     private static CommandInfo CreateCommandInfo(
         CommandNode node,
-        IReadOnlyList<string> parentPath)
+        List<string> parentPath)
     {
         var path = new List<string>(parentPath.Count + 1);
         path.AddRange(parentPath);

@@ -16,17 +16,17 @@ public interface ICommandInterceptorWithExitCode<TExitCode> : ICommandIntercepto
     /// <summary>
     /// Intercepts command execution.
     /// </summary>
-    /// <param name="context">The command context.</param>
+    /// <param name="context">The interceptor context.</param>
     /// <param name="next">The next interceptor or the command execution delegate.</param>
     /// <param name="cancellationToken">The cancellation token for the command.</param>
     /// <returns>The command exit code.</returns>
     Task<TExitCode> InterceptAsync(
-        CommandContext context,
+        CommandInterceptorContext context,
         Func<CancellationToken, Task<TExitCode>> next,
         CancellationToken cancellationToken);
 
     async Task<int> ICommandInterceptor.InterceptAsync(
-        CommandContext context,
+        CommandInterceptorContext context,
         Func<CancellationToken, Task<int>> next,
         CancellationToken cancellationToken)
     {
