@@ -6,117 +6,171 @@ SPDX-License-Identifier: MIT
 
 # Typed Exit Codes
 
-`fsinspect` currently uses integer exit codes. In this step, you'll replace them with a shared enum so both commands return the same well-defined set of process exit codes.
+Scripts and automation rely on predictable process exit codes. At the moment `todo` uses integer exit codes, which is straightforward but becomes difficult to maintain as more commands and statuses are added. In this step, you'll replace them with a shared enum and add a `done` command that marks a task as complete.
 
 ## Add the exit code type
 
 Add this enum to the project:
 
 ```csharp
-public enum FsInspectExitCode
+public enum TodoExitCode
 {
     Success = 0,
-    FileNotFound = 1,
+    TaskNotFound = 1,
     CommandLineError = 2,
 }
 ```
 
 The enum values are the process exit codes returned by the application.
 
-## Update InspectCommand
+## Update ListCommand
 
-Change `InspectCommand` to use `NoParametersCommand<FsInspectExitCode>` and return the enum:
-
-```csharp
-public sealed class InspectCommand : NoParametersCommand<FsInspectExitCode>
-{
-    public override FsInspectExitCode Execute(CommandContext context)
-    {
-        var directory = new DirectoryInfo(Environment.CurrentDirectory);
-
-        context.Console.Output.WriteLine($"Path:   {directory.FullName}");
-        context.Console.Output.WriteLine($"Name:   {directory.Name}");
-        context.Console.Output.WriteLine($"Parent: {directory.Parent?.FullName ?? "(none)"}");
-
-        return FsInspectExitCode.Success;
-    }
-}
-```
-
-## Update PreviewCommand
-
-Change `PreviewCommand` to implement `IAsyncCommand<PreviewParameters, FsInspectExitCode>`. Replace `return 1` with `return FsInspectExitCode.FileNotFound` and return `FsInspectExitCode.Success` at the end:
+Change `ListCommand` to use `NoParametersCommand<TodoExitCode>` and return the enum:
 
 ```csharp
-public sealed class PreviewCommand : IAsyncCommand<PreviewParameters, FsInspectExitCode>
+public sealed class ListCommand : NoParametersAsyncCommand<TodoExitCode>
 {
-    public async Task<FsInspectExitCode> ExecuteAsync(
+    public override async Task<TodoExitCode> ExecuteAsync(
         CommandContext context,
-        PreviewParameters parameters,
         CancellationToken cancellationToken)
     {
-        if (!File.Exists(parameters.Path))
+        var tasks = await new TodoStore("todo.json").LoadAsync(cancellationToken);
+
+        if (tasks.Count == 0)
         {
-            context.Console.Error.WriteLine($"File not found: {parameters.Path}");
-            return FsInspectExitCode.FileNotFound;
+            context.Console.Output.WriteLine("No tasks yet.");
+            return TodoExitCode.Success;
         }
 
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .AddColumn("Line")
-            .AddColumn("Text");
+            .AddColumn("ID")
+            .AddColumn("Status")
+            .AddColumn("Priority")
+            .AddColumn("Title");
 
-        var number = 0;
-        await foreach (var line in File.ReadLinesAsync(parameters.Path, cancellationToken))
+        foreach (var task in tasks)
         {
-            if (number == parameters.Lines) break;
-            number++;
-            table.AddRow(number.ToString(), Markup.Escape(line));
+            table.AddRow(
+                task.Id.ToString(),
+                task.IsDone ? "Done" : "Pending",
+                task.Priority.ToString(),
+                Markup.Escape(task.Title));
         }
 
         context.AnsiConsole.Output.Write(table);
-        return FsInspectExitCode.Success;
+        return TodoExitCode.Success;
+    }
+}
+```
+
+## Update AddCommand
+
+Change `AddCommand` to implement `IAsyncCommand<AddParameters, TodoExitCode>` and return `TodoExitCode.Success`:
+
+```csharp
+public sealed class AddCommand : IAsyncCommand<AddParameters, TodoExitCode>
+{
+    public async Task<TodoExitCode> ExecuteAsync(
+        CommandContext context,
+        AddParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var store = new TodoStore("todo.json");
+        var tasks = (await store.LoadAsync(cancellationToken)).ToList();
+        var id = tasks.Count == 0 ? 1 : tasks.Max(task => task.Id) + 1;
+
+        tasks.Add(new TodoItem(id, parameters.Title, parameters.Priority));
+        await store.SaveAsync(tasks, cancellationToken);
+
+        context.Console.Output.WriteLine($"Added task {id}: {parameters.Title}");
+        return TodoExitCode.Success;
+    }
+}
+```
+
+## Add the done command
+
+Add the parameter type and command for marking a task as complete:
+
+```csharp
+public sealed partial record DoneParameters
+{
+    [Argument(0)]
+    public int Id { get; init; }
+}
+
+public sealed class DoneCommand : IAsyncCommand<DoneParameters, TodoExitCode>
+{
+    public async Task<TodoExitCode> ExecuteAsync(
+        CommandContext context,
+        DoneParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var store = new TodoStore("todo.json");
+        var tasks = (await store.LoadAsync(cancellationToken)).ToList();
+        var index = tasks.FindIndex(task => task.Id == parameters.Id);
+
+        if (index < 0)
+        {
+            context.AnsiConsole.Error.MarkupLineInterpolated(
+                $"[red]Task {parameters.Id} was not found.[/]");
+            return TodoExitCode.TaskNotFound;
+        }
+
+        tasks[index] = tasks[index] with { IsDone = true };
+        await store.SaveAsync(tasks, cancellationToken);
+
+        context.AnsiConsole.Output.MarkupLineInterpolated(
+            $"[green]Completed task {parameters.Id}: {Markup.Escape(tasks[index].Title)}[/]");
+        return TodoExitCode.Success;
     }
 }
 ```
 
 ## Register the commands
 
-Update the app registration to use `ConfigureCommands<FsInspectExitCode>` and set the command-line error exit code to `CommandLineError`:
+Update the app registration to use `ConfigureCommands<TodoExitCode>` and set the command-line error exit code to `CommandLineError`:
 
 ```csharp
 var app = ConsoleAppBuilder.Create()
-    .WithName("fsinspect")
+    .WithName("todo")
     .ConfigureHelp(help => help
         .UseSpectreHelp())
     .ConfigureErrorHandling(errors => errors
         .UseSpectreErrors()
-        .UseExitCode(FsInspectExitCode.CommandLineError))
-    .ConfigureCommands<FsInspectExitCode>(commands => commands
-        .AddCommand<InspectCommand>("info", "Show information about the current directory")
-        .AddAsyncCommand<PreviewCommand, PreviewParameters>("preview", "Preview the first lines of a file"))
+        .UseExitCode(TodoExitCode.CommandLineError))
+    .ConfigureCommands<TodoExitCode>(commands => commands
+        .AddAsyncCommand<ListCommand>("list", "List all tasks")
+        .AddAsyncCommand<AddCommand, AddParameters>("add", "Add a task")
+        .AddAsyncCommand<DoneCommand, DoneParameters>("done", "Mark a task as done"))
     .Build();
 ```
 
-`ConfigureCommands<FsInspectExitCode>` requires every registered command to return that enum. `UseExitCode` maps command-line errors to `CommandLineError`, keeping them distinct from the file-not-found result returned by the command.
+`ConfigureCommands<TodoExitCode>` requires every registered command to return that enum. `UseExitCode` maps command-line errors to `CommandLineError`, keeping them distinct from application failures.
 
 ## Run the app
 
-Successful commands return `FsInspectExitCode.Success`, which is exit code `0`:
+Successful commands return `TodoExitCode.Success`, which is exit code `0`:
 
 ```bash
-dotnet run -- info
-dotnet run -- preview sample.txt --lines 2
+dotnet run -- list
+dotnet run -- add "Write docs" --priority high
+dotnet run -- done 1
 ```
 
-A missing file returns `FsInspectExitCode.FileNotFound`, which is exit code `1`:
+![todo done output](../images/todo-done.png)
+
+Marking a task that does not exist returns `TodoExitCode.TaskNotFound`, which is exit code `1`:
 
 ```bash
-dotnet run -- preview missing.txt
+dotnet run -- done 99
 ```
 
-Command-line errors, such as an unknown option, return `CommandLineError`, which is exit code `2`:
+![todo task not found output](../images/todo-not-found.png)
 
-```bash
-dotnet run -- preview sample.txt --bad
-```
+You now have a persisted, styled todo CLI with typed exit codes, help, localization, and structured error handling.
+
+## Next
+
+- [Dependency Injection](dependency-injection.md)

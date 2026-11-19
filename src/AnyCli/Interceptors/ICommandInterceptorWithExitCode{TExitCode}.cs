@@ -34,7 +34,7 @@ public interface ICommandInterceptorWithExitCode<TExitCode> : ICommandIntercepto
             context,
             async token => (TExitCode)Enum.ToObject(
                 typeof(TExitCode),
-                await next(token).ConfigureAwait(false)),
+                await next.Invoke(token).ConfigureAwait(false)),
             cancellationToken).ConfigureAwait(false);
 
         return Convert.ToInt32(result, CultureInfo.InvariantCulture);

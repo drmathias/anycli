@@ -60,7 +60,7 @@ public sealed class ConsoleAppBuilder<TGlobalOptions>
     /// <returns>The current builder.</returns>
     public ConsoleAppBuilder<TGlobalOptions> AddInterceptor<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor>()
-        where TInterceptor : class, ICommandInterceptor<TGlobalOptions>
+        where TInterceptor : class, ICommandInterceptor
     {
         _builder.AddInterceptor<TInterceptor>();
         return this;

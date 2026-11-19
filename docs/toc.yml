@@ -15,3 +15,9 @@
       href: getting-started/styled-output-with-spectreconsole.md
     - name: Typed Exit Codes
       href: getting-started/typed-exit-codes.md
+    - name: Dependency Injection
+      href: getting-started/dependency-injection.md
+    - name: Logging With Interceptors
+      href: getting-started/logging-with-interceptors.md
+    - name: Global Options
+      href: getting-started/global-options.md

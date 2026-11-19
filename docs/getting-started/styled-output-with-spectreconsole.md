@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Styled Output With Spectre.Console
 
-`fsinspect` currently prints the preview as plain text. In this step, you'll render it as a Spectre.Console table and use Spectre styling for command-line errors.
+Currently `todo` prints all output as plain text. In this step, you'll render the task list as a Spectre.Console table and use Spectre styling for help and command-line errors.
 
 ## Add the package
 
@@ -25,35 +25,39 @@ using AnyCli.SpectreConsole;
 using Spectre.Console;
 ```
 
-## Render the preview as a table
+## Render the task list as a table
 
-Replace `PreviewCommand` with this version:
+Replace `ListCommand` with this version:
 
 ```csharp
-public sealed class PreviewCommand : IAsyncCommand<PreviewParameters>
+public sealed class ListCommand : NoParametersAsyncCommand
 {
-    public async Task<int> ExecuteAsync(
+    public override async Task<int> ExecuteAsync(
         CommandContext context,
-        PreviewParameters parameters,
         CancellationToken cancellationToken)
     {
-        if (!File.Exists(parameters.Path))
+        var tasks = await new TodoStore("todo.json").LoadAsync(cancellationToken);
+
+        if (tasks.Count == 0)
         {
-            context.Console.Error.WriteLine($"File not found: {parameters.Path}");
-            return 1;
+            context.Console.Output.WriteLine("No tasks yet.");
+            return 0;
         }
 
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .AddColumn("Line")
-            .AddColumn("Text");
+            .AddColumn("ID")
+            .AddColumn("Status")
+            .AddColumn("Priority")
+            .AddColumn("Title");
 
-        var number = 0;
-        await foreach (var line in File.ReadLinesAsync(parameters.Path, cancellationToken))
+        foreach (var task in tasks)
         {
-            if (number == parameters.Lines) break;
-            number++;
-            table.AddRow(number.ToString(), Markup.Escape(line));
+            table.AddRow(
+                task.Id.ToString(),
+                task.IsDone ? "Done" : "Pending",
+                task.Priority.ToString(),
+                Markup.Escape(task.Title));
         }
 
         context.AnsiConsole.Output.Write(table);
@@ -62,7 +66,7 @@ public sealed class PreviewCommand : IAsyncCommand<PreviewParameters>
 }
 ```
 
-`context.AnsiConsole.Output` is a Spectre console for standard output. The command builds a table with one row per preview line and writes the finished table. `Markup.Escape` keeps file content from being interpreted as Spectre markup.
+`context.AnsiConsole.Output` is a Spectre console for standard output. `Markup.Escape` keeps task titles from being interpreted as Spectre markup.
 
 ## Use Spectre help and errors
 
@@ -70,36 +74,43 @@ Configure the default Spectre help provider and the Spectre error writer togethe
 
 ```csharp
 var app = ConsoleAppBuilder.Create()
-    .WithName("fsinspect")
+    .WithName("todo")
     .ConfigureHelp(help => help
         .UseSpectreHelp())
     .ConfigureErrorHandling(errors => errors
         .UseSpectreErrors())
     .ConfigureCommands(commands => commands
-        .AddCommand<InspectCommand>("info", "Show information about the current directory")
-        .AddAsyncCommand<PreviewCommand, PreviewParameters>("preview", "Preview the first lines of a file"))
+        .AddAsyncCommand<ListCommand>("list", "List all tasks")
+        .AddAsyncCommand<AddCommand, AddParameters>("add", "Add a task"))
     .Build();
 ```
 
-The command still handles its own file-not-found error. AnyCLI errors, such as an unknown option, are now written through the Spectre error writer.
+AnyCLI's own command-line errors, such as an unknown option, are now written through the Spectre error writer.
 
 ## Run the app
 
-Using the `sample.txt` from the previous step, render the first two lines:
+Add a couple of tasks if you have not already done so:
 
 ```bash
-dotnet run -- preview sample.txt --lines 2
+dotnet run -- add "Write docs" --priority high
+dotnet run -- add "Review PR" --priority normal
 ```
 
-![fsinspect preview output rendered as a Spectre.Console table](../images/fsinspect-preview.png)
-
-Command-line errors are also styled:
+List the tasks:
 
 ```bash
-dotnet run -- preview sample.txt --bad
+dotnet run -- list
 ```
 
-![fsinspect command-line error rendered with Spectre.Console styling](../images/fsinspect-error.png)
+![todo task list rendered as a Spectre.Console table](../images/todo-list-table.png)
+
+Command-line errors are styled too:
+
+```bash
+dotnet run -- add "Write docs" --unknown
+```
+
+![todo command-line error rendered with Spectre.Console styling](../images/todo-error.png)
 
 ## Next
 

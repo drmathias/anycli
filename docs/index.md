@@ -14,6 +14,15 @@ SPDX-License-Identifier: MIT
 
 AnyCLI is a typed, performant and Native-AOT ready command-line framework for .NET 10 and 11. At its core it provides command, argument and option parsing, built-in help and structured errors, first-class localization support with out-of-the-box translations for seven languages, provider-agnostic DI support, and so much more.
 
+<table>
+  <tbody>
+    <tr>
+      <td><img src="images/dotexample-help-en.png" alt="English help output for dotexample" width="100%"></td>
+      <td><img src="images/dotexample-spectre-custom-es.png" alt="Spanish help output for dotexample" width="100%"></td>
+    </tr>
+  </tbody>
+</table>
+
 ## Packages
 
 | Package | Version | What it provides |
@@ -49,23 +58,6 @@ AnyCLI is a good fit for:
 - Projects that want Native AOT support without giving up a conventional .NET programming model.
 - Tools that need rich terminal output while keeping a plain-text fallback available.
 
-## Localization, out the box
-
-<table>
-  <thead>
-    <tr>
-      <th>English</th>
-      <th>Spanish</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><img src="images/dotexample-help-en.png" alt="English help output for dotexample" width="100%"></td>
-      <td><img src="images/dotexample-help-es.png" alt="Spanish help output for dotexample" width="100%"></td>
-    </tr>
-  </tbody>
-</table>
-
 ## Features
 
 ### Commands and parameters
@@ -88,9 +80,24 @@ Commands and framework services support dependency injection. Interceptors can r
 
 Help output is available by default and can be replaced. Failures are represented as structured errors, with configurable handlers, messages, output writers, and exit codes.
 
-### Localisation
+### Localization, out the box
 
 Help headings, built-in option descriptions, and error messages are localised for seven languages. Application descriptions can be localised in the same way, and UI and formatting cultures can be configured independently.
+
+<table>
+  <thead>
+    <tr>
+      <th>English</th>
+      <th>Spanish</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="images/dotexample-help-en.png" alt="English help output for dotexample" width="100%"></td>
+      <td><img src="images/dotexample-help-es.png" alt="Spanish help output for dotexample" width="100%"></td>
+    </tr>
+  </tbody>
+</table>
 
 ### Performance and Native AOT
 
@@ -99,6 +106,25 @@ AnyCLI supports Native AOT and trimming. The common parsing and dispatch path is
 ### Spectre.Console adaptor
 
 The optional Spectre.Console adaptor adds rich output, tables, panels, markup, and styled error rendering. Plain console output remains available when rich rendering is not needed.
+
+<table>
+  <thead>
+    <tr>
+      <th>Default styling</th>
+      <th>Custom styling</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><img src="images/dotexample-spectre-default-en.png" alt="English root help with default Spectre.Console styling" width="100%"></td>
+      <td><img src="images/dotexample-spectre-custom-en.png" alt="English root help with custom Spectre.Console styling" width="100%"></td>
+    </tr>
+    <tr>
+      <td><img src="images/dotexample-spectre-default-command-en.png" alt="English command help with default Spectre.Console styling" width="100%"></td>
+      <td><img src="images/dotexample-spectre-custom-command-en.png" alt="English command help with custom Spectre.Console styling" width="100%"></td>
+    </tr>
+  </tbody>
+</table>
 
 ## Next
 

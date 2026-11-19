@@ -6,7 +6,41 @@ SPDX-License-Identifier: MIT
 
 # Arguments and Options
 
-`fsinspect` currently has one command. In this step, you'll add `preview`, which prints the first lines of a file with line numbers. Along the way, you'll see how AnyCLI binds a required positional argument and an option with a default value.
+Users expect to add tasks without editing a data file. Right now, every `todo` task has to be added by editing `todo.json`. In this step, you'll add an async `add` command with a required title argument and a priority option.
+
+## Add task priority
+
+Update `TodoItem` and add a priority enum:
+
+```csharp
+public enum TodoPriority
+{
+    Low,
+    Normal,
+    High,
+}
+
+/// <summary>A persisted task.</summary>
+public sealed record TodoItem(
+    int Id,
+    string Title,
+    TodoPriority Priority,
+    bool IsDone = false);
+```
+
+## Add the save method
+
+Update `TodoStore` with a method that writes tasks asynchronously:
+
+```csharp
+public async Task SaveAsync(
+    IReadOnlyList<TodoItem> tasks,
+    CancellationToken cancellationToken)
+{
+    var json = JsonSerializer.Serialize(tasks);
+    await File.WriteAllTextAsync(path, json, cancellationToken);
+}
+```
 
 ## Add the parameters
 
@@ -16,13 +50,13 @@ Add this parameter type to the project:
 using AnyCli.Parameters.Arguments;
 using AnyCli.Parameters.Options;
 
-public sealed partial record PreviewParameters
+public sealed partial record AddParameters
 {
     [Argument(0)]
-    public required string Path { get; init; }
+    public required string Title { get; init; }
 
-    [Option("--lines", "-n")]
-    public int Lines { get; init; } = 10;
+    [Option("--priority", "-p")]
+    public TodoPriority Priority { get; init; } = TodoPriority.Normal;
 }
 ```
 
@@ -30,32 +64,24 @@ public sealed partial record PreviewParameters
 
 ## Add the command
 
-Add the command below the parameter type:
+Add the async command below the parameter type:
 
 ```csharp
-using AnyCli.Commands.Execution;
-
-public sealed class PreviewCommand : IAsyncCommand<PreviewParameters>
+public sealed class AddCommand : IAsyncCommand<AddParameters>
 {
     public async Task<int> ExecuteAsync(
         CommandContext context,
-        PreviewParameters parameters,
+        AddParameters parameters,
         CancellationToken cancellationToken)
     {
-        if (!File.Exists(parameters.Path))
-        {
-            context.Console.Error.WriteLine($"File not found: {parameters.Path}");
-            return 1;
-        }
+        var store = new TodoStore("todo.json");
+        var tasks = (await store.LoadAsync(cancellationToken)).ToList();
+        var id = tasks.Count == 0 ? 1 : tasks.Max(task => task.Id) + 1;
 
-        var number = 0;
-        await foreach (var line in File.ReadLinesAsync(parameters.Path, cancellationToken))
-        {
-            if (number == parameters.Lines) break;
-            number++;
-            context.Console.Output.WriteLine($"{number}: {line}");
-        }
+        tasks.Add(new TodoItem(id, parameters.Title, parameters.Priority));
+        await store.SaveAsync(tasks, cancellationToken);
 
+        context.Console.Output.WriteLine($"Added task {id}: {parameters.Title}");
         return 0;
     }
 }
@@ -69,10 +95,10 @@ Update the command registration in `Program.cs`:
 
 ```csharp
 var app = ConsoleAppBuilder.Create()
-    .WithName("fsinspect")
+    .WithName("todo")
     .ConfigureCommands(commands => commands
-        .AddCommand<InspectCommand>("info", "Show information about the current directory")
-        .AddAsyncCommand<PreviewCommand, PreviewParameters>("preview", "Preview the first lines of a file"))
+        .AddAsyncCommand<ListCommand>("list", "List all tasks")
+        .AddAsyncCommand<AddCommand, AddParameters>("add", "Add a task"))
     .Build();
 ```
 
@@ -80,36 +106,40 @@ var app = ConsoleAppBuilder.Create()
 
 ## Run the app
 
-Create `sample.txt`:
-
-```text
-the quick brown fox
-jumps over the lazy dog
-the dog barks
-```
-
-Preview the first two lines:
+Add a task:
 
 ```bash
-dotnet run -- preview sample.txt --lines 2
+dotnet run -- add "Write docs" --priority high
 ```
 
-![fsinspect preview output showing two numbered lines](../images/fsinspect-preview-plain.png)
+```text
+Added task 1: Write docs
+```
+
+![todo add output](../images/todo-add-output.png)
 
 The short alias and `=` form work as well:
 
 ```bash
-dotnet run -- preview sample.txt -n 2
-dotnet run -- preview sample.txt --lines=2
+dotnet run -- add "Review PR" -p normal
+dotnet run -- add "Ship release" --priority=high
 ```
 
-When `--lines` is omitted, the command uses the default value of `10`:
+When `--priority` is omitted, the command uses `TodoPriority.Normal`:
 
 ```bash
-dotnet run -- preview sample.txt
+dotnet run -- add "Plan next sprint"
 ```
 
-If the file does not exist, the command writes an error and returns exit code `1`. If the path argument is omitted, AnyCLI reports a structured command-line error and returns exit code `2`.
+Omit the title:
+
+```bash
+dotnet run -- add
+```
+
+![todo missing title argument error](../images/todo-missing-title.png)
+
+AnyCLI reports a structured command-line error and returns exit code `2`.
 
 ## Next
 
