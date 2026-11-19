@@ -21,3 +21,23 @@
       href: getting-started/logging-with-interceptors.md
     - name: Global Options
       href: getting-started/global-options.md
+- name: How-to Guides
+  expanded: true
+  items:
+    - name: Optional and Variadic Arguments
+      href: guides/optional-and-variadic-arguments.md
+    - name: Require an Option
+      href: guides/required-options.md
+    - name: Accept Repeated Options
+      href: guides/repeated-options.md
+    - name: Set Default Values
+      href: guides/default-values.md
+    - name: Parse Custom Value Types
+      href: guides/custom-value-parsers.md
+- name: Reference
+  expanded: true
+  items:
+    - name: Command-line Syntax
+      href: reference/command-line-syntax.md
+    - name: Parameter Attributes
+      href: reference/parameter-attributes.md

@@ -141,6 +141,11 @@ dotnet run -- add
 
 AnyCLI reports a structured command-line error and returns exit code `2`.
 
+## Learn more
+
+- [Define optional and variadic arguments](../guides/optional-and-variadic-arguments.md)
+- [Parameter attributes reference](../reference/parameter-attributes.md)
+
 ## Next
 
 - [Styled Output With Spectre.Console](styled-output-with-spectreconsole.md)
