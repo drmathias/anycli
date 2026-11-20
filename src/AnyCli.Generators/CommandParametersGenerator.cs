@@ -1076,7 +1076,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         return SymbolDisplay.FormatPrimitive(
             actual!,
             quoteStrings: true,
-            useHexadecimalNumbers: false);
+            useHexadecimalNumbers: false)!;
     }
 
     private static bool TryNormalizeOptionName(string? name, out string normalizedName)
