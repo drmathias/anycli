@@ -14,6 +14,8 @@ AnyCli is a source-generated, AOT-friendly command-line framework for .NET with 
 [![.NET 11](https://img.shields.io/badge/.NET-11-512BD4)](https://dotnet.microsoft.com/)
 [![AOT ready](https://img.shields.io/badge/AOT-ready-brightgreen)](https://learn.microsoft.com/dotnet/core/deploying/native-aot/)
 
+Read the [documentation](https://drmathias.github.io/anycli/) for getting started, guides, and the API reference.
+
 ## Philosophy
 
 AnyCli is optimised for both utility and extensibility. It is mildly opinionated and suitable for building almost all types of CLI apps. If your use case isn't supported, please open an issue.
@@ -64,33 +66,33 @@ _Environment: macOS Tahoe 26.2, Intel Core i7-9750H, 12 logical cores, .NET SDK 
 
 | Rank | Framework | Mean | Median | Ratio | Allocated |
 | ---: | --- | ---: | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 9.169 ns | 9.183 ns | 0.008 | 0 B |
-| **2** | **AnyCli** | **1,173.574 ns** | **1,131.228 ns** | **1.000** | **1320 B** |
-| 3 | XenoAtom.CommandLine | 2,683.232 ns | 2,675.898 ns | 2.294 | 2992 B |
-| 4 | System.CommandLine | 4,813.651 ns | 4,553.850 ns | 4.116 | 4848 B |
-| 4 | CliFx | 4,892.083 ns | 4,864.132 ns | 4.183 | 4392 B |
-| 5 | Spectre.Console.Cli | 128,521.274 ns | 128,171.630 ns | 109.886 | 45649 B |
+| 1 | ConsoleAppFramework | 9.034 ns | 8.737 ns | 0.009 | 0 B |
+| **2** | **AnyCli** | **969.983 ns** | **951.020 ns** | **1.000** | **1320 B** |
+| 3 | XenoAtom.CommandLine | 2,234.497 ns | 2,250.428 ns | 2.311 | 2992 B |
+| 4 | System.CommandLine | 3,858.519 ns | 3,907.955 ns | 3.990 | 4848 B |
+| 5 | CliFx | 4,428.909 ns | 4,478.285 ns | 4.580 | 4392 B |
+| 6 | Spectre.Console.Cli | 108,867.854 ns | 108,747.203 ns | 112.592 | 45646 B |
 
 ### Cold start (JIT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 78.96 ms | 78.45 ms | 0.58 |
-| 2 | XenoAtom.CommandLine | 115.64 ms | 115.33 ms | 0.84 |
-| 3 | System.CommandLine | 128.03 ms | 126.91 ms | 0.94 |
-| 3 | CliFx | 132.81 ms | 133.35 ms | 0.97 |
-| **3** | **AnyCli** | **138.65 ms** | **133.86 ms** | **1.00** |
-| 4 | Spectre.Console.Cli | 255.93 ms | 254.91 ms | 1.87 |
+| 1 | ConsoleAppFramework | 62.80 ms | 62.32 ms | 0.56 |
+| **2** | **AnyCli** | **113.17 ms** | **114.48 ms** | **1.00** |
+| 2 | CliFx | 114.59 ms | 115.89 ms | 1.02 |
+| 2 | XenoAtom.CommandLine | 118.06 ms | 117.32 ms | 1.05 |
+| 2 | System.CommandLine | 127.33 ms | 125.16 ms | 1.13 |
+| 3 | Spectre.Console.Cli | 216.18 ms | 216.13 ms | 1.92 |
 
 ### Cold start (NativeAOT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 13.42 ms | 13.38 ms | 0.90 |
-| 1 | XenoAtom.CommandLine | 13.85 ms | 13.96 ms | 0.93 |
-| **1** | **AnyCli** | **15.01 ms** | **14.96 ms** | **1.00** |
-| 1 | System.CommandLine | 15.77 ms | 15.64 ms | 1.06 |
-| 1 | CliFx | 16.19 ms | 14.40 ms | 1.08 |
+| **1** | **AnyCli** | **11.70 ms** | **11.59 ms** | **1.00** |
+| 1 | XenoAtom.CommandLine | 12.22 ms | 11.73 ms | 1.05 |
+| 1 | ConsoleAppFramework | 12.66 ms | 12.62 ms | 1.08 |
+| 1 | CliFx | 13.77 ms | 13.71 ms | 1.18 |
+| 1 | System.CommandLine | 14.05 ms | 13.78 ms | 1.20 |
 
 _Ranks are BenchmarkDotNet statistical ranks; ties indicate statistically similar results._
 <!-- benchmarks:end -->
