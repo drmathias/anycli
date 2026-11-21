@@ -36,11 +36,13 @@ public sealed class ListCommand : NoParametersAsyncCommand
         CommandContext context,
         CancellationToken cancellationToken)
     {
-        var tasks = await new TodoStore("todo.json").LoadAsync(cancellationToken);
+        var tasks = await new TodoStore(TodoStore.DataPath).LoadAsync(cancellationToken);
 
         if (tasks.Count == 0)
         {
-            context.Console.Output.WriteLine("No tasks yet.");
+            context.AnsiConsole.Output.MarkupLine("[yellow]No tasks yet.[/]");
+            context.AnsiConsole.Output.MarkupLine(
+                "[grey]Add one with: todo add \"Write docs\"[/]");
             return 0;
         }
 
@@ -54,19 +56,58 @@ public sealed class ListCommand : NoParametersAsyncCommand
         foreach (var task in tasks)
         {
             table.AddRow(
-                task.Id.ToString(),
-                task.IsDone ? "Done" : "Pending",
-                task.Priority.ToString(),
+                $"[grey]{task.Id}[/]",
+                task.IsDone ? "[green]Done[/]" : "[yellow]Pending[/]",
+                task.Priority switch
+                {
+                    TodoPriority.High => "[red]High[/]",
+                    TodoPriority.Low => "[grey]Low[/]",
+                    _ => "Normal",
+                },
                 Markup.Escape(task.Title));
         }
 
         context.AnsiConsole.Output.Write(table);
+
+        var done = tasks.Count(task => task.IsDone);
+        var pending = tasks.Count - done;
+
+        context.AnsiConsole.Output.MarkupLineInterpolated(
+            $"[grey]{tasks.Count} tasks · {done} done · {pending} pending[/]");
         return 0;
     }
 }
 ```
 
-`context.AnsiConsole.Output` is a Spectre console for standard output. `Markup.Escape` keeps task titles from being interpreted as Spectre markup.
+`context.AnsiConsole.Output` is a Spectre console for standard output. IDs are grey, statuses and priorities use their own colours, and the summary line sits below the table. `Markup.Escape` keeps task titles from being interpreted as Spectre markup.
+
+## Update the add output
+
+`AddCommand` still writes plain text. Update its success message so it follows the same pattern:
+
+```csharp
+public sealed class AddCommand : IAsyncCommand<AddParameters>
+{
+    public async Task<int> ExecuteAsync(
+        CommandContext context,
+        AddParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        var store = new TodoStore(TodoStore.DataPath);
+        var tasks = (await store.LoadAsync(cancellationToken)).ToList();
+        var id = tasks.Count == 0 ? 1 : tasks.Max(task => task.Id) + 1;
+
+        tasks.Add(new TodoItem(id, parameters.Title, parameters.Priority));
+        await store.SaveAsync(tasks, cancellationToken);
+
+        context.AnsiConsole.Output.MarkupLineInterpolated(
+            $"[green]Added task [bold]{id}[/]: {Markup.Escape(parameters.Title)} ({parameters.Priority.ToString().ToLowerInvariant()})[/]");
+        return 0;
+    }
+}
+```
+
+Successful changes are fully green, task IDs are bold, and only secondary hints use grey.
 
 ## Use Spectre help and errors
 

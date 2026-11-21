@@ -34,11 +34,13 @@ public sealed class ListCommand : NoParametersAsyncCommand<TodoExitCode>
         CommandContext context,
         CancellationToken cancellationToken)
     {
-        var tasks = await new TodoStore("todo.json").LoadAsync(cancellationToken);
+        var tasks = await new TodoStore(TodoStore.DataPath).LoadAsync(cancellationToken);
 
         if (tasks.Count == 0)
         {
-            context.Console.Output.WriteLine("No tasks yet.");
+            context.AnsiConsole.Output.MarkupLine("[yellow]No tasks yet.[/]");
+            context.AnsiConsole.Output.MarkupLine(
+                "[grey]Add one with: todo add \"Write docs\"[/]");
             return TodoExitCode.Success;
         }
 
@@ -52,13 +54,24 @@ public sealed class ListCommand : NoParametersAsyncCommand<TodoExitCode>
         foreach (var task in tasks)
         {
             table.AddRow(
-                task.Id.ToString(),
-                task.IsDone ? "Done" : "Pending",
-                task.Priority.ToString(),
+                $"[grey]{task.Id}[/]",
+                task.IsDone ? "[green]Done[/]" : "[yellow]Pending[/]",
+                task.Priority switch
+                {
+                    TodoPriority.High => "[red]High[/]",
+                    TodoPriority.Low => "[grey]Low[/]",
+                    _ => "Normal",
+                },
                 Markup.Escape(task.Title));
         }
 
         context.AnsiConsole.Output.Write(table);
+
+        var done = tasks.Count(task => task.IsDone);
+        var pending = tasks.Count - done;
+
+        context.AnsiConsole.Output.MarkupLineInterpolated(
+            $"[grey]{tasks.Count} tasks · {done} done · {pending} pending[/]");
         return TodoExitCode.Success;
     }
 }
@@ -76,14 +89,15 @@ public sealed class AddCommand : IAsyncCommand<AddParameters, TodoExitCode>
         AddParameters parameters,
         CancellationToken cancellationToken)
     {
-        var store = new TodoStore("todo.json");
+        var store = new TodoStore(TodoStore.DataPath);
         var tasks = (await store.LoadAsync(cancellationToken)).ToList();
         var id = tasks.Count == 0 ? 1 : tasks.Max(task => task.Id) + 1;
 
         tasks.Add(new TodoItem(id, parameters.Title, parameters.Priority));
         await store.SaveAsync(tasks, cancellationToken);
 
-        context.Console.Output.WriteLine($"Added task {id}: {parameters.Title}");
+        context.AnsiConsole.Output.MarkupLineInterpolated(
+            $"[green]Added task [bold]{id}[/]: {Markup.Escape(parameters.Title)} ({parameters.Priority.ToString().ToLowerInvariant()})[/]");
         return TodoExitCode.Success;
     }
 }
@@ -107,7 +121,7 @@ public sealed class DoneCommand : IAsyncCommand<DoneParameters, TodoExitCode>
         DoneParameters parameters,
         CancellationToken cancellationToken)
     {
-        var store = new TodoStore("todo.json");
+        var store = new TodoStore(TodoStore.DataPath);
         var tasks = (await store.LoadAsync(cancellationToken)).ToList();
         var index = tasks.FindIndex(task => task.Id == parameters.Id);
 
@@ -115,6 +129,8 @@ public sealed class DoneCommand : IAsyncCommand<DoneParameters, TodoExitCode>
         {
             context.AnsiConsole.Error.MarkupLineInterpolated(
                 $"[red]Task {parameters.Id} was not found.[/]");
+            context.AnsiConsole.Error.MarkupLine(
+                "[grey]Run 'todo list' to see task IDs.[/]");
             return TodoExitCode.TaskNotFound;
         }
 
@@ -122,7 +138,7 @@ public sealed class DoneCommand : IAsyncCommand<DoneParameters, TodoExitCode>
         await store.SaveAsync(tasks, cancellationToken);
 
         context.AnsiConsole.Output.MarkupLineInterpolated(
-            $"[green]Completed task {parameters.Id}: {Markup.Escape(tasks[index].Title)}[/]");
+            $"[green]Completed task [bold]{parameters.Id}[/]: {Markup.Escape(tasks[index].Title)}[/]");
         return TodoExitCode.Success;
     }
 }

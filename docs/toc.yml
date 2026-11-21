@@ -21,6 +21,8 @@
       href: getting-started/logging-with-interceptors.md
     - name: Global Options
       href: getting-started/global-options.md
+    - name: Command Groups
+      href: getting-started/command-groups.md
 - name: How-to Guides
   expanded: true
   items:

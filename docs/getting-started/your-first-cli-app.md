@@ -44,6 +44,11 @@ public sealed record TodoItem(int Id, string Title, bool IsDone = false);
 /// <summary>Reads tasks from a JSON file.</summary>
 public sealed class TodoStore(string path)
 {
+    public static string DataPath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "TodoCli",
+        "todo.json");
+
     public async Task<IReadOnlyList<TodoItem>> LoadAsync(
         CancellationToken cancellationToken)
     {
@@ -60,7 +65,7 @@ public sealed class ListCommand : NoParametersAsyncCommand
         CommandContext context,
         CancellationToken cancellationToken)
     {
-        var tasks = await new TodoStore("todo.json").LoadAsync(cancellationToken);
+        var tasks = await new TodoStore(TodoStore.DataPath).LoadAsync(cancellationToken);
 
         if (tasks.Count == 0)
         {
@@ -82,6 +87,12 @@ public sealed class ListCommand : NoParametersAsyncCommand
 `ListCommand` is the simplest asynchronous command shape. It receives a `CommandContext` and a cancellation token, performs its work, and returns the process exit code.
 
 `ConsoleAppBuilder` creates the application, `AddAsyncCommand` registers `ListCommand` under the name `list`, and `RunAsync` runs the application with the process arguments.
+
+`TodoStore.DataPath` places the task file in the current user's local application data directory:
+
+- **Windows:** `%LOCALAPPDATA%\TodoCli\todo.json`
+- **MacOS:** `~/Library/Application Support/TodoCli/todo.json`
+- **Linux:** `~/.local/share/TodoCli/todo.json`
 
 ## What this gives you
 

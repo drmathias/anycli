@@ -34,6 +34,11 @@ public interface ITodoStore
 
 public sealed class JsonTodoStore(string path) : ITodoStore
 {
+    public static string DataPath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "TodoCli",
+        "todo.json");
+
     // Existing LoadAsync and SaveAsync methods.
 }
 ```
@@ -61,7 +66,7 @@ public sealed class DoneCommand(ITodoStore store) : IAsyncCommand<DoneParameters
 }
 ```
 
-Remove the `new JsonTodoStore("todo.json")` lines from the command bodies and use the injected `store` instead:
+Remove the `new JsonTodoStore(JsonTodoStore.DataPath)` lines from the command bodies and use the injected `store` instead:
 
 ```csharp
 var tasks = (await store.LoadAsync(cancellationToken)).ToList();
@@ -78,7 +83,7 @@ Register the store and the commands, then pass the provider to `UseServiceProvid
 using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection();
-services.AddSingleton<ITodoStore>(new JsonTodoStore("todo.json"));
+services.AddSingleton<ITodoStore>(new JsonTodoStore(JsonTodoStore.DataPath));
 services.AddTransient<ListCommand>();
 services.AddTransient<AddCommand>();
 services.AddTransient<DoneCommand>();
@@ -145,7 +150,7 @@ services.AddTransient<AddCommand>();
 services.AddTransient<DoneCommand>();
 ```
 
-A test can now run the app, assert on the command output, and inspect the fake store's saved tasks without touching `todo.json`.
+A test can now run the app, assert on the command output, and inspect the fake store's saved tasks without touching the real task file.
 
 ## Next
 

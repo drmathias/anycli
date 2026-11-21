@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Arguments and Options
 
-Users expect to add tasks without editing a data file. Right now, every `todo` task has to be added by editing `todo.json`. In this step, you'll add an async `add` command with a required title argument and a priority option.
+Users expect to add tasks without editing a data file. Right now, every `todo` task has to be added by editing the JSON data file directly. In this step, you'll add an async `add` command with a required title argument and a priority option.
 
 ## Add task priority
 
@@ -37,6 +37,12 @@ public async Task SaveAsync(
     IReadOnlyList<TodoItem> tasks,
     CancellationToken cancellationToken)
 {
+    var directory = Path.GetDirectoryName(path);
+    if (directory is not null)
+    {
+        Directory.CreateDirectory(directory);
+    }
+
     var json = JsonSerializer.Serialize(tasks);
     await File.WriteAllTextAsync(path, json, cancellationToken);
 }
@@ -62,6 +68,8 @@ public sealed partial record AddParameters
 
 `[Argument(0)]` declares a required positional argument at position zero. `[Option]` declares a named option with a short alias, and its property initializer provides the default value when the option is omitted.
 
+The save method creates the application data directory if it does not exist before writing the file.
+
 ## Add the command
 
 Add the async command below the parameter type:
@@ -74,7 +82,7 @@ public sealed class AddCommand : IAsyncCommand<AddParameters>
         AddParameters parameters,
         CancellationToken cancellationToken)
     {
-        var store = new TodoStore("todo.json");
+        var store = new TodoStore(TodoStore.DataPath);
         var tasks = (await store.LoadAsync(cancellationToken)).ToList();
         var id = tasks.Count == 0 ? 1 : tasks.Max(task => task.Id) + 1;
 
@@ -110,10 +118,6 @@ Add a task:
 
 ```bash
 dotnet run -- add "Write docs" --priority high
-```
-
-```text
-Added task 1: Write docs
 ```
 
 ![todo add output](../images/todo-add-output.png)

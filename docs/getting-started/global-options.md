@@ -13,12 +13,15 @@ As it stands `todo` currently logs at a fixed `Information` level. In this step,
 Add the global options type to the project:
 
 ```csharp
+using System.ComponentModel;
+
 using Microsoft.Extensions.Logging;
 
 [GlobalOptions]
 public partial record TodoGlobalOptions
 {
     [Option("--log-level", "-l")]
+    [Description("Minimum log level")]
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
 }
 ```
@@ -151,3 +154,7 @@ Global options can also appear before the command:
 ```bash
 dotnet run -- --log-level debug add "Write docs" --priority high
 ```
+
+## Next
+
+- [Command Groups](command-groups.md)
