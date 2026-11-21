@@ -108,6 +108,9 @@ jobs:
       - name: Build documentation
         run: dotnet tool run docfx docs/docfx.json
 
+      - name: Add social metadata
+        run: dotnet run scripts/add-social-meta.cs -- docs/_site
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
 
