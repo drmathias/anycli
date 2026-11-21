@@ -131,6 +131,4 @@ The error pipeline handles command-line input errors. Exceptions thrown by comma
 ## Related
 
 - [Help, errors, and output](../explanation/help-errors-and-output.md)
-- [Customize help](../guides/customize-help.md)
-- [Customize error handling](../guides/customize-error-handling.md)
 - [Spectre.Console adapter reference](spectre-console-adapter.md)

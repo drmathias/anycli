@@ -90,7 +90,4 @@ Help rendering only uses `Output`. The underlying `HelpContext.AnsiConsole` type
 ## Related
 
 - [The Spectre.Console adapter](../explanation/spectre-adapter.md)
-- [Render rich output](../guides/spectre/render-rich-output.md)
-- [Use Spectre.Console help](../guides/spectre/use-spectre-help.md)
-- [Use Spectre.Console errors](../guides/spectre/use-spectre-errors.md)
 - [Help and error pipeline reference](help-and-error-pipeline.md)

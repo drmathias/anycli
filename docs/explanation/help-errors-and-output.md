@@ -80,5 +80,3 @@ The Spectre.Console adapter uses exactly this structure. It provides a help prov
 
 - [Help and error pipeline reference](../reference/help-and-error-pipeline.md)
 - [The Spectre.Console adapter](spectre-adapter.md)
-- [Customize help](../guides/customize-help.md)
-- [Customize error handling](../guides/customize-error-handling.md)
