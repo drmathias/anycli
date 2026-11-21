@@ -56,6 +56,10 @@
       href: reference/command-line-syntax.md
     - name: Parameter Attributes
       href: reference/parameter-attributes.md
+    - name: Parameter Parsing
+      href: reference/parameter-parsing.md
+    - name: Diagnostics
+      href: reference/diagnostics.md
     - name: Help and Error Pipeline
       href: reference/help-and-error-pipeline.md
     - name: Spectre.Console Adapter

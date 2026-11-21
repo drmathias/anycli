@@ -6,11 +6,56 @@ SPDX-License-Identifier: MIT
 
 # Parse custom value types
 
-Use a custom parser when an argument or option value is not covered by the built-in scalar types.
+Use this guide when a command parameter type is not already parsed by AnyCLI.
 
-## Implement a parser
+If you control the type, prefer implementing `IParsable<T>` or `ISpanParsable<T>` before writing a separate parser. AnyCLI discovers those interfaces automatically.
 
-Implement `IParameterParser<T>` for the value type:
+## Use a standard parsing interface
+
+For a type you own, implement `IParsable<T>`:
+
+```csharp
+using System.Globalization;
+
+public readonly record struct Slug(string Value) : IParsable<Slug>
+{
+    public static Slug Parse(string value, IFormatProvider? provider) =>
+        TryParse(value, provider, out var result)
+            ? result
+            : throw new FormatException($"Invalid slug '{value}'.");
+
+    public static bool TryParse(
+        string? value,
+        IFormatProvider? provider,
+        out Slug result)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            result = default;
+            return false;
+        }
+
+        result = new Slug(value.Trim().ToLowerInvariant());
+        return true;
+    }
+}
+```
+
+Use the type directly in a parameter:
+
+```csharp
+public sealed partial record CreateParameters
+{
+    [Argument(0)]
+    public required Slug Slug { get; init; }
+}
+```
+
+Implement `ISpanParsable<T>` instead when the type can use span-based parsing. Because it extends `IParsable<T>`, provide both the string and span members. AnyCLI uses the span implementation automatically.
+
+## Use a custom parser for types you do not control
+
+If the type is external, or you need different parsing rules, implement `IParameterParser<T>`:
 
 ```csharp
 using System.Globalization;
@@ -38,9 +83,9 @@ public sealed class TicketIdParser : IParameterParser<TicketId>
 }
 ```
 
-## Use the parser
+## Apply the parser
 
-Set `Parser` on the argument or option attribute:
+Set `Parser` on the specific argument or option:
 
 ```csharp
 public sealed partial record InspectParameters
@@ -58,17 +103,18 @@ public sealed partial record CloseParameters
 
 Invalid values produce a structured command-line error and return exit code `2` by default.
 
-## Reuse parsers for a type
+## Register a parser once
 
-Register a parser once for a value type with the assembly-level attribute:
+Register the parser for the value type when it should apply everywhere:
 
 ```csharp
 [assembly: ParameterValueParser<TicketId, TicketIdParser>]
 ```
 
-Parameters of `TicketId` then use the parser without setting `Parser` on each attribute.
+Parameters of `TicketId` then use the parser without setting `Parser` on each attribute. A type can have only one registered parser.
 
 ## Related
 
+- [Parameter parsing reference](../reference/parameter-parsing.md)
+- [Diagnostics reference](../reference/diagnostics.md)
 - [Parameter attributes reference](../reference/parameter-attributes.md)
-- [Command-line syntax](../reference/command-line-syntax.md)
