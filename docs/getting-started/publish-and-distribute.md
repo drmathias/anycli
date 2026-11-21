@@ -112,4 +112,5 @@ On Windows the file is `TodoCli.exe`. Native AOT requires the platform's C++ too
 You've completed the Getting Started tutorial. Continue with the how-to guides and reference:
 
 - [Optional and Variadic Arguments](../guides/optional-and-variadic-arguments.md)
+- [Handle Cancellation](../guides/handle-cancellation.md)
 - [Command-line Syntax](../reference/command-line-syntax.md)
