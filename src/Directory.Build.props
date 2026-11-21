@@ -10,6 +10,7 @@ SPDX-License-Identifier: MIT
     <Authors>Adam Shirt</Authors>
     <Copyright>Copyright © 2026 Adam Shirt</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>anycli-icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <RepositoryType>git</RepositoryType>
@@ -26,6 +27,14 @@ SPDX-License-Identifier: MIT
 
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)..\branding\anycli-icon.png"
+          Pack="true"
+          PackagePath="\"
+          Link="anycli-icon.png" />
+    <None Include="$(MSBuildThisFileDirectory)..\branding\anycli-readme.png"
+          Pack="true"
+          PackagePath="branding\"
+          Link="branding\anycli-readme.png" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RepositoryUrl)' != ''">

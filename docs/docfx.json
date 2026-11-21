@@ -23,7 +23,9 @@
     "globalMetadata": {
       "_appName": "anycli",
       "_appTitle": "AnyCli Documentation",
-      "_appFooter": "Licensed under the MIT license",
+      "_appLogoPath": "branding/anycli-logo.svg",
+      "_appFaviconPath": "branding/favicon.ico",
+      "_appFooter": "Licensed under the MIT license | Docs Built with <a href=\"https://dotnet.github.io/docfx/docs/basic-concepts.html\">docfx</a>",
       "_enableSearch": true,
       "_disableToc": false,
       "_disableAffix": false,
@@ -39,6 +41,13 @@
       {
         "files": [
           "images/**"
+        ]
+      },
+      {
+        "src": "../branding",
+        "dest": "branding",
+        "files": [
+          "**"
         ]
       }
     ]

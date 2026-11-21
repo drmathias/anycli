@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 SPDX-License-Identifier: MIT
 -->
 
-# AnyCli
+![AnyCli](branding/anycli-readme.png)
 
 AnyCli is a source-generated, AOT-friendly command-line framework for .NET with typed command parameters.
 

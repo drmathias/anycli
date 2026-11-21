@@ -3,8 +3,24 @@
  * SPDX-License-Identifier: MIT
  */
 
-#logo {
+.navbar-brand {
+  font-size: 0;
+}
+
+.navbar-brand #logo {
   display: none;
+}
+
+.navbar-brand::before {
+  content: "";
+  display: block;
+  width: 125px;
+  height: 40px;
+  background: url("../branding/anycli-logo.svg") no-repeat left center / contain;
+}
+
+html[data-bs-theme="light"] .navbar-brand::before {
+  background-image: url("../branding/anycli-logo-light.svg");
 }
 
 #navbar .navbar-nav {
