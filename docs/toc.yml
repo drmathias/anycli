@@ -27,6 +27,13 @@
       href: getting-started/localize-the-app.md
     - name: Publish and Distribute
       href: getting-started/publish-and-distribute.md
+- name: Explanation
+  expanded: true
+  items:
+    - name: Help, Errors, and Output
+      href: explanation/help-errors-and-output.md
+    - name: The Spectre.Console Adapter
+      href: explanation/spectre-adapter.md
 - name: How-to Guides
   expanded: true
   items:
@@ -49,3 +56,7 @@
       href: reference/command-line-syntax.md
     - name: Parameter Attributes
       href: reference/parameter-attributes.md
+    - name: Help and Error Pipeline
+      href: reference/help-and-error-pipeline.md
+    - name: Spectre.Console Adapter
+      href: reference/spectre-console-adapter.md

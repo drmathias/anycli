@@ -153,6 +153,13 @@ dotnet run -- add "Write docs" --unknown
 
 ![todo command-line error rendered with Spectre.Console styling](../images/todo-error.png)
 
+## Learn more
+
+- [Render rich output](../guides/spectre/render-rich-output.md)
+- [Use Spectre.Console help](../guides/spectre/use-spectre-help.md)
+- [Use Spectre.Console errors](../guides/spectre/use-spectre-errors.md)
+- [Spectre.Console adapter reference](../reference/spectre-console-adapter.md)
+
 ## Next
 
 - [Typed Exit Codes](typed-exit-codes.md)
