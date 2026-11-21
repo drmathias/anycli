@@ -24,5 +24,13 @@ html[data-bs-theme="light"] .navbar-brand::before {
 }
 
 #navbar .navbar-nav {
+  display: flex;
+}
+
+#navbar .navbar-nav > .nav-item {
   display: none;
+}
+
+#navbar .navbar-nav > .nav-item:has([data-api-reference]) {
+  display: block;
 }

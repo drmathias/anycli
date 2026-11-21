@@ -487,3 +487,6 @@ benchmarks/results/
 # DocFX output
 docs/_site/
 docs/obj/
+
+# Generated Docfx API metadata
+docs/api/

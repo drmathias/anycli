@@ -8,13 +8,13 @@ SPDX-License-Identifier: MIT
 
 AnyCli is a source-generated, AOT-friendly command-line framework for .NET with typed command parameters.
 
+Read the [documentation](https://drmathias.github.io/anycli/) for getting started, guides, and the API reference.
+
 [![Tests](https://github.com/drmathias/anycli/actions/workflows/test.yml/badge.svg)](https://github.com/drmathias/anycli/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/drmathias/anycli/blob/main/LICENSES/MIT.txt)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com/)
 [![.NET 11](https://img.shields.io/badge/.NET-11-512BD4)](https://dotnet.microsoft.com/)
 [![AOT ready](https://img.shields.io/badge/AOT-ready-brightgreen)](https://learn.microsoft.com/dotnet/core/deploying/native-aot/)
-
-Read the [documentation](https://drmathias.github.io/anycli/) for getting started, guides, and the API reference.
 
 ## Philosophy
 

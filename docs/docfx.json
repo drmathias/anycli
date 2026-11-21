@@ -1,5 +1,26 @@
 {
   "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../src/AnyCli/bin/Release/net11.0",
+          "files": [
+            "AnyCli.dll"
+          ]
+        },
+        {
+          "src": "../src/AnyCli.SpectreConsole/bin/Release/net11.0",
+          "files": [
+            "AnyCli.SpectreConsole.dll"
+          ]
+        }
+      ],
+      "dest": "api",
+      "memberLayout": "samePage",
+      "namespaceLayout": "nested"
+    }
+  ],
   "build": {
     "content": [
       {
