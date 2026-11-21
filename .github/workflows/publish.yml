@@ -82,19 +82,13 @@ jobs:
               --skip-duplicate
           done
 
-  docs:
+  docs-build:
     needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    concurrency:
-      group: pages
-      cancel-in-progress: false
 
     steps:
       - name: Checkout release tag
@@ -122,6 +116,20 @@ jobs:
         with:
           path: docs/_site
 
+  docs-deploy:
+    needs: docs-build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
