@@ -11,9 +11,14 @@ path = [
     "AnyCli.slnx",
     "global.json",
     ".config/dotnet-tools.json",
+    "branding/**",
     "docs/docfx.json",
+    "docs/images/**",
     "src/AnyCli.Generators/AnalyzerReleases.Shipped.md",
     "src/AnyCli.Generators/AnalyzerReleases.Unshipped.md",
+    "src/AnyCli/Errors/*.resx",
+    "src/AnyCli/Help/*.resx",
+    "tests/AnyCli.Tests/Resources/*.resx",
     "**/packages.lock.json",
 ]
 precedence = "closest"

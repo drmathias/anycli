@@ -152,6 +152,10 @@ services.AddTransient<DoneCommand>();
 
 A test can now run the app, assert on the command output, and inspect the fake store's saved tasks without touching the real task file.
 
+## Learn more
+
+- [Test a CLI application](../guides/test-a-cli-application.md)
+
 ## Next
 
 - [Logging With Interceptors](logging-with-interceptors.md)
