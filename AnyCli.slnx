@@ -7,9 +7,11 @@
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/AnyCli.Benchmarks/AnyCli.Benchmarks.csproj" />
     <Project Path="benchmarks/hosts/AnyCli.Host/AnyCli.Host.csproj" />
+    <Project Path="benchmarks/hosts/CliFx.Host/CliFx.Host.csproj" />
     <Project Path="benchmarks/hosts/ConsoleAppFramework.Host/ConsoleAppFramework.Host.csproj" />
     <Project Path="benchmarks/hosts/SpectreCli.Host/SpectreCli.Host.csproj" />
     <Project Path="benchmarks/hosts/SystemCommandLine.Host/SystemCommandLine.Host.csproj" />
+    <Project Path="benchmarks/hosts/XenoAtom.Host/XenoAtom.Host.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AnyCli.Generators.Tests/AnyCli.Generators.Tests.csproj" />

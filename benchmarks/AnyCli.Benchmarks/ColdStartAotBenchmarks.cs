@@ -24,6 +24,8 @@ public class ColdStartAotBenchmarks
         Verify(await ProcessHost.RunAotAsync("AnyCli", Args).ConfigureAwait(false), "AnyCli");
         Verify(await ProcessHost.RunAotAsync("SystemCommandLine", Args).ConfigureAwait(false), "System.CommandLine");
         Verify(await ProcessHost.RunAotAsync("ConsoleAppFramework", Args).ConfigureAwait(false), "ConsoleAppFramework");
+        Verify(await ProcessHost.RunAotAsync("CliFx", Args).ConfigureAwait(false), "CliFx");
+        Verify(await ProcessHost.RunAotAsync("XenoAtom", Args).ConfigureAwait(false), "XenoAtom.CommandLine");
     }
 
     [Benchmark(Baseline = true)]
@@ -34,6 +36,12 @@ public class ColdStartAotBenchmarks
 
     [Benchmark]
     public Task<int> ConsoleAppFramework() => ProcessHost.RunAotAsync("ConsoleAppFramework", Args);
+
+    [Benchmark]
+    public Task<int> CliFx() => ProcessHost.RunAotAsync("CliFx", Args);
+
+    [Benchmark]
+    public Task<int> XenoAtomCommandLine() => ProcessHost.RunAotAsync("XenoAtom", Args);
 
     private static void Verify(int exitCode, string framework)
     {

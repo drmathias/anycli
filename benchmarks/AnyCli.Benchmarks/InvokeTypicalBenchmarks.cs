@@ -21,6 +21,8 @@ public class InvokeTypicalBenchmarks
     private SystemCommandLineAdapter _systemCommandLine = null!;
     private SpectreCliAdapter _spectreCli = null!;
     private ConsoleAppFrameworkAdapter _consoleAppFramework = null!;
+    private CliFxAdapter _cliFx = null!;
+    private XenoAtomCommandLineAdapter _xenoAtom = null!;
 
     [GlobalSetup]
     public async Task Setup()
@@ -29,11 +31,15 @@ public class InvokeTypicalBenchmarks
         _systemCommandLine = SystemCommandLineAdapter.Create();
         _spectreCli = SpectreCliAdapter.Create();
         _consoleAppFramework = ConsoleAppFrameworkAdapter.Create();
+        _cliFx = CliFxAdapter.Create();
+        _xenoAtom = XenoAtomCommandLineAdapter.Create();
 
         Verify(await _anyCli.InvokeAsync(Args).ConfigureAwait(false), "AnyCli");
         Verify(await _systemCommandLine.InvokeAsync(Args).ConfigureAwait(false), "System.CommandLine");
         Verify(await _spectreCli.InvokeAsync(Args).ConfigureAwait(false), "Spectre.Console.Cli");
         Verify(await _consoleAppFramework.InvokeAsync(Args).ConfigureAwait(false), "ConsoleAppFramework");
+        Verify(await _cliFx.InvokeAsync(Args).ConfigureAwait(false), "CliFx");
+        Verify(await _xenoAtom.InvokeAsync(Args).ConfigureAwait(false), "XenoAtom.CommandLine");
     }
 
     [Benchmark(Baseline = true)]
@@ -47,6 +53,12 @@ public class InvokeTypicalBenchmarks
 
     [Benchmark]
     public ValueTask<int> ConsoleAppFramework() => _consoleAppFramework.InvokeAsync(Args);
+
+    [Benchmark]
+    public Task<int> CliFx() => _cliFx.InvokeAsync(Args);
+
+    [Benchmark]
+    public Task<int> XenoAtomCommandLine() => _xenoAtom.InvokeAsync(Args);
 
     private static void Verify(int exitCode, string framework)
     {

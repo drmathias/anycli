@@ -64,27 +64,33 @@ _Environment: macOS Tahoe 26.2, Intel Core i7-9750H, 12 logical cores, .NET SDK 
 
 | Rank | Framework | Mean | Median | Ratio | Allocated |
 | ---: | --- | ---: | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 8.265 ns | 8.258 ns | 0.009 | 0 B |
-| **2** | **AnyCli** | **912.665 ns** | **910.183 ns** | **1.000** | **1320 B** |
-| 3 | System.CommandLine | 3,791.222 ns | 3,771.586 ns | 4.155 | 4848 B |
-| 4 | Spectre.Console.Cli | 104,304.541 ns | 103,577.733 ns | 114.301 | 45646 B |
+| 1 | ConsoleAppFramework | 9.169 ns | 9.183 ns | 0.008 | 0 B |
+| **2** | **AnyCli** | **1,173.574 ns** | **1,131.228 ns** | **1.000** | **1320 B** |
+| 3 | XenoAtom.CommandLine | 2,683.232 ns | 2,675.898 ns | 2.294 | 2992 B |
+| 4 | System.CommandLine | 4,813.651 ns | 4,553.850 ns | 4.116 | 4848 B |
+| 4 | CliFx | 4,892.083 ns | 4,864.132 ns | 4.183 | 4392 B |
+| 5 | Spectre.Console.Cli | 128,521.274 ns | 128,171.630 ns | 109.886 | 45649 B |
 
 ### Cold start (JIT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 61.30 ms | 60.68 ms | 0.55 |
-| 2 | System.CommandLine | 101.70 ms | 100.53 ms | 0.92 |
-| **2** | **AnyCli** | **111.52 ms** | **108.30 ms** | **1.00** |
-| 3 | Spectre.Console.Cli | 214.90 ms | 213.69 ms | 1.94 |
+| 1 | ConsoleAppFramework | 78.96 ms | 78.45 ms | 0.58 |
+| 2 | XenoAtom.CommandLine | 115.64 ms | 115.33 ms | 0.84 |
+| 3 | System.CommandLine | 128.03 ms | 126.91 ms | 0.94 |
+| 3 | CliFx | 132.81 ms | 133.35 ms | 0.97 |
+| **3** | **AnyCli** | **138.65 ms** | **133.86 ms** | **1.00** |
+| 4 | Spectre.Console.Cli | 255.93 ms | 254.91 ms | 1.87 |
 
 ### Cold start (NativeAOT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 10.80 ms | 10.75 ms | 0.97 |
-| **1** | **AnyCli** | **11.17 ms** | **11.08 ms** | **1.00** |
-| 2 | System.CommandLine | 12.92 ms | 12.92 ms | 1.16 |
+| 1 | ConsoleAppFramework | 13.42 ms | 13.38 ms | 0.90 |
+| 1 | XenoAtom.CommandLine | 13.85 ms | 13.96 ms | 0.93 |
+| **1** | **AnyCli** | **15.01 ms** | **14.96 ms** | **1.00** |
+| 1 | System.CommandLine | 15.77 ms | 15.64 ms | 1.06 |
+| 1 | CliFx | 16.19 ms | 14.40 ms | 1.08 |
 
 _Ranks are BenchmarkDotNet statistical ranks; ties indicate statistically similar results._
 <!-- benchmarks:end -->

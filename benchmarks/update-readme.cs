@@ -26,6 +26,8 @@ var frameworkNames = new Dictionary<string, string>(StringComparer.Ordinal)
     ["SystemCommandLine"] = "System.CommandLine",
     ["SpectreConsoleCli"] = "Spectre.Console.Cli",
     ["ConsoleAppFramework"] = "ConsoleAppFramework",
+    ["CliFx"] = "CliFx",
+    ["XenoAtomCommandLine"] = "XenoAtom.CommandLine",
 };
 
 var readme = File.ReadAllText(readmePath);

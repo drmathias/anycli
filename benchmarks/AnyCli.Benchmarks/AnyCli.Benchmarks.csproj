@@ -18,10 +18,12 @@ SPDX-License-Identifier: MIT
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.16.0-preview.2" />
     <PackageReference Include="CliWrap" Version="3.10.5" />
+    <PackageReference Include="CliFx" Version="3.0.1" />
     <PackageReference Include="ConsoleAppFramework" Version="5.8.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="11.0.0" />
     <PackageReference Include="Spectre.Console.Cli" Version="0.57.2" />
     <PackageReference Include="System.CommandLine" Version="3.0.0" />
+    <PackageReference Include="XenoAtom.CommandLine" Version="2.1.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -22,6 +22,8 @@ public class ColdStartJitBenchmarks
         Verify(await ProcessHost.RunJitAsync("SystemCommandLine", Args).ConfigureAwait(false), "System.CommandLine");
         Verify(await ProcessHost.RunJitAsync("SpectreCli", Args).ConfigureAwait(false), "Spectre.Console.Cli");
         Verify(await ProcessHost.RunJitAsync("ConsoleAppFramework", Args).ConfigureAwait(false), "ConsoleAppFramework");
+        Verify(await ProcessHost.RunJitAsync("CliFx", Args).ConfigureAwait(false), "CliFx");
+        Verify(await ProcessHost.RunJitAsync("XenoAtom", Args).ConfigureAwait(false), "XenoAtom.CommandLine");
     }
 
     [Benchmark(Baseline = true)]
@@ -35,6 +37,12 @@ public class ColdStartJitBenchmarks
 
     [Benchmark]
     public Task<int> ConsoleAppFramework() => ProcessHost.RunJitAsync("ConsoleAppFramework", Args);
+
+    [Benchmark]
+    public Task<int> CliFx() => ProcessHost.RunJitAsync("CliFx", Args);
+
+    [Benchmark]
+    public Task<int> XenoAtomCommandLine() => ProcessHost.RunJitAsync("XenoAtom", Args);
 
     private static void Verify(int exitCode, string framework)
     {

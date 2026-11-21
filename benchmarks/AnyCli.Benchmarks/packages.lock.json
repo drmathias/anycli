@@ -20,6 +20,12 @@
           "deniszykov.WebSocketListener": "4.2.19"
         }
       },
+      "CliFx": {
+        "type": "Direct",
+        "requested": "[3.0.1, )",
+        "resolved": "3.0.1",
+        "contentHash": "wYdIZOMl+qnmRlaqiuATHzcRthzjO1XKOSC89M45aVa6+ZBQ4H508KcBQlpGJqLfbnxz3w+r8fBuXYJcsIe1FA=="
+      },
       "CliWrap": {
         "type": "Direct",
         "requested": "[3.10.5, )",
@@ -55,6 +61,12 @@
         "requested": "[3.0.0, )",
         "resolved": "3.0.0",
         "contentHash": "swNpSTl0iYJeBuvYYfaY+VxzZ5YC8wklwkqDCNOq2aTQqJzjauJfh/O3Zw93nwxspWrxvZTjT45f8VPR0ParEA=="
+      },
+      "XenoAtom.CommandLine": {
+        "type": "Direct",
+        "requested": "[2.1.0, )",
+        "resolved": "2.1.0",
+        "contentHash": "/A3Sn+n8ld+vAFmWJniCcqRlPM0e+bF9yxb+NAfIM2Fun1XEVXWKpsZXXjYBn2XkNvcTvl6waerEFmRn6odmGg=="
       },
       "Azure.Core": {
         "type": "Transitive",

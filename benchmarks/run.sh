@@ -22,7 +22,7 @@ echo "Runtime identifier: $rid"
 rm -rf "$hosts_root"
 mkdir -p "$hosts_root/jit"
 
-for host in AnyCli SystemCommandLine SpectreCli ConsoleAppFramework; do
+for host in AnyCli SystemCommandLine SpectreCli ConsoleAppFramework CliFx XenoAtom; do
     echo "Publishing JIT host: $host"
     dotnet publish "$benchmarks_root/hosts/$host.Host/$host.Host.csproj" \
         --configuration Release \
@@ -34,7 +34,7 @@ if [[ "${BENCH_SKIP_AOT:-0}" != "1" ]]; then
     mkdir -p "$hosts_root/aot"
 
     # Spectre.Console.Cli is reflection-based and does not support NativeAOT.
-    for host in AnyCli SystemCommandLine ConsoleAppFramework; do
+    for host in AnyCli SystemCommandLine ConsoleAppFramework CliFx XenoAtom; do
         echo "Publishing AOT host: $host"
         dotnet publish "$benchmarks_root/hosts/$host.Host/$host.Host.csproj" \
             --configuration Release \
