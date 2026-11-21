@@ -135,3 +135,7 @@ dotnet run -- list
 ```
 
 ![output from add, data reset, and list](../images/todo-data-output.png)
+
+## Next
+
+- [Localize the App](localize-the-app.md)

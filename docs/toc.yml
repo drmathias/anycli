@@ -23,6 +23,10 @@
       href: getting-started/global-options.md
     - name: Command Groups
       href: getting-started/command-groups.md
+    - name: Localize the App
+      href: getting-started/localize-the-app.md
+    - name: Publish and Distribute
+      href: getting-started/publish-and-distribute.md
 - name: How-to Guides
   expanded: true
   items:
