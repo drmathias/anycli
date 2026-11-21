@@ -126,6 +126,11 @@ cat todo.log
 
 The interceptor writes a debug message with the raw command before it runs, then an information message after it. At the default `Information` level, the debug message is filtered out. The next step will make the log level configurable through a global option.
 
+## Learn more
+
+- [Write an interceptor](../guides/write-an-interceptor.md)
+- [Interceptors reference](../reference/interceptors.md)
+
 ## Next
 
 - [Global Options](global-options.md)

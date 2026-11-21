@@ -151,6 +151,24 @@ public class InterceptorTests
     }
 
     [Test]
+    public async Task CombinedInterceptor_ReceivesGlobalOptionsAndEnumExitCode()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .AddGlobalOptions<TestGlobalOptions>()
+            .ConfigureCommands<InterceptorExitCode>(commands =>
+                commands.AddCommand<GlobalEnumFailCommand, TestGlobalEchoParameters>("fail"))
+            .AddInterceptor<GlobalOptionEnumInterceptor>()
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(
+            app,
+            ["--log-level", "debug", "fail"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo((int)InterceptorExitCode.Succeeded);
+        await Assert.That(result.Output).IsEqualTo("debug>after:Failed<");
+    }
+
+    [Test]
     public async Task Interceptor_ReceivesRawCommandAndParsedParameters()
     {
         var app = ConsoleAppBuilder.Create()
@@ -162,12 +180,12 @@ public class InterceptorTests
 
         var result = await TestAppHarness.RunAsync(
             app,
-            ["run", "Ada Lovelace", "--count", "3", "--tag", "docs", "--tag", "release"]);
+            ["run", "Ada Lovelace", "--count", "3", "--tag", "docs", "--tag", "release", "--dry-run"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo(
-            "todo run \"Ada Lovelace\" --count 3 --tag docs --tag release|" +
-            "Ada Lovelace|3|docs,release");
+            "todo run \"Ada Lovelace\" --count 3 --tag docs --tag release --dry-run|" +
+            "Ada Lovelace|3|docs,release|True|True");
     }
 
     [Test]
@@ -326,6 +344,30 @@ public class InterceptorTests
         }
     }
 
+    private sealed class GlobalEnumFailCommand
+        : ICommand<TestGlobalEchoParameters, InterceptorExitCode>
+    {
+        public InterceptorExitCode Execute(
+            CommandContext context,
+            TestGlobalEchoParameters parameters) =>
+            InterceptorExitCode.Failed;
+    }
+
+    private sealed class GlobalOptionEnumInterceptor
+        : ICommandInterceptorWithExitCode<TestGlobalOptions, InterceptorExitCode>
+    {
+        public async Task<InterceptorExitCode> InterceptAsync(
+            CommandInterceptorContext<TestGlobalOptions> context,
+            Func<CancellationToken, Task<InterceptorExitCode>> next,
+            CancellationToken cancellationToken)
+        {
+            context.Console.Output.Write($"{context.GlobalOptions.LogLevel}>");
+            var exitCode = await next.Invoke(cancellationToken).ConfigureAwait(false);
+            context.Console.Output.Write($"after:{exitCode}<");
+            return InterceptorExitCode.Succeeded;
+        }
+    }
+
     private sealed class MarkerInterceptor : ICommandInterceptor
     {
         public Task<int> InterceptAsync(CommandInterceptorContext context, Func<CancellationToken, Task<int>> next, CancellationToken cancellationToken)
@@ -365,13 +407,23 @@ public class InterceptorTests
             Func<CancellationToken, Task<int>> next,
             CancellationToken cancellationToken)
         {
-            var tags = context.ParsedOptions.TryGetValue("--tag", out var parsedTagOption)
-                && parsedTagOption is IReadOnlyList<string> tagValues
-                    ? string.Join(",", tagValues)
+            var tags = context.ParsedOptions.TryGetValue("--tag", out var tagValue)
+                && tagValue is ParsedValue.Multiple collection
+                    ? string.Join(",", collection.Values)
                     : "";
+            var name = context.ParsedArguments["name"] is ParsedValue.Scalar { Value: string value }
+                ? value
+                : "";
+            var count = context.ParsedOptions["--count"] is ParsedValue.Scalar { Value: string countValue }
+                ? countValue
+                : "";
+            var dryRun = context.ParsedOptions.TryGetValue("--dry-run", out var dryRunValue)
+                && dryRunValue is ParsedValue.Flag;
+            var missingNote = context.ParsedArguments.TryGetValue("note", out var noteValue)
+                && noteValue is ParsedValue.Scalar { Value: null };
 
             context.Console.Output.Write(
-                $"{context.RawCommand}|{context.ParsedArguments["name"]}|{context.ParsedOptions["--count"]}|{tags}");
+                $"{context.RawCommand}|{name}|{count}|{tags}|{dryRun}|{missingNote}");
 
             return next.Invoke(cancellationToken);
         }
@@ -407,4 +459,10 @@ public sealed partial record InterceptorContextParameters
 
     [Option("--tag")]
     public string[] Tags { get; set; } = [];
+
+    [Option("--dry-run")]
+    public bool DryRun { get; set; }
+
+    [OptionalArgument(1)]
+    public string? Note { get; set; }
 }

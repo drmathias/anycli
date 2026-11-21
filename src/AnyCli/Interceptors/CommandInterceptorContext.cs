@@ -12,8 +12,8 @@ public class CommandInterceptorContext : CommandContext
     internal CommandInterceptorContext(
         CommandContext context,
         string rawCommand,
-        IReadOnlyDictionary<string, object?> parsedArguments,
-        IReadOnlyDictionary<string, object?> parsedOptions)
+        IReadOnlyDictionary<string, ParsedValue> parsedArguments,
+        IReadOnlyDictionary<string, ParsedValue> parsedOptions)
         : base(context.CommandPath, context.Console)
     {
         RawCommand = rawCommand;
@@ -29,12 +29,12 @@ public class CommandInterceptorContext : CommandContext
     /// <summary>
     /// Gets the parsed positional argument values.
     /// </summary>
-    public IReadOnlyDictionary<string, object?> ParsedArguments { get; }
+    public IReadOnlyDictionary<string, ParsedValue> ParsedArguments { get; }
 
     /// <summary>
     /// Gets the parsed option values.
     /// </summary>
-    public IReadOnlyDictionary<string, object?> ParsedOptions { get; }
+    public IReadOnlyDictionary<string, ParsedValue> ParsedOptions { get; }
 }
 
 /// <summary>
@@ -47,8 +47,8 @@ public sealed class CommandInterceptorContext<TGlobalOptions> : CommandIntercept
     internal CommandInterceptorContext(
         CommandContext<TGlobalOptions> context,
         string rawCommand,
-        IReadOnlyDictionary<string, object?> parsedArguments,
-        IReadOnlyDictionary<string, object?> parsedOptions)
+        IReadOnlyDictionary<string, ParsedValue> parsedArguments,
+        IReadOnlyDictionary<string, ParsedValue> parsedOptions)
         : base(context, rawCommand, parsedArguments, parsedOptions)
     {
         GlobalOptions = context.GlobalOptions;

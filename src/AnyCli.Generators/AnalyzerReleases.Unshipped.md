@@ -22,3 +22,5 @@ ANYCLI012 | AnyCli | Error | Default value on required variadic parameter
 ANYCLI015 | AnyCli | Error | Global option declared as argument
 ANYCLI016 | AnyCli | Error | Conflicting parameters kind
 ANYCLI017 | AnyCli | Error | Invalid variadic maximum count
+ANYCLI018 | AnyCli | Error | Interceptor global options mismatch
+ANYCLI019 | AnyCli | Error | Interceptor exit code mismatch

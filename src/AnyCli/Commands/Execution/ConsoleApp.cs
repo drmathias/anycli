@@ -416,8 +416,8 @@ public sealed class ConsoleApp
         ParsedCommandParameters parameters,
         string rawCommand)
     {
-        var parsedArguments = parameters.Arguments.ToDictionary();
-        var parsedOptions = parameters.Options.ToDictionary();
+        var parsedArguments = ToParsedValues(parameters.Arguments.ToDictionary());
+        var parsedOptions = ToParsedValues(parameters.Options.ToDictionary());
 
         return _globalOptionsDefinition is null
             ? new CommandInterceptorContext(
@@ -430,6 +430,13 @@ public sealed class ConsoleApp
                 rawCommand,
                 parsedArguments,
                 parsedOptions);
+    }
+
+    private static Dictionary<string, ParsedValue> ToParsedValues(IReadOnlyDictionary<string, object?> values)
+    {
+        var parsedValues = new Dictionary<string, ParsedValue>(values.Count, StringComparer.Ordinal);
+        foreach (var (name, value) in values) parsedValues[name] = ParsedValue.From(value);
+        return parsedValues;
     }
 
     private string CreateRawCommand(string[] args)

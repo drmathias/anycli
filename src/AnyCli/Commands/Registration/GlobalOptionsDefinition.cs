@@ -14,8 +14,8 @@ internal interface IGlobalOptionsDefinition
     CommandInterceptorContext CreateInterceptorContext(
         CommandContext context,
         string rawCommand,
-        IReadOnlyDictionary<string, object?> parsedArguments,
-        IReadOnlyDictionary<string, object?> parsedOptions);
+        IReadOnlyDictionary<string, ParsedValue> parsedArguments,
+        IReadOnlyDictionary<string, ParsedValue> parsedOptions);
 }
 
 internal sealed class GlobalOptionsDefinition<TGlobalOptions> : IGlobalOptionsDefinition
@@ -33,8 +33,8 @@ internal sealed class GlobalOptionsDefinition<TGlobalOptions> : IGlobalOptionsDe
     public CommandInterceptorContext CreateInterceptorContext(
         CommandContext context,
         string rawCommand,
-        IReadOnlyDictionary<string, object?> parsedArguments,
-        IReadOnlyDictionary<string, object?> parsedOptions) =>
+        IReadOnlyDictionary<string, ParsedValue> parsedArguments,
+        IReadOnlyDictionary<string, ParsedValue> parsedOptions) =>
         new CommandInterceptorContext<TGlobalOptions>(
             (CommandContext<TGlobalOptions>)context,
             rawCommand,

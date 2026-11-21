@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Diagnostics reference
 
-The AnyCli source generator emits the following diagnostics while generating command parameter code. All are compile-time errors and are enabled by default.
+The AnyCli source generator and analyzer emit the following compile-time diagnostics. All are errors and are enabled by default.
 
 | ID | Diagnostic | Cause and fix |
 | --- | --- | --- |
@@ -27,5 +27,7 @@ The AnyCli source generator emits the following diagnostics while generating com
 | `ANYCLI015` | Global option declared as argument | A property on a `[GlobalOptions]` type uses `[Argument]`. Global options must use `[Option]`. |
 | `ANYCLI016` | Conflicting parameters kind | A type is marked `[GlobalOptions]` and also implements `ICommandParameters<T>`. Use one role; command parameter types should inherit from the global options type instead. |
 | `ANYCLI017` | Invalid variadic maximum count | `MaximumCount` must be greater than `1` and at least `MinimumCount`. Raise the maximum or use a scalar parameter instead. |
+| `ANYCLI018` | Interceptor global options mismatch | An interceptor requires typed global options that the application does not configure. Call `AddGlobalOptions<TGlobalOptions>()` with the required type on the application builder. |
+| `ANYCLI019` | Interceptor exit code mismatch | An interceptor requires a command exit code type that the application does not configure. Call `ConfigureCommands<TExitCode>(...)` with the required type on the application builder. |
 
-All diagnostics are emitted by the source generator before parameter code is generated. Fixing the diagnostic is required for the command parameter type to compile.
+Parameter diagnostics are emitted by the source generator before parameter code is generated. Interceptor diagnostics are reported on the `AddInterceptor<T>()` call. Fixing the diagnostic is required for the application to compile.

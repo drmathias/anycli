@@ -107,5 +107,6 @@ A linked token source lets an interceptor add its own cancellation condition, su
 
 ## Related
 
+- [Write an interceptor](write-an-interceptor.md)
 - [Typed exit codes](../getting-started/typed-exit-codes.md)
 - [Logging with interceptors](../getting-started/logging-with-interceptors.md)
