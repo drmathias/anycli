@@ -118,39 +118,7 @@ dotnet run -- list
 
 ## Test with a fake store
 
-Commands now depend on `ITodoStore`, so a test can replace JSON persistence with an in-memory implementation:
-
-```csharp
-public sealed class InMemoryTodoStore : ITodoStore
-{
-    private readonly List<TodoItem> _tasks = [];
-
-    public Task<IReadOnlyList<TodoItem>> LoadAsync(
-        CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<TodoItem>>(_tasks);
-
-    public Task SaveAsync(
-        IReadOnlyList<TodoItem> tasks,
-        CancellationToken cancellationToken)
-    {
-        _tasks.Clear();
-        _tasks.AddRange(tasks);
-        return Task.CompletedTask;
-    }
-}
-```
-
-Use the same application configuration with the fake store:
-
-```csharp
-var services = new ServiceCollection();
-services.AddSingleton<ITodoStore>(new InMemoryTodoStore());
-services.AddTransient<ListCommand>();
-services.AddTransient<AddCommand>();
-services.AddTransient<DoneCommand>();
-```
-
-A test can now run the app, assert on the command output, and inspect the fake store's saved tasks without touching the real task file.
+The app now depends on `ITodoStore`, so a test can replace JSON persistence with an in-memory implementation or a mock.
 
 ## Learn more
 

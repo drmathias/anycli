@@ -57,6 +57,30 @@ var app = TodoApp.Create(store);
 
 Add other dependencies as parameters as the application grows.
 
+## Create a fake store
+
+The app depends on `ITodoStore`, so tests can replace JSON persistence with an in-memory implementation:
+
+```csharp
+public sealed class InMemoryTodoStore : ITodoStore
+{
+    private readonly List<TodoItem> _tasks = [];
+
+    public Task<IReadOnlyList<TodoItem>> LoadAsync(
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<TodoItem>>(_tasks);
+
+    public Task SaveAsync(
+        IReadOnlyList<TodoItem> tasks,
+        CancellationToken cancellationToken)
+    {
+        _tasks.Clear();
+        _tasks.AddRange(tasks);
+        return Task.CompletedTask;
+    }
+}
+```
+
 ## Capture console I/O
 
 `ConsoleApp.RunAsync` accepts an `IConsole`. Use `TextConsole` with `StringWriter` instances to capture output and error separately:
@@ -123,7 +147,7 @@ public async Task Add_WithoutTitle_ReturnsCommandLineError()
 
 ## Inject a fake service
 
-Use the `InMemoryTodoStore` from [Dependency Injection](../getting-started/dependency-injection.md), or another fake that records saved tasks. Inspect it through its interface after the command runs:
+Use the fake store above, or another fake that records saved tasks. Inspect it through its interface after the command runs:
 
 ```csharp
 [Test]
