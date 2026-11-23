@@ -23,6 +23,32 @@ public class EnumParsingTests
     }
 
     [Test]
+    public async Task DefaultEnumParameterParser_RejectsMalformedKebabCase()
+    {
+        foreach (var value in new[] { "v-e-r-y-s-l-o-w", "very--slow", "-very-slow", "very-slow-" })
+        {
+            var success = DefaultEnumParameterParser.TryParse<KebabMode>(
+                value,
+                provider: null,
+                out _);
+
+            await Assert.That(success).IsFalse();
+        }
+    }
+
+    [Test]
+    public async Task DefaultEnumParameterParser_UsesKebabCaseNamingPolicy()
+    {
+        var success = DefaultEnumParameterParser.TryParse<AcronymMode>(
+            "xml-http-request",
+            provider: null,
+            out var result);
+
+        await Assert.That(success).IsTrue();
+        await Assert.That(result).IsEqualTo(AcronymMode.XMLHttpRequest);
+    }
+
+    [Test]
     public async Task DefaultEnumParameterParser_RejectsNumericValues()
     {
         foreach (var value in new[] { "0", "1", "-1", "+1", "0x1", "999", "1,2" })
@@ -169,4 +195,9 @@ public enum KebabMode
 {
     Fast,
     VerySlow,
+}
+
+public enum AcronymMode
+{
+    XMLHttpRequest,
 }
