@@ -306,98 +306,6 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task ReportsIncompatibleDefaultValueType()
-    {
-        var result = RunGenerator(
-            """
-            using AnyCli.Parameters.Arguments;
-            using AnyCli.Parameters.Options;
-            using AnyCli.Parameters.Parsing;
-
-            public sealed partial class BadParameters
-            {
-                [Option("--count", DefaultValue = "not-an-int")]
-                public int Count { get; set; }
-            }
-            """);
-
-        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI006");
-
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
-        await Assert.That(diagnostic.GetMessage()).Contains("Count");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
-    }
-
-    [Test]
-    public async Task ReportsInvalidCollectionDefaultValue()
-    {
-        var result = RunGenerator(
-            """
-            using AnyCli.Parameters.Arguments;
-            using AnyCli.Parameters.Options;
-            using AnyCli.Parameters.Parsing;
-
-            public sealed partial class BadParameters
-            {
-                [Option("--tag", DefaultValue = 5)]
-                public string[] Tags { get; set; } = [];
-            }
-            """);
-
-        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI010");
-
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
-        await Assert.That(diagnostic.GetMessage()).Contains("Tags");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
-    }
-
-    [Test]
-    public async Task ReportsInvalidCollectionDefaultValueElementType()
-    {
-        var result = RunGenerator(
-            """
-            using AnyCli.Parameters.Arguments;
-            using AnyCli.Parameters.Options;
-            using AnyCli.Parameters.Parsing;
-
-            public sealed partial class BadParameters
-            {
-                [Option("--count", DefaultValue = new[] { "not-an-int" })]
-                public int[] Counts { get; set; } = [];
-            }
-            """);
-
-        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI011");
-
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
-        await Assert.That(diagnostic.GetMessage()).Contains("Counts");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
-    }
-
-    [Test]
-    public async Task ReportsDefaultValueOnRequiredVariadicParameter()
-    {
-        var result = RunGenerator(
-            """
-            using AnyCli.Parameters.Arguments;
-            using AnyCli.Parameters.Options;
-            using AnyCli.Parameters.Parsing;
-
-            public sealed partial class BadParameters
-            {
-                [VariadicArgument(0, MinimumCount = 1, DefaultValue = new[] { "a" })]
-                public string[] Values { get; set; } = [];
-            }
-            """);
-
-        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI012");
-
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
-        await Assert.That(diagnostic.GetMessage()).Contains("Values");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
-    }
-
-    [Test]
     public async Task ReportsNegativeArgumentPosition()
     {
         var result = RunGenerator(
@@ -615,14 +523,14 @@ public class GeneratorDiagnosticTests
 
             public sealed partial class GoodParameters
             {
-                [Option("--mode", DefaultValue = Mode.Fast)]
-                public Mode Mode { get; set; }
+                [Option("--mode")]
+                public Mode Mode { get; set; } = Mode.Fast;
 
-                [Option("--verbose", DefaultValue = true)]
-                public bool Verbose { get; set; }
+                [Option("--verbose")]
+                public bool Verbose { get; set; } = true;
 
-                [OptionalArgument(0, DefaultValue = 8080)]
-                public int Port { get; set; }
+                [OptionalArgument(0)]
+                public int Port { get; set; } = 8080;
             }
             """);
 
@@ -635,6 +543,28 @@ public class GeneratorDiagnosticTests
         await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
         await Assert.That(result.GeneratedSourceTexts.Single().Contains("SetDefaultValue")).IsTrue();
         await Assert.That(errors.Length).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task DoesNotCaptureComputedInitializerForHelp()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Options;
+
+            public sealed partial class GoodParameters
+            {
+                [Option("--data")]
+                public string Data { get; set; } = CreateDefault();
+
+                private static string CreateDefault() => "data";
+            }
+            """);
+
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(generated).DoesNotContain("SetDefaultValue(");
     }
 
     [Test]
@@ -823,8 +753,8 @@ public class GeneratorDiagnosticTests
                 [Option("--verbose")]
                 public bool Verbose { get; set; }
 
-                [Option("--tag", DefaultValue = new[] { "a", "b" })]
-                public string[] Tags { get; set; } = [];
+                [Option("--tag")]
+                public string[] Tags { get; set; } = ["a", "b"];
             }
             """);
 
@@ -839,7 +769,8 @@ public class GeneratorDiagnosticTests
         await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
         await Assert.That(generated).Contains("IGlobalOptions<");
         await Assert.That(generated).Contains("GlobalOptionBuilder options");
-        await Assert.That(generated).Contains("Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
+        await Assert.That(generated).Contains(
+            "Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
         await Assert.That(generated).DoesNotContain("ICommandParameters<");
     }
 
@@ -955,6 +886,216 @@ public class GeneratorDiagnosticTests
         await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
         await Assert.That(diagnostic.GetMessage()).Contains("Value");
         await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsInvalidDefaultValueProvider()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Parameters.Options;
+
+            public sealed class NotAProvider
+            {
+            }
+
+            public sealed partial class BadParameters
+            {
+                [Option("--name", DefaultValueProvider = typeof(NotAProvider))]
+                public string Name { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI020");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Name");
+        await Assert.That(diagnostic.GetMessage()).Contains("NotAProvider");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsDefaultValueDisplayOnRequiredParameter()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Help;
+            using AnyCli.Parameters.Options;
+
+            public sealed partial class BadParameters
+            {
+                [RequiredOption("--name")]
+                [DefaultValueDisplay("value")]
+                public string Name { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI022");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Name");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsDefaultValueDisplayWithoutDefault()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Help;
+            using AnyCli.Parameters.Options;
+
+            public sealed partial class BadParameters
+            {
+                [Option("--name")]
+                [DefaultValueDisplay("value")]
+                public string Name { get; set; }
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI023");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Name");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReportsDefaultValueProviderOnGlobalOption()
+    {
+        var result = RunGenerator(
+            """
+            using System.Threading;
+            using AnyCli.Parameters.Binding;
+            using AnyCli.Parameters.Options;
+
+            public sealed class LevelProvider : IDefaultValueProvider<string>
+            {
+                public string CreateDefault() => "provider";
+            }
+
+            [GlobalOptions]
+            public sealed partial class BadOptions
+            {
+                [Option("--level", DefaultValueProvider = typeof(LevelProvider))]
+                public string Level { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI024");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Level");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task GeneratesAsyncDefaultValueProvider()
+    {
+        var result = RunGenerator(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+            using AnyCli.Parameters.Binding;
+            using AnyCli.Parameters.Options;
+
+            public sealed class NameProvider : IAsyncDefaultValueProvider<string>
+            {
+                public ValueTask<string> CreateDefaultAsync(CancellationToken cancellationToken) =>
+                    ValueTask.FromResult("provider");
+            }
+
+            public sealed partial class ValidParameters
+            {
+                [Option("--name", DefaultValueProvider = typeof(NameProvider))]
+                public string Name { get; set; } = "";
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(generated).Contains("BindAsync(");
+        await Assert.That(generated).Contains("CreateDefaultAsync(cancellationToken)");
+        await Assert.That(generated).Contains("await ");
+    }
+
+    [Test]
+    public async Task ReportsAmbiguousDefaultValueProvider()
+    {
+        var result = RunGenerator(
+            """
+            using System.Threading;
+            using System.Threading.Tasks;
+            using AnyCli.Parameters.Binding;
+            using AnyCli.Parameters.Options;
+
+            public sealed class NameProvider :
+                IDefaultValueProvider<string>,
+                IAsyncDefaultValueProvider<string>
+            {
+                public string CreateDefault() => "sync";
+
+                public ValueTask<string> CreateDefaultAsync(CancellationToken cancellationToken) =>
+                    ValueTask.FromResult("async");
+            }
+
+            public sealed partial class BadParameters
+            {
+                [Option("--name", DefaultValueProvider = typeof(NameProvider))]
+                public string Name { get; set; } = "";
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI025");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Name");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task GeneratesDefaultValueProviderAndDisplay()
+    {
+        var result = RunGenerator(
+            """
+            using System.Threading;
+            using AnyCli.Help;
+            using AnyCli.Parameters.Binding;
+            using AnyCli.Parameters.Options;
+
+            public sealed class NameProvider : IDefaultValueProvider<string>
+            {
+                public string CreateDefault() => "provider";
+            }
+
+            public sealed partial class ValidParameters
+            {
+                [Option("--name", DefaultValueProvider = typeof(NameProvider))]
+                [DefaultValueDisplay("provider")]
+                [DefaultValueDisplayResource("NameDefault")]
+                public string Name { get; set; } = "";
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(generated).Contains("SetDefaultValueProvider(typeof(global::NameProvider))");
+        await Assert.That(generated).Contains(
+            "new global::AnyCli.Help.HelpText(\"provider\", \"NameDefault\")");
+        await Assert.That(generated).Contains(
+            "DefaultValueProviderResolver.Resolve<global::NameProvider>(services)");
     }
 
     private static GeneratorResult RunGenerator(string source)

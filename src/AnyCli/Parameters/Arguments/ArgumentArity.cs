@@ -54,11 +54,6 @@ public readonly record struct ArgumentArity
     public int Maximum { get; }
 
     /// <summary>
-    /// Gets a value indicating whether at least one value is required.
-    /// </summary>
-    public bool IsRequired => Minimum > 0;
-
-    /// <summary>
     /// Gets a value indicating whether the argument accepts more than one value.
     /// </summary>
     public bool IsVariadic => Maximum > 1;

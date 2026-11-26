@@ -27,8 +27,12 @@ public interface ICommandParameters<TSelf>
     /// </summary>
     /// <param name="parameterValues">The parsed parameter values.</param>
     /// <param name="globalOptionValues">The parsed global option values.</param>
+    /// <param name="cancellationToken">The cancellation token for the current command invocation.</param>
+    /// <param name="services">The configured service provider, or <see langword="null"/>.</param>
     /// <returns>The parameters instance.</returns>
-    static abstract TSelf Bind(
+    static abstract ValueTask<TSelf> BindAsync(
         ParsedCommandParameters parameterValues,
-        CommandOptionValues globalOptionValues);
+        CommandOptionValues globalOptionValues,
+        CancellationToken cancellationToken,
+        IServiceProvider? services);
 }

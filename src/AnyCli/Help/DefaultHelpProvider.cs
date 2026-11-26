@@ -10,18 +10,23 @@ namespace AnyCli.Help;
 public sealed class DefaultHelpProvider : IHelpProvider
 {
     private readonly IHelpTextProvider _textProvider;
+    private readonly IHelpValueFormatter _valueFormatter;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultHelpProvider"/> class.
     /// </summary>
     /// <param name="textProvider">The provider for localized help text.</param>
+    /// <param name="valueFormatter">The formatter for default values.</param>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="textProvider"/> is <see langword="null"/>.
     /// </exception>
-    public DefaultHelpProvider(IHelpTextProvider textProvider)
+    public DefaultHelpProvider(
+        IHelpTextProvider textProvider,
+        IHelpValueFormatter? valueFormatter = null)
     {
         ArgumentNullException.ThrowIfNull(textProvider);
         _textProvider = textProvider;
+        _valueFormatter = valueFormatter ?? new DefaultHelpValueFormatter();
     }
 
     /// <inheritdoc/>
@@ -117,59 +122,65 @@ public sealed class DefaultHelpProvider : IHelpProvider
             command.Path.Count == 0 ? command.Name : string.Join(' ', command.Path),
         };
 
-        foreach (var argument in command.Arguments)
-        {
-            parts.Add(GetArgumentSyntax(argument));
-        }
+        foreach (var argument in command.Arguments) parts.Add(GetArgumentSyntax(argument));
 
         parts.Add(GetOptionsUsage());
 
-        if (command.Children.Count > 0)
-        {
-            parts.Add(GetCommandUsage());
-        }
+        if (command.Children.Count > 0) parts.Add(GetCommandUsage());
 
         return string.Join(' ', parts);
     }
 
-    private string GetOptionsUsage() =>
-        $"[{_textProvider.GetOptionsPlaceholder()}]";
+    private string GetOptionsUsage() => $"[{_textProvider.GetOptionsPlaceholder()}]";
 
-    private string GetCommandUsage() =>
-        $"<{_textProvider.GetCommandPlaceholder()}>";
+    private string GetCommandUsage() => $"<{_textProvider.GetCommandPlaceholder()}>";
 
     private static string GetArgumentSyntax(ArgumentInfo argument)
     {
-        var name = argument.IsVariadic
-            ? argument.Name + "..."
-            : argument.Name;
-
-        return argument.IsRequired
-            ? $"<{name}>"
-            : $"[{name}]";
+        var name = argument.Arity.IsVariadic ? argument.Name + "..." : argument.Name;
+        return argument.IsRequired ? $"<{name}>" : $"[{name}]";
     }
 
     private HelpEntry CreateArgumentEntry(CommandInfo command, ArgumentInfo argument) =>
-        new(
-            GetArgumentSyntax(argument),
+        new(GetArgumentSyntax(argument),
             ResolveDescription(command, argument.Description, argument: argument));
 
     private HelpEntry CreateOptionEntry(CommandInfo? command, OptionInfo option) =>
-        new(
-            string.Join(", ", option.Names),
+        new(string.Join(", ", option.Names),
             ResolveDescription(command, option.Description, option: option));
 
     private string ResolveDescription(
         CommandInfo? command,
         HelpText description,
         OptionInfo? option = null,
-        ArgumentInfo? argument = null) =>
-        _textProvider.GetDescription(
-            new HelpDescriptionContext(
-                command,
-                description,
-                option,
-                argument));
+        ArgumentInfo? argument = null)
+    {
+        var resolved = _textProvider.GetDescription(new HelpDescriptionContext(command, description, option, argument));
+
+        var text = GetDefaultValueText(option, argument);
+        if (text is null) return resolved;
+
+        var defaultValue = $"[{_textProvider.GetDefaultValueLabel()}: {text}]";
+        return resolved.Length == 0 ? defaultValue : $"{resolved} {defaultValue}";
+    }
+
+    private string? GetDefaultValueText(OptionInfo? option, ArgumentInfo? argument)
+    {
+        var display = option?.DefaultValue?.DisplayText ?? argument?.DefaultValue?.DisplayText ?? HelpText.Empty;
+        if (!display.IsEmpty)
+        {
+            var displayText = _textProvider.GetDefaultValueText(display);
+            if (!string.IsNullOrWhiteSpace(displayText)) return displayText;
+        }
+
+        return option?.DefaultValue is DefaultValueInfo.Provider || argument?.DefaultValue is DefaultValueInfo.Provider
+            ? null
+            : option?.DefaultValue is DefaultValueInfo.Initializer optionInitializer
+                ? _valueFormatter.Format(optionInitializer.Value, _textProvider.GetFormatCulture())
+                : argument?.DefaultValue is DefaultValueInfo.Initializer argumentInitializer
+                    ? _valueFormatter.Format(argumentInitializer.Value, _textProvider.GetFormatCulture())
+                    : null;
+    }
 
     private static void WriteDescription(
         IOutputWriter output,
@@ -191,10 +202,7 @@ public sealed class DefaultHelpProvider : IHelpProvider
         string heading,
         IReadOnlyList<HelpEntry> entries)
     {
-        if (entries.Count == 0)
-        {
-            return;
-        }
+        if (entries.Count == 0) return;
 
         output.WriteLine();
         output.WriteLine($"{heading}:");

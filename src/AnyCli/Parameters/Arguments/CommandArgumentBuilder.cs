@@ -222,10 +222,16 @@ public sealed class CommandArgumentBuilder
         }
 
         var argument = _arguments[^1];
-        if (argument.Arity.IsRequired || argument.Arity.IsVariadic)
+        if (argument.Arity.IsVariadic)
         {
             throw new InvalidOperationException(
-                "Only non-variadic optional arguments can have a default value.");
+                "Variadic arguments must use SetDefaultValues.");
+        }
+
+        if (argument.Arity.Minimum > 0)
+        {
+            throw new InvalidOperationException(
+                "Required arguments cannot have a default value.");
         }
 
         argument.SetDefaultValue(value);
@@ -233,7 +239,7 @@ public sealed class CommandArgumentBuilder
     }
 
     /// <summary>
-    /// Sets the default values of the most recently added zero-or-more variadic argument.
+    /// Sets the default values of the most recently added variadic argument.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="values">The default values.</param>
@@ -242,7 +248,7 @@ public sealed class CommandArgumentBuilder
     /// <paramref name="values"/> is <see langword="null"/>.
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// No argument has been added, the argument is not variadic, or the argument requires values.
+    /// No argument has been added, or the argument is not variadic.
     /// </exception>
     public CommandArgumentBuilder SetDefaultValues<T>(IReadOnlyCollection<T> values)
     {
@@ -254,13 +260,88 @@ public sealed class CommandArgumentBuilder
         }
 
         var argument = _arguments[^1];
-        if (!argument.Arity.IsVariadic || argument.Arity.IsRequired)
+        if (!argument.Arity.IsVariadic)
         {
             throw new InvalidOperationException(
-                "Only zero-or-more variadic arguments can have default values.");
+                "Only variadic arguments can have default values.");
         }
 
         argument.SetDefaultValue(values.ToArray());
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the default value provider of the most recently added optional argument.
+    /// </summary>
+    /// <param name="providerType">The default value provider type.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="providerType"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// No argument has been added, or the argument is required.
+    /// </exception>
+    public CommandArgumentBuilder SetDefaultValueProvider(Type providerType)
+    {
+        ArgumentNullException.ThrowIfNull(providerType);
+
+        if (_arguments.Count == 0)
+        {
+            throw new InvalidOperationException("No argument has been added.");
+        }
+
+        var argument = _arguments[^1];
+        if (argument.Arity.Minimum > 0 && !argument.Arity.IsVariadic)
+        {
+            throw new InvalidOperationException(
+                "Only optional arguments can have a default value provider.");
+        }
+
+        argument.SetDefaultValueProvider(providerType);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the default value display text of the most recently added argument.
+    /// </summary>
+    /// <param name="display">The localized default value display text.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// No argument has been added, or the argument is required.
+    /// </exception>
+    public CommandArgumentBuilder SetDefaultValueDisplay(HelpText display)
+    {
+        if (_arguments.Count == 0)
+        {
+            throw new InvalidOperationException("No argument has been added.");
+        }
+
+        var argument = _arguments[^1];
+        if (argument.Arity.Minimum > 0 && !argument.Arity.IsVariadic)
+        {
+            throw new InvalidOperationException(
+                "Only optional arguments can have a default value display.");
+        }
+
+        argument.SetDefaultValueDisplay(display);
+        return this;
+    }
+
+    /// <summary>
+    /// Marks the most recently added argument as having a property initializer.
+    /// </summary>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// No argument has been added.
+    /// </exception>
+    public CommandArgumentBuilder SetHasInitializer()
+    {
+        if (_arguments.Count == 0)
+        {
+            throw new InvalidOperationException("No argument has been added.");
+        }
+
+        _arguments[^1].SetHasInitializer();
         return this;
     }
 
@@ -315,13 +396,13 @@ public sealed class CommandArgumentBuilder
                 throw new InvalidOperationException("A variadic argument must be the last argument.");
             }
 
-            if (argument.Arity.IsRequired && !argument.Arity.IsVariadic && optionalSeen)
+            if (argument.Arity.Minimum > 0 && !argument.Arity.IsVariadic && optionalSeen)
             {
                 throw new InvalidOperationException(
                     "Required arguments must appear before optional arguments.");
             }
 
-            if (!argument.Arity.IsVariadic && !argument.Arity.IsRequired)
+            if (!argument.Arity.IsVariadic && argument.Arity.Minimum == 0)
             {
                 optionalSeen = true;
             }

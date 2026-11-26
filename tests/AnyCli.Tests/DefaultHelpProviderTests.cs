@@ -36,8 +36,8 @@ public class DefaultHelpProviderTests
             <input>  Input file
 
         Options:
-            --count        Number of items
-            --mode         Processing mode
+            --count        Number of items [default: three items]
+            --mode         Processing mode [default: fast]
             --verbose      Enable verbose output
             -h, --help     Prints help information
             -v, --version  Prints version information
@@ -102,8 +102,8 @@ public class DefaultHelpProviderTests
             <input>  Archivo de entrada
 
         Opciones:
-            --count        Número de elementos
-            --mode         Modo de procesamiento
+            --count        Número de elementos [predeterminado: tres elementos]
+            --mode         Modo de procesamiento [predeterminado: fast]
             --verbose      Habilitar salida detallada
             -h, --help     Muestra la información de ayuda
             -v, --version  Muestra la información de versión
@@ -131,6 +131,19 @@ public class DefaultHelpProviderTests
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Error).IsEmpty();
         await Assert.That(Normalize(result.Output)).IsEqualTo(Normalize(ExpectedRunHelp));
+    }
+
+    [Test]
+    public async Task CommandHelp_DefaultProvider_RendersDefaultValues()
+    {
+        var app = CreateApp();
+
+        var result = await TestAppHarness.RunAsync(app, ["run", "--help"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Error).IsEmpty();
+        await Assert.That(result.Output).Contains("[default: three items]");
+        await Assert.That(result.Output).Contains("[default: fast]");
     }
 
     [Test]
@@ -192,8 +205,9 @@ public class DefaultHelpProviderTests
             .WithName("anycli")
             .WithVersion("1.0.0")
             .ConfigureLocalization(LocalizationOptions.FromCulture(culture))
-            .ConfigureHelp(help => help.UseLocalizedTextProvider(
-                AnyCli.Tests.Resources.HelpDescriptions.ResourceManager))
+            .ConfigureHelp(help => help
+                .UseLocalizedTextProvider(
+                    Resources.HelpDescriptions.ResourceManager))
             .ConfigureCommands(commands =>
             {
                 commands.AddCommand<RunCommand, RunParameters>(
@@ -238,11 +252,12 @@ public sealed partial class RunParameters
 
     [Option("--count")]
     [ResourceDescription("CountDescription")]
-    public int Count { get; set; }
+    [DefaultValueDisplayResource("CountDefault")]
+    public int Count { get; set; } = 3;
 
     [Option("--mode")]
     [ResourceDescription("ModeDescription")]
-    public RunMode Mode { get; set; }
+    public RunMode Mode { get; set; } = RunMode.Fast;
 
     [Option("--verbose")]
     [ResourceDescription("VerboseDescription")]

@@ -66,6 +66,41 @@ public sealed class OptionBuilder<T>
         return new DefaultValueOptionBuilder<T>(_option);
     }
 
+    /// <summary>
+    /// Sets the default value provider used when the option is not supplied.
+    /// </summary>
+    /// <param name="providerType">The default value provider type.</param>
+    /// <returns>The current option builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="providerType"/> is <see langword="null"/>.
+    /// </exception>
+    public OptionBuilder<T> SetDefaultValueProvider(Type providerType)
+    {
+        _option.SetDefaultValueProvider(providerType);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the localized default value display text shown in help output.
+    /// </summary>
+    /// <param name="display">The default value display text.</param>
+    /// <returns>The current option builder.</returns>
+    public OptionBuilder<T> SetDefaultValueDisplay(HelpText display)
+    {
+        _option.SetDefaultValueDisplay(display);
+        return this;
+    }
+
+    /// <summary>
+    /// Marks the option as having a property initializer.
+    /// </summary>
+    /// <returns>The current option builder.</returns>
+    public OptionBuilder<T> SetHasInitializer()
+    {
+        _option.SetHasInitializer();
+        return this;
+    }
+
     internal static void SetAliasesCore(
         OptionDefinition option,
         IReadOnlyCollection<string> aliases)

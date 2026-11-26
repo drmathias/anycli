@@ -17,21 +17,25 @@ public sealed class SpectreHelpProvider : IHelpProvider
 {
     private readonly SpectreHelpOptions _options;
     private readonly IHelpTextProvider _textProvider;
+    private readonly IHelpValueFormatter _valueFormatter;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SpectreHelpProvider"/> class.
     /// </summary>
     /// <param name="textProvider">The provider for localized help text.</param>
+    /// <param name="valueFormatter">The formatter for default values.</param>
     /// <param name="options">The styling options, or <see langword="null"/> to use defaults.</param>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="textProvider"/> is <see langword="null"/>.
     /// </exception>
     public SpectreHelpProvider(
         IHelpTextProvider textProvider,
+        IHelpValueFormatter? valueFormatter = null,
         SpectreHelpOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(textProvider);
         _textProvider = textProvider;
+        _valueFormatter = valueFormatter ?? new DefaultHelpValueFormatter();
         _options = options ?? new SpectreHelpOptions();
     }
 
@@ -42,7 +46,6 @@ public sealed class SpectreHelpProvider : IHelpProvider
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
-
         var output = context.AnsiConsole.Output;
         var hasCommands = context.Commands.Count > 0;
         var usage = CreateRootUsage(context.AppName, hasCommands);
@@ -168,15 +171,13 @@ public sealed class SpectreHelpProvider : IHelpProvider
         return parts;
     }
 
-    private string GetOptionsUsage() =>
-        $"[{_textProvider.GetOptionsPlaceholder()}]";
+    private string GetOptionsUsage() => $"[{_textProvider.GetOptionsPlaceholder()}]";
 
-    private string GetCommandUsage() =>
-        $"<{_textProvider.GetCommandPlaceholder()}>";
+    private string GetCommandUsage() => $"<{_textProvider.GetCommandPlaceholder()}>";
 
     private static string GetArgumentSyntax(ArgumentInfo argument)
     {
-        var name = argument.IsVariadic
+        var name = argument.Arity.IsVariadic
             ? argument.Name + "..."
             : argument.Name;
 
@@ -186,20 +187,17 @@ public sealed class SpectreHelpProvider : IHelpProvider
     }
 
     private HelpEntry CreateArgumentEntry(CommandInfo command, ArgumentInfo argument) =>
-        new(
-            GetArgumentSyntax(argument),
+        new(GetArgumentSyntax(argument),
             ResolveDescription(command, argument.Description, argument: argument),
             _options.ArgumentStyle);
 
     private HelpEntry CreateOptionEntry(OptionInfo option) =>
-        new(
-            string.Join(", ", option.Names),
+        new(string.Join(", ", option.Names),
             ResolveDescription(command: null, option.Description, option: option),
             _options.OptionStyle);
 
     private HelpEntry CreateCommandEntry(CommandInfo command) =>
-        new(
-            command.Name,
+        new(command.Name,
             ResolveDescription(command, command.Description),
             _options.CommandStyle);
 
@@ -207,13 +205,39 @@ public sealed class SpectreHelpProvider : IHelpProvider
         CommandInfo? command,
         HelpText description,
         OptionInfo? option = null,
-        ArgumentInfo? argument = null) =>
-        _textProvider.GetDescription(
+        ArgumentInfo? argument = null)
+    {
+        var resolved = _textProvider.GetDescription(
             new HelpDescriptionContext(
                 command,
                 description,
                 option,
                 argument));
+
+        var text = GetDefaultValueText(option, argument);
+        if (text is null) return resolved;
+
+        var defaultValue = $"[{_textProvider.GetDefaultValueLabel()}: {text}]";
+        return resolved.Length == 0 ? defaultValue : $"{resolved} {defaultValue}";
+    }
+
+    private string? GetDefaultValueText(OptionInfo? option, ArgumentInfo? argument)
+    {
+        var display = option?.DefaultValue?.DisplayText ?? argument?.DefaultValue?.DisplayText ?? HelpText.Empty;
+        if (!display.IsEmpty)
+        {
+            var displayText = _textProvider.GetDefaultValueText(display);
+            if (!string.IsNullOrWhiteSpace(displayText)) return displayText;
+        }
+
+        return option?.DefaultValue is DefaultValueInfo.Provider || argument?.DefaultValue is DefaultValueInfo.Provider
+            ? null
+            : option?.DefaultValue is DefaultValueInfo.Initializer optionInitializer
+                ? _valueFormatter.Format(optionInitializer.Value, _textProvider.GetFormatCulture())
+                : argument?.DefaultValue is DefaultValueInfo.Initializer argumentInitializer
+                    ? _valueFormatter.Format(argumentInitializer.Value, _textProvider.GetFormatCulture())
+                    : null;
+    }
 
     private void WriteDescription(
         IAnsiConsole output,
@@ -232,10 +256,7 @@ public sealed class SpectreHelpProvider : IHelpProvider
         WriteLine(output, $"{heading}:", _options.HeadingStyle);
         output.Write(new Text("    ", _options.UsageStyle));
 
-        foreach (var segment in usage)
-        {
-            output.Write(new Text(segment.Text, segment.Style));
-        }
+        foreach (var segment in usage) output.Write(new Text(segment.Text, segment.Style));
 
         output.WriteLine();
     }
@@ -245,10 +266,7 @@ public sealed class SpectreHelpProvider : IHelpProvider
         string heading,
         IReadOnlyList<HelpEntry> entries)
     {
-        if (entries.Count == 0)
-        {
-            return;
-        }
+        if (entries.Count == 0) return;
 
         output.WriteLine();
         WriteLine(output, $"{heading}:", _options.HeadingStyle);

@@ -241,9 +241,10 @@ internal static class CommandParameterParser
 
             var available = positionalValues.Count - position;
 
+            var usesDefault = available == 0 && definition.HasDefaultValueSource;
             if (definition.Arity.IsVariadic)
             {
-                if (available < definition.Arity.Minimum)
+                if (available < definition.Arity.Minimum && !usesDefault)
                 {
                     throw new CommandErrorException(
                         new TooFewVariadicValuesError(
@@ -267,7 +268,7 @@ internal static class CommandParameterParser
                 ? available
                 : Math.Min(definition.Arity.Maximum, available);
 
-            if (count < definition.Arity.Minimum)
+            if (count < definition.Arity.Minimum && !usesDefault)
             {
                 throw new CommandErrorException(
                     new MissingRequiredArgumentError(definition.Name));
@@ -320,18 +321,12 @@ internal static class CommandParameterParser
             return name.Length == 2 && optionLookup.ContainsKey(name);
         }
 
-        if (token.Length == 2)
-        {
-            return optionLookup.ContainsKey(token);
-        }
+        if (token.Length == 2) return optionLookup.ContainsKey(token);
 
         for (var index = 1; index < token.Length; index++)
         {
             if (!optionLookup.TryGetValue("-" + token[index], out var option) ||
-                option.Definition.TakesValue)
-            {
-                return false;
-            }
+                option.Definition.ValueKind is not OptionValueKind.Flag) return false;
         }
 
         return true;
@@ -387,7 +382,7 @@ internal static class CommandParameterParser
                 throw new CommandErrorException(new UnknownOptionError(token));
             }
 
-            if (binding.Definition.TakesValue)
+            if (binding.Definition.ValueKind is not OptionValueKind.Flag)
             {
                 if (index + 1 >= tokens.Length || tokens[index + 1] == "--")
                 {
@@ -396,10 +391,7 @@ internal static class CommandParameterParser
 
                 AddOptionValue(commandValues, globalValues, binding, tokens[++index]);
             }
-            else
-            {
-                AddOptionValue(commandValues, globalValues, binding, null);
-            }
+            else AddOptionValue(commandValues, globalValues, binding, null);
 
             return index;
         }
@@ -412,7 +404,7 @@ internal static class CommandParameterParser
                 throw new CommandErrorException(new UnknownOptionError(name));
             }
 
-            if (binding.Definition.TakesValue)
+            if (binding.Definition.ValueKind is not OptionValueKind.Flag)
             {
                 throw new CommandErrorException(new OptionRequiresSeparateValueError(name));
             }
@@ -438,7 +430,7 @@ internal static class CommandParameterParser
             throw new CommandErrorException(new UnknownOptionError(name));
         }
 
-        if (binding.Definition.TakesValue)
+        if (binding.Definition.ValueKind is not OptionValueKind.Flag)
         {
             if (equalsIndex >= 0)
             {
@@ -478,7 +470,7 @@ internal static class CommandParameterParser
                 "Command options are not supported during global option parsing.");
         if (optionValues.TryGetValue(binding.Definition.Name, out var optionValue))
         {
-            if (!binding.Definition.IsCollection)
+            if (binding.Definition.ValueKind is not OptionValueKind.Collection)
             {
                 throw new CommandErrorException(
                     new RepeatedOptionError(binding.Definition.Name));
@@ -492,7 +484,7 @@ internal static class CommandParameterParser
 
         if (value is not null)
         {
-            optionValue.Add(value, binding.Definition.IsCollection);
+            optionValue.Add(value, binding.Definition.ValueKind is OptionValueKind.Collection);
         }
     }
 }

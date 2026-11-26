@@ -22,7 +22,7 @@ public sealed class VariadicArgumentAttribute(int position) : ArgumentAttributeB
     public int MaximumCount { get; set; } = int.MaxValue;
 
     /// <summary>
-    /// Gets or sets the default values used when no argument values are supplied.
+    /// Gets or sets a default value provider that creates the values when no argument values are supplied.
     /// </summary>
-    public object? DefaultValue { get; set; }
+    public Type? DefaultValueProvider { get; set; }
 }

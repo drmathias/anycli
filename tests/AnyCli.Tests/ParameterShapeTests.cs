@@ -242,8 +242,8 @@ public sealed partial record ImmutableArgumentsParameters
     [Argument(0)]
     public string Name { get; init; } = "";
 
-    [OptionalArgument(1, DefaultValue = "note")]
-    public string Note { get; init; } = "";
+    [OptionalArgument(1)]
+    public string Note { get; init; } = "note";
 
     [VariadicArgument(2)]
     public string[] Values { get; init; } = [];
@@ -270,8 +270,8 @@ public sealed partial class ClassInitOnlyParameters
     [Argument(0)]
     public string Name { get; init; } = "";
 
-    [Option("--count", DefaultValue = 3)]
-    public int Count { get; init; }
+    [Option("--count")]
+    public int Count { get; init; } = 3;
 }
 
 public sealed partial class ClassRequiredParameters

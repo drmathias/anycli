@@ -55,6 +55,24 @@ public class SpectreHelpTests
     }
 
     [Test]
+    public async Task DefaultValues_MatchDefaultProvider()
+    {
+        var plain = await TestAppHarness.RunAsync(
+            CreateDefaultValueApp(useSpectre: false),
+            ["defaults", "--help"]);
+        var spectre = await TestAppHarness.RunAsync(
+            CreateDefaultValueApp(useSpectre: true),
+            ["defaults", "--help"]);
+
+        await Assert.That(spectre.ExitCode).IsEqualTo(0);
+        await Assert.That(spectre.Error).IsEmpty();
+        await Assert.That(spectre.Output).Contains("[default: tasks.json]");
+        await Assert.That(spectre.Output).Contains("[default: 7]");
+        await Assert.That(spectre.Output).Contains("[default: fast]");
+        await Assert.That(Normalize(spectre.Output)).IsEqualTo(Normalize(plain.Output));
+    }
+
+    [Test]
     public async Task LocalizedTextProvider_IsUsedBySpectreHelp()
     {
         var app = CreateApp(
@@ -82,18 +100,27 @@ public class SpectreHelpTests
                 if (useDescriptionResources)
                 {
                     help.UseLocalizedTextProvider(
-                        AnyCli.Tests.Resources.HelpDescriptions.ResourceManager);
+                        Resources.HelpDescriptions.ResourceManager);
                 }
 
-                if (useSpectre)
-                {
-                    help.UseSpectreHelp();
-                }
+                if (useSpectre) help.UseSpectreHelp();
             })
             .ConfigureCommands(commands =>
                 commands.AddCommand<SpectreHelpCommand, SpectreHelpParameters>(
                     "run",
                     "Run the command"))
+            .Build();
+
+    private static ConsoleApp CreateDefaultValueApp(bool useSpectre) =>
+        ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureLocalization(LocalizationOptions.FromCulture("en"))
+            .ConfigureHelp(help =>
+            {
+                if (useSpectre) help.UseSpectreHelp();
+            })
+            .ConfigureCommands(commands =>
+                commands.AddCommand<DefaultValueCommand, SpectreDefaultParameters>("defaults"))
             .Build();
 
     private static string Normalize(string value) =>
@@ -104,6 +131,11 @@ public class SpectreHelpTests
                 .Split('\n')
                 .Select(line => line.TrimEnd()))
             .TrimEnd('\n');
+
+    private sealed class DefaultValueCommand : ICommand<SpectreDefaultParameters>
+    {
+        public int Execute(CommandContext context, SpectreDefaultParameters parameters) => 0;
+    }
 
     private sealed class SpectreHelpCommand : ICommand<SpectreHelpParameters>
     {
@@ -121,4 +153,26 @@ public sealed partial class SpectreHelpParameters
     [Option("--verbose")]
     [Description("Verbose output")]
     public bool Verbose { get; set; }
+}
+
+
+public sealed partial class SpectreDefaultParameters
+{
+    [Option("--data")]
+    [DefaultValueDisplay("tasks.json")]
+    public string Data { get; set; } = CreateComputedDefault();
+
+    [OptionalArgument(0)]
+    public int Count { get; set; } = 7;
+
+    [Option("--mode")]
+    public SpectreDefaultMode Mode { get; set; } = SpectreDefaultMode.Fast;
+
+    private static string CreateComputedDefault() => "computed";
+}
+
+public enum SpectreDefaultMode
+{
+    Fast,
+    Slow,
 }

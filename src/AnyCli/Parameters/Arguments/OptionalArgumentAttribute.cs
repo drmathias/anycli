@@ -19,7 +19,7 @@ public sealed class OptionalArgumentAttribute : ArgumentAttributeBase
     }
 
     /// <summary>
-    /// Gets or sets the default value used when the argument is not supplied.
+    /// Gets or sets a default value provider that creates the value when the argument is not supplied.
     /// </summary>
-    public object? DefaultValue { get; set; }
+    public Type? DefaultValueProvider { get; set; }
 }

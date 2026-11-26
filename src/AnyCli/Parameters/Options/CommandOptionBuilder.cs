@@ -22,7 +22,7 @@ public sealed class CommandOptionBuilder
     /// option name.
     /// </exception>
     public OptionBuilder<T> AddValue<T>(string name) =>
-        Add<T>(name, typeof(T), typeof(T), takesValue: true, isCollection: false);
+        Add<T>(name, typeof(T), typeof(T), OptionValueKind.Value);
 
     /// <summary>
     /// Adds an option that does not consume a value.
@@ -34,7 +34,7 @@ public sealed class CommandOptionBuilder
     /// option name.
     /// </exception>
     public OptionBuilder<bool> AddFlag(string name) =>
-        Add<bool>(name, typeof(bool), typeof(bool), takesValue: false, isCollection: false);
+        Add<bool>(name, typeof(bool), typeof(bool), OptionValueKind.Flag);
 
     /// <summary>
     /// Adds an option that can be repeated into a collection.
@@ -47,7 +47,7 @@ public sealed class CommandOptionBuilder
     /// option name.
     /// </exception>
     public OptionBuilder<T[]> AddCollection<T>(string name) =>
-        Add<T[]>(name, typeof(T), typeof(T[]), takesValue: true, isCollection: true);
+        Add<T[]>(name, typeof(T), typeof(T[]), OptionValueKind.Collection);
 
     internal IReadOnlyList<OptionDefinition> Build()
     {
@@ -66,8 +66,7 @@ public sealed class CommandOptionBuilder
         string name,
         Type valueType,
         Type declaredType,
-        bool takesValue,
-        bool isCollection)
+        OptionValueKind valueKind)
     {
         var option = new OptionDefinition(
             NormalizeName(name),
@@ -76,8 +75,7 @@ public sealed class CommandOptionBuilder
             valueType,
             declaredType,
             required: false,
-            takesValue,
-            isCollection);
+            valueKind);
         _options.Add(option);
         return new OptionBuilder<TValue>(option);
     }

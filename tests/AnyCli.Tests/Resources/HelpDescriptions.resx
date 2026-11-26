@@ -76,4 +76,7 @@
   <data name="VerboseDescription" xml:space="preserve">
     <value>Enable verbose output</value>
   </data>
+  <data name="CountDefault" xml:space="preserve">
+    <value>three items</value>
+  </data>
 </root>

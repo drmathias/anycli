@@ -53,4 +53,9 @@ public static class HelpTextResourceKeys
     /// The built-in version option description.
     /// </summary>
     public const string VersionOptionDescription = nameof(VersionOptionDescription);
+
+    /// <summary>
+    /// The label used before a parameter's default value.
+    /// </summary>
+    public const string DefaultValue = nameof(DefaultValue);
 }

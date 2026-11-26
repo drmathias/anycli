@@ -1,8 +1,8 @@
-using System.ComponentModel;
-
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 //
 // SPDX-License-Identifier: MIT
+
+using System.ComponentModel;
 
 using AnyCli.Tests.Fixtures;
 
@@ -70,8 +70,9 @@ public class HelpLocalizationTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureLocalization(LocalizationOptions.FromCulture("fr"))
-            .ConfigureHelp(help => help.UseLocalizedTextProvider(
-                AnyCli.Tests.Resources.HelpDescriptions.ResourceManager))
+            .ConfigureHelp(help => help
+                .UseLocalizedTextProvider(
+                    Resources.HelpDescriptions.ResourceManager))
             .ConfigureCommands(commands => commands.AddCommand<ArgumentCommand, ArgumentParameters>("run"))
             .Build();
 
@@ -87,8 +88,9 @@ public class HelpLocalizationTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureHelp(help => help.UseLocalizedTextProvider(
-                AnyCli.Tests.Resources.HelpDescriptions.ResourceManager))
+            .ConfigureHelp(help => help
+                .UseLocalizedTextProvider(
+                    Resources.HelpDescriptions.ResourceManager))
             .ConfigureCommands(commands => commands.AddCommand<FallbackCommand, FallbackParameters>("run"))
             .Build();
 
@@ -120,9 +122,10 @@ public class HelpLocalizationTests
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureHelp(help => help.UseLocalizedTextProvider(
-                "AnyCli.Tests.Resources.MissingHelpDescriptions",
-                typeof(HelpLocalizationTests).Assembly))
+            .ConfigureHelp(help => help
+                .UseLocalizedTextProvider(
+                    "AnyCli.Tests.Resources.MissingHelpDescriptions",
+                    typeof(HelpLocalizationTests).Assembly))
             .ConfigureCommands(commands => commands.AddCommand<ArgumentCommand, ArgumentParameters>("run"))
             .Build();
 
@@ -155,6 +158,33 @@ public class HelpLocalizationTests
             var usage = resources.GetString("Usage", culture);
 
             await Assert.That(usage).IsEqualTo(expectedUsage);
+        }
+    }
+
+    [Test]
+    public async Task HelpResources_ContainDefaultValueTranslations()
+    {
+        var resources = new System.Resources.ResourceManager(
+            "AnyCli.Help.HelpMessages",
+            typeof(LocalizedHelpTextProvider).Assembly);
+
+        var expected = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["en"] = "default",
+            ["fr"] = "par défaut",
+            ["de"] = "Standard",
+            ["es"] = "predeterminado",
+            ["pt-BR"] = "padrão",
+            ["it"] = "predefinito",
+            ["nl"] = "standaard",
+        };
+
+        foreach (var (cultureName, expectedDefault) in expected)
+        {
+            var culture = System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+            var defaultValue = resources.GetString("DefaultValue", culture);
+
+            await Assert.That(defaultValue).IsEqualTo(expectedDefault);
         }
     }
 

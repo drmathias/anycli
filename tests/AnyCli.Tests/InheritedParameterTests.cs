@@ -111,14 +111,14 @@ public class InheritedBaseParameters
     [Argument(0)]
     public string Name { get; set; } = "";
 
-    [OptionalArgument(1, DefaultValue = 3)]
-    public int Count { get; set; }
+    [OptionalArgument(1)]
+    public int Count { get; set; } = 3;
 
     [RequiredOption("--mode")]
     public string Mode { get; set; } = "";
 
-    [Option("--tag", DefaultValue = new[] { "base" })]
-    public string[] Tags { get; set; } = [];
+    [Option("--tag")]
+    public string[] Tags { get; set; } = ["base"];
 }
 
 public sealed partial class InheritedParameters : InheritedBaseParameters

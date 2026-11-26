@@ -79,6 +79,9 @@
   <data name="CommandPlaceholder" xml:space="preserve">
     <value>COMMAND</value>
   </data>
+  <data name="DefaultValue" xml:space="preserve">
+    <value>default</value>
+  </data>
   <data name="HelpOptionDescription" xml:space="preserve">
     <value>Prints help information</value>
   </data>

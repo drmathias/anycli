@@ -472,8 +472,13 @@ public sealed partial class HashSetParameters
 
 public sealed partial class GeneratedOneOrMoreParameters
 {
+    public GeneratedOneOrMoreParameters()
+    {
+        Values = [];
+    }
+
     [VariadicArgument(0, MinimumCount = 1)]
-    public int[] Values { get; set; } = [];
+    public int[] Values { get; set; }
 }
 
 public sealed partial class IListParameters

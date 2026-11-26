@@ -43,7 +43,7 @@ copy input.txt
 
 ## Variadic arguments
 
-`[VariadicArgument]` accepts zero or more positional values by default. Use `MinimumCount` and `MaximumCount` to constrain the number of values.
+`[VariadicArgument]` accepts zero or more positional values by default. Use `MinimumCount` and `MaximumCount` to constrain the number of user-supplied values. A property initializer or `DefaultValueProvider` is used without applying those bounds when no values are supplied, and the argument is treated as optional if a default value is configured.
 
 ```csharp
 public sealed partial record TagParameters
@@ -89,7 +89,7 @@ run --dry-run
 public string Config { get; set; } = "";
 ```
 
-Required options do not use `DefaultValue`; the option must be present on the command line.
+Required options do not support supplying default values; the option must be present on the command line.
 
 ## Attribute properties
 
@@ -98,27 +98,45 @@ Required options do not use `DefaultValue`; the option must be present on the co
 | `Position` | Argument attributes | Zero-based positional index |
 | `Name` | Argument and option attributes | Explicit argument or primary option name |
 | `Aliases` | Option attributes | Additional option names |
-| `DefaultValue` | Optional/variadic arguments and options | Value used when the parameter is omitted |
+| `DefaultValueProvider` | Optional/variadic arguments and options | Provider type implementing `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>` |
 | `MinimumCount` | `[VariadicArgument]` | Minimum number of values |
 | `MaximumCount` | `[VariadicArgument]` | Maximum number of values |
 | `Parser` | Argument and option attributes | Custom `IParameterParser<T>` implementation |
 
+Provider types may implement `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>`. Default value providers are not supported on global options.
+
 ## Defaults
 
-Defaults can come from the attribute or from the property initializer. Explicit command-line values take priority.
+Defaults come from a property initializer or a `DefaultValueProvider`. Explicit command-line values take priority.
 
 1. Explicit command-line value.
-2. Attribute `DefaultValue`.
+2. `DefaultValueProvider`.
 3. Property initializer.
+4. `default(T)`.
 
-Property initializers are preserved when no command-line value or attribute default is supplied.
+Property initializers are preserved when no command-line value or provider default is supplied.
+
+Simple initializers are captured by the generator and shown in help output. Computed initializers are not evaluated for help.
+
+### Default value display
+
+Use `[DefaultValueDisplay]` for literal help text and `[DefaultValueDisplayResource]` for a resource key:
+
+```csharp
+[Option("--data")]
+[DefaultValueDisplay("tasks.json")]
+[DefaultValueDisplayResource("DataFileDefault")]
+public string DataFile { get; set; } = "tasks.json";
+```
+
+Display metadata affects help output only. It overrides captured initializer values and does not change binding behavior. It is ignored for required parameters.
 
 ## Supported value types
 
 AnyCLI supports:
 
 - `string`
-- Enums, matched case-insensitively and with kebab-case names
+- Enums, matched case-insensitively and with canonical kebab-case names
 - Types implementing `IParsable<T>` or `ISpanParsable<T>`
 - Collections of supported scalar types
 - Custom types with an `IParameterParser<T>` implementation

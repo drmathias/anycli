@@ -34,10 +34,12 @@ The help provider decides the layout and writes the result. The default provider
 
 Text is a separate concern. `IHelpTextProvider` supplies section headings, usage placeholders, and descriptions. The default provider is `LocalizedHelpTextProvider`, so help text can be localized without replacing the renderer.
 
-A custom help provider receives a `HelpProviderContext` containing:
+A custom help provider factory receives a `HelpProviderContext` containing:
 
 - the application service provider, when configured
 - the configured `IHelpTextProvider`
+- the configured `IHelpValueFormatter`
+- the configured localization options
 
 Root help and command help receive different contexts. `RootHelpContext` contains the top-level commands and global options. `CommandHelpContext` contains the command or command group being described.
 

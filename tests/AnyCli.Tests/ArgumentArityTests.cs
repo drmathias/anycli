@@ -20,15 +20,11 @@ public class ArgumentArityTests
     }
 
     [Test]
-    public async Task IsRequiredAndIsVariadic_AreDerivedFromRange()
+    public async Task IsVariadic_IsDerivedFromRange()
     {
-        await Assert.That(ArgumentArity.ExactlyOne.IsRequired).IsTrue();
         await Assert.That(ArgumentArity.ExactlyOne.IsVariadic).IsFalse();
-        await Assert.That(ArgumentArity.ZeroOrOne.IsRequired).IsFalse();
         await Assert.That(ArgumentArity.ZeroOrOne.IsVariadic).IsFalse();
-        await Assert.That(ArgumentArity.ZeroOrMore.IsRequired).IsFalse();
         await Assert.That(ArgumentArity.ZeroOrMore.IsVariadic).IsTrue();
-        await Assert.That(ArgumentArity.OneOrMore.IsRequired).IsTrue();
         await Assert.That(ArgumentArity.OneOrMore.IsVariadic).IsTrue();
     }
 

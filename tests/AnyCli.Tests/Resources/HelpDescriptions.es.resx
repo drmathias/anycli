@@ -76,4 +76,7 @@
   <data name="VerboseDescription" xml:space="preserve">
     <value>Habilitar salida detallada</value>
   </data>
+  <data name="CountDefault" xml:space="preserve">
+    <value>tres elementos</value>
+  </data>
 </root>

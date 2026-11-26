@@ -9,6 +9,10 @@ namespace AnyCli.Help;
 /// </summary>
 /// <param name="ServiceProvider">The application service provider, when one is configured.</param>
 /// <param name="TextProvider">The configured help text provider.</param>
+/// <param name="ValueFormatter">The configured help value formatter.</param>
+/// <param name="Localization">The configured localization options.</param>
 public sealed record HelpProviderContext(
     IServiceProvider? ServiceProvider,
-    IHelpTextProvider TextProvider);
+    IHelpTextProvider TextProvider,
+    IHelpValueFormatter ValueFormatter,
+    LocalizationOptions Localization);

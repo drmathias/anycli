@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Globalization;
+
 namespace AnyCli.Help;
 
 /// <summary>
@@ -57,4 +59,23 @@ public interface IHelpTextProvider
     /// <param name="context">The description context.</param>
     /// <returns>The localized description.</returns>
     string GetDescription(HelpDescriptionContext context);
+
+    /// <summary>
+    /// Gets the localized label used before a parameter's default value.
+    /// </summary>
+    /// <returns>The localized default value label.</returns>
+    string GetDefaultValueLabel();
+
+    /// <summary>
+    /// Gets the localized display text for a parameter's default value.
+    /// </summary>
+    /// <param name="text">The configured default value display text.</param>
+    /// <returns>The localized display text.</returns>
+    string GetDefaultValueText(HelpText text);
+
+    /// <summary>
+    /// Gets the culture used to format values in help text.
+    /// </summary>
+    /// <returns>The formatting culture.</returns>
+    CultureInfo GetFormatCulture();
 }

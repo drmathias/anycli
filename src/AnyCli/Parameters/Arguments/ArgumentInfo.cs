@@ -20,20 +20,14 @@ public sealed record ArgumentInfo(
     /// <summary>
     /// Gets a value indicating whether the argument is required.
     /// </summary>
-    public bool IsRequired => Arity.IsRequired;
+    /// <remarks>
+    /// A variadic argument is optional when a default value or property initializer is available,
+    /// even when its minimum count is greater than zero.
+    /// </remarks>
+    public bool IsRequired => Arity.Minimum > 0 && DefaultValue is null;
 
     /// <summary>
-    /// Gets a value indicating whether the argument accepts more than one value.
+    /// Gets the configured default value source, when one is defined.
     /// </summary>
-    public bool IsVariadic => Arity.IsVariadic;
-
-    /// <summary>
-    /// Gets the configured default value, when one is defined.
-    /// </summary>
-    public object? DefaultValue { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the argument has a configured default value.
-    /// </summary>
-    public bool HasDefaultValue { get; init; }
+    public DefaultValueInfo? DefaultValue { get; init; }
 }

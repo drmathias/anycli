@@ -25,7 +25,7 @@ Use the `AnyCli.SpectreConsole` namespace for the adapter, providers, writers, a
 | `SpectreHelpProvider` | Renders help with Spectre.Console. |
 | `SpectreCommandErrorWriter` | Renders command-line errors with Spectre.Console. |
 | `SpectreConsoleOptions` | Controls ANSI, color, and interaction detection. |
-| `SpectreHelpOptions` | Controls help styles. |
+| `SpectreHelpOptions` | Controls Spectre.Console help styles. |
 | `SpectreErrorOptions` | Controls error styles and console options. |
 
 ## Adapter methods
@@ -52,10 +52,10 @@ Help rendering only uses `Output`. The underlying `HelpContext.AnsiConsole` type
 
 | Method | Effect |
 | --- | --- |
-| `UseSpectreHelp(SpectreHelpOptions?)` | Replaces the help renderer with `SpectreHelpProvider`. |
+| `UseSpectreHelp(Action<SpectreHelpOptions>?)` | Replaces the help renderer with `SpectreHelpProvider`. |
 | `UseSpectreErrors(SpectreErrorOptions?)` | Replaces the error writer with `SpectreCommandErrorWriter`. |
 
-`UseSpectreHelp` uses the configured `IHelpTextProvider` from `HelpProviderContext`, so headings and descriptions remain localizable. `UseSpectreErrors` replaces only the writer; the message provider and exit code remain unchanged.
+`UseSpectreHelp` uses the shared `IHelpTextProvider` and `IHelpValueFormatter` configured on `ConfigureHelp`, so headings, descriptions, and default values work the same way as the default provider. `UseSpectreErrors` replaces only the writer; the message provider and exit code remain unchanged.
 
 ## SpectreConsoleOptions
 

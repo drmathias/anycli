@@ -497,8 +497,8 @@ public partial class TestGlobalOptions
 [GlobalOptions]
 public partial class DefaultGlobalOptions
 {
-    [Option("--log-level", DefaultValue = "information")]
-    public string LogLevel { get; set; } = "none";
+    [Option("--log-level")]
+    public string LogLevel { get; set; } = "information";
 }
 
 [GlobalOptions]
@@ -511,8 +511,8 @@ public partial class RequiredGlobalOptions
 [GlobalOptions]
 public partial class CollectionDefaultGlobalOptions
 {
-    [Option("--tag", DefaultValue = new[] { "a", "b" })]
-    public string[] Tags { get; set; } = [];
+    [Option("--tag")]
+    public string[] Tags { get; set; } = ["a", "b"];
 }
 
 [GlobalOptions]

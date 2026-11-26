@@ -24,8 +24,13 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private const string GlobalOptionsAttributeName = "AnyCli.Parameters.Options.GlobalOptionsAttribute";
     private const string DescriptionAttributeName = "System.ComponentModel.DescriptionAttribute";
     private const string ResourceDescriptionAttributeName = "AnyCli.Help.ResourceDescriptionAttribute";
+    private const string DefaultValueDisplayAttributeName = "AnyCli.Help.DefaultValueDisplayAttribute";
+    private const string DefaultValueDisplayResourceAttributeName =
+        "AnyCli.Help.DefaultValueDisplayResourceAttribute";
     private const string ParametersInterfaceName = "ICommandParameters`1";
     private const string GlobalOptionsInterfaceName = "IGlobalOptions`1";
+    private const string DefaultValueProviderInterfaceName = "IDefaultValueProvider`1";
+    private const string AsyncDefaultValueProviderInterfaceName = "IAsyncDefaultValueProvider`1";
     private const string ParameterValueParserAttributeName = "ParameterValueParserAttribute`2";
     private const string EnumParameterParserAttributeName = "EnumParameterParserAttribute`1";
     private const string ParameterParserInterfaceName = "IParameterParser`1";
@@ -69,24 +74,6 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor InvalidDefaultValueTypeDiagnostic = new(
-        id: "ANYCLI006",
-        title: "Invalid default value type",
-        messageFormat:
-            "Default value for parameter property '{0}' cannot be assigned to type '{1}'",
-        category: "AnyCli",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    private static readonly DiagnosticDescriptor UnsupportedDefaultValueDiagnostic = new(
-        id: "ANYCLI008",
-        title: "Unsupported default value",
-        messageFormat:
-            "Default value for parameter property '{0}' is not a supported constant",
-        category: "AnyCli",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
     private static readonly DiagnosticDescriptor InvalidOptionNameDiagnostic = new(
         id: "ANYCLI009",
         title: "Invalid option name",
@@ -123,29 +110,47 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor InvalidCollectionDefaultValueDiagnostic = new(
-        id: "ANYCLI010",
-        title: "Invalid collection default value",
+    private static readonly DiagnosticDescriptor InvalidDefaultValueProviderDiagnostic = new(
+        id: "ANYCLI020",
+        title: "Invalid default value provider",
         messageFormat:
-            "DefaultValue for collection parameter property '{0}' must be a non-null array",
+            "DefaultValueProvider type '{1}' for parameter property '{0}' must be a non-abstract class implementing IDefaultValueProvider<{2}> or IAsyncDefaultValueProvider<{2}>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor InvalidDefaultValueElementTypeDiagnostic = new(
-        id: "ANYCLI011",
-        title: "Invalid default value element type",
+    private static readonly DiagnosticDescriptor AmbiguousDefaultValueProviderDiagnostic = new(
+        id: "ANYCLI025",
+        title: "Ambiguous default value provider",
         messageFormat:
-            "DefaultValue for parameter property '{0}' contains a value that cannot be assigned to element type '{1}'",
+            "DefaultValueProvider type '{1}' for parameter property '{0}' implements both IDefaultValueProvider<{2}> and IAsyncDefaultValueProvider<{2}>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor RequiredVariadicDefaultValueDiagnostic = new(
-        id: "ANYCLI012",
-        title: "Default values on required variadic parameter",
+    private static readonly DiagnosticDescriptor DefaultValueDisplayOnRequiredParameterDiagnostic = new(
+        id: "ANYCLI022",
+        title: "Default value display on required parameter",
         messageFormat:
-            "Variadic parameter property '{0}' with MinimumCount {1} cannot have a default value",
+            "Required parameter property '{0}' cannot have default value display metadata",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DefaultValueDisplayWithoutDefaultDiagnostic = new(
+        id: "ANYCLI023",
+        title: "Default value display without default value",
+        messageFormat:
+            "Parameter property '{0}' has default value display metadata but no configured default value",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DefaultValueProviderOnGlobalOptionDiagnostic = new(
+        id: "ANYCLI024",
+        title: "Default value provider on global option",
+        messageFormat:
+            "Global option property '{0}' cannot use DefaultValueProvider",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -344,6 +349,16 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         diagnostics);
                     if (option is not null)
                     {
+                        if (isGlobalOptions &&
+                            option.DefaultValueProviderTypeName is not null)
+                        {
+                            diagnostics.Add(new DiagnosticModel(
+                                DefaultValueProviderOnGlobalOptionDiagnostic,
+                                GetLocation(property),
+                                property.Name));
+                            continue;
+                        }
+
                         if (isGlobalOptionProperty)
                         {
                             globalOptions.Add(option);
@@ -490,43 +505,55 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     collectionTypeFullName = GetTypeName(property.Type);
                 }
 
-                string? defaultExpression = null;
-                if (isOptionalArgument && !TryGetDefaultValueExpression(
+                string? defaultProviderTypeName = null;
+                var defaultProviderKind = DefaultValueProviderKind.Sync;
+                if (isOptionalArgument && !TryGetDefaultValueProvider(
                         property,
                         attribute,
                         property.Type,
-                        isCollection: false,
-                        elementType: null,
-                        isVariadic: false,
-                        minimumCount: 0,
-                        compilation,
                         diagnostics,
-                        out defaultExpression))
+                        out defaultProviderTypeName,
+                        out defaultProviderKind))
                 {
                     continue;
                 }
 
-                if (isVariadic)
-                {
-                    _ = TryGetVariadicCollection(
+                if (isVariadic && !TryGetDefaultValueProvider(
+                        property,
+                        attribute,
                         property.Type,
-                        out var defaultElementType,
-                        out _);
+                        diagnostics,
+                        out defaultProviderTypeName,
+                        out defaultProviderKind))
+                {
+                    continue;
+                }
 
-                    if (!TryGetDefaultValueExpression(
-                            property,
-                            attribute,
-                            property.Type,
-                            isCollection: true,
-                            defaultElementType,
-                            isVariadic: true,
-                            minimumCount,
-                            compilation,
-                            diagnostics,
-                            out defaultExpression))
-                    {
-                        continue;
-                    }
+                var hasInitializer = HasPropertyInitializer(property) &&
+                    (isOptionalArgument || isVariadic);
+                string? defaultFallbackExpression = null;
+                if ((isOptionalArgument || isVariadic) &&
+                    defaultProviderTypeName is null)
+                {
+                    _ = TryGetDefaultValueFallback(
+                        property,
+                        compilation,
+                        out defaultFallbackExpression);
+                }
+
+                var hasDefaultSource = defaultFallbackExpression is not null ||
+                    defaultProviderTypeName is not null ||
+                    hasInitializer;
+                var isRequiredArgument = !isOptionalArgument &&
+                    (!isVariadic || (minimumCount > 0 && !hasDefaultSource));
+                var defaultDisplay = GetDefaultValueDisplay(property);
+                if (!ValidateDefaultValueDisplay(
+                        property,
+                        isRequiredArgument,
+                        hasDefaultSource,
+                        diagnostics))
+                {
+                    continue;
                 }
 
                 if (!TryCreateParsePlan(
@@ -565,7 +592,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     collectionKind,
                     minimumCount,
                     maximumCount,
-                    defaultExpression,
+                    defaultFallbackExpression,
+                    defaultProviderTypeName,
+                    defaultProviderKind,
+                    hasInitializer,
+                    defaultDisplay,
                     parsePlan));
             }
         }
@@ -651,6 +682,101 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         }
 
         return new HelpTextModel(text, resourceKey);
+    }
+
+    private static HelpTextModel GetDefaultValueDisplay(IPropertySymbol property)
+    {
+        string? text = null;
+        string? resourceKey = null;
+
+        for (var current = property; current is not null; current = current.OverriddenProperty)
+        {
+            foreach (var attribute in current.GetAttributes())
+            {
+                var attributeName = attribute.AttributeClass?.ToDisplayString();
+                if (attribute.ConstructorArguments.Length == 0 ||
+                    attribute.ConstructorArguments[0].Value is not string value)
+                {
+                    continue;
+                }
+
+                if (text is null && attributeName == DefaultValueDisplayAttributeName)
+                {
+                    text = value;
+                }
+                else if (resourceKey is null &&
+                         attributeName == DefaultValueDisplayResourceAttributeName &&
+                         !string.IsNullOrWhiteSpace(value))
+                {
+                    resourceKey = value;
+                }
+            }
+
+            if (text is not null && resourceKey is not null)
+            {
+                break;
+            }
+        }
+
+        return new HelpTextModel(text, resourceKey);
+    }
+
+    private static bool ValidateDefaultValueDisplay(
+        IPropertySymbol property,
+        bool required,
+        bool hasDefaultValue,
+        List<DiagnosticModel> diagnostics)
+    {
+        var hasDisplay = false;
+        for (var current = property; current is not null; current = current.OverriddenProperty)
+        {
+            if (current.GetAttributes().Any(attribute =>
+                    attribute.AttributeClass?.ToDisplayString() is
+                        DefaultValueDisplayAttributeName or DefaultValueDisplayResourceAttributeName))
+            {
+                hasDisplay = true;
+                break;
+            }
+        }
+
+        if (!hasDisplay)
+        {
+            return true;
+        }
+
+        if (required)
+        {
+            diagnostics.Add(new DiagnosticModel(
+                DefaultValueDisplayOnRequiredParameterDiagnostic,
+                GetLocation(property),
+                property.Name));
+            return false;
+        }
+
+        if (!hasDefaultValue)
+        {
+            diagnostics.Add(new DiagnosticModel(
+                DefaultValueDisplayWithoutDefaultDiagnostic,
+                GetLocation(property),
+                property.Name));
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasPropertyInitializer(IPropertySymbol property)
+    {
+        for (var current = property; current is not null; current = current.OverriddenProperty)
+        {
+            if (current.DeclaringSyntaxReferences.Any(reference =>
+                    reference.GetSyntax() is PropertyDeclarationSyntax { Initializer: not null }))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string GetHelpTextExpression(HelpTextModel helpText) =>
@@ -843,18 +969,38 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             isFlag = valueType.SpecialType == SpecialType.System_Boolean;
         }
 
-        string? defaultExpression = null;
-        if (!required && !TryGetDefaultValueExpression(
+        string? defaultProviderTypeName = null;
+        var defaultProviderKind = DefaultValueProviderKind.Sync;
+        if (!required && !TryGetDefaultValueProvider(
                 property,
                 attribute,
                 property.Type,
-                isCollection,
-                isCollection ? elementType : null,
-                isVariadic: false,
-                minimumCount: 0,
-                compilation,
                 diagnostics,
-                out defaultExpression))
+                out defaultProviderTypeName,
+                out defaultProviderKind))
+        {
+            return null;
+        }
+
+        string? defaultFallbackExpression = null;
+        if (!required &&
+            defaultProviderTypeName is null)
+        {
+            _ = TryGetDefaultValueFallback(
+                property,
+                compilation,
+                out defaultFallbackExpression);
+        }
+
+        var hasInitializer = HasPropertyInitializer(property);
+        var defaultDisplay = GetDefaultValueDisplay(property);
+        if (!ValidateDefaultValueDisplay(
+                property,
+                required,
+                defaultFallbackExpression is not null ||
+                defaultProviderTypeName is not null ||
+                hasInitializer,
+                diagnostics))
         {
             return null;
         }
@@ -893,173 +1039,248 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             isCollection,
             elementTypeFullName,
             collectionKind,
-            defaultExpression,
+            defaultFallbackExpression,
+            defaultProviderTypeName,
+            defaultProviderKind,
+            hasInitializer,
+            defaultDisplay,
             parsePlan);
     }
 
-    private static bool TryGetDefaultValueExpression(
+    private static bool TryGetDefaultValueProvider(
         IPropertySymbol property,
         AttributeData attribute,
         ITypeSymbol targetType,
-        bool isCollection,
-        ITypeSymbol? elementType,
-        bool isVariadic,
-        int minimumCount,
-        Compilation compilation,
         List<DiagnosticModel> diagnostics,
-        out string? expression)
+        out string? providerTypeName,
+        out DefaultValueProviderKind providerKind)
     {
-        expression = null;
+        providerTypeName = null;
+        providerKind = DefaultValueProviderKind.Sync;
 
+        ITypeSymbol? providerType = null;
         foreach (var namedArgument in attribute.NamedArguments)
         {
-            if (namedArgument.Key != "DefaultValue")
+            if (namedArgument.Key == "DefaultValueProvider" &&
+                namedArgument.Value.Value is ITypeSymbol valueProviderType)
             {
-                continue;
+                providerType = valueProviderType;
+                break;
             }
+        }
 
-            if (isCollection)
-            {
-                if (isVariadic && minimumCount > 0)
-                {
-                    diagnostics.Add(new DiagnosticModel(
-                        RequiredVariadicDefaultValueDiagnostic,
-                        GetLocation(property),
-                        property.Name,
-                        minimumCount));
-                    return false;
-                }
-
-                if (elementType is null ||
-                    namedArgument.Value.IsNull ||
-                    namedArgument.Value.Kind != TypedConstantKind.Array)
-                {
-                    diagnostics.Add(new DiagnosticModel(
-                        InvalidCollectionDefaultValueDiagnostic,
-                        GetLocation(property),
-                        property.Name));
-                    return false;
-                }
-
-                var elements = new List<string>(namedArgument.Value.Values.Length);
-                foreach (var element in namedArgument.Value.Values)
-                {
-                    if (!TryFormatDefaultValue(element, out var elementExpression) ||
-                        !IsAssignableDefaultValue(element, elementType, compilation))
-                    {
-                        diagnostics.Add(new DiagnosticModel(
-                            InvalidDefaultValueElementTypeDiagnostic,
-                            GetLocation(property),
-                            property.Name,
-                            elementType.ToDisplayString()));
-                        return false;
-                    }
-
-                    elements.Add(elementExpression!);
-                }
-
-                expression = $"new {GetTypeName(elementType)}[] {{ " +
-                    string.Join(", ", elements) + " }";
-                return true;
-            }
-
-            if (!TryFormatDefaultValue(namedArgument.Value, out expression))
-            {
-                diagnostics.Add(new DiagnosticModel(
-                    UnsupportedDefaultValueDiagnostic,
-                    GetLocation(property),
-                    property.Name));
-                return false;
-            }
-
-            if (!IsAssignableDefaultValue(
-                    namedArgument.Value,
-                    targetType,
-                    compilation))
-            {
-                diagnostics.Add(new DiagnosticModel(
-                    InvalidDefaultValueTypeDiagnostic,
-                    GetLocation(property),
-                    property.Name,
-                    targetType.ToDisplayString()));
-                expression = null;
-                return false;
-            }
-
+        if (providerType is null)
+        {
             return true;
         }
 
+        var validation = GetDefaultValueProviderValidation(providerType, targetType);
+        if (validation == DefaultValueProviderValidation.Ambiguous)
+        {
+            diagnostics.Add(new DiagnosticModel(
+                AmbiguousDefaultValueProviderDiagnostic,
+                GetLocation(property),
+                property.Name,
+                providerType.ToDisplayString(),
+                targetType.ToDisplayString()));
+            return false;
+        }
+
+        if (validation == DefaultValueProviderValidation.Invalid)
+        {
+            diagnostics.Add(new DiagnosticModel(
+                InvalidDefaultValueProviderDiagnostic,
+                GetLocation(property),
+                property.Name,
+                providerType.ToDisplayString(),
+                targetType.ToDisplayString()));
+            return false;
+        }
+
+        providerTypeName = providerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        providerKind = validation == DefaultValueProviderValidation.Async
+            ? DefaultValueProviderKind.Async
+            : DefaultValueProviderKind.Sync;
         return true;
     }
 
-    private static bool IsAssignableDefaultValue(
-        TypedConstant value,
-        ITypeSymbol targetType,
-        Compilation compilation)
+    private static DefaultValueProviderValidation GetDefaultValueProviderValidation(
+        ITypeSymbol providerType,
+        ITypeSymbol targetType)
     {
-        if (value.IsNull)
+        if (providerType is not INamedTypeSymbol
+            {
+                TypeKind: TypeKind.Class,
+                IsAbstract: false,
+                IsStatic: false,
+                IsUnboundGenericType: false,
+            })
         {
-            return targetType.IsReferenceType ||
-                (targetType is INamedTypeSymbol named &&
-                    named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T);
+            return DefaultValueProviderValidation.Invalid;
         }
 
-        if (value.Type is not { } sourceType)
+        var isSync = ImplementsDefaultValueProvider(
+            providerType,
+            targetType,
+            DefaultValueProviderInterfaceName);
+        var isAsync = ImplementsDefaultValueProvider(
+            providerType,
+            targetType,
+            AsyncDefaultValueProviderInterfaceName);
+
+        return (isSync, isAsync) switch
+        {
+            (true, true) => DefaultValueProviderValidation.Ambiguous,
+            (true, false) => DefaultValueProviderValidation.Sync,
+            (false, true) => DefaultValueProviderValidation.Async,
+            _ => DefaultValueProviderValidation.Invalid,
+        };
+    }
+
+    private static bool ImplementsDefaultValueProvider(
+        ITypeSymbol providerType,
+        ITypeSymbol targetType,
+        string interfaceName) =>
+        providerType.AllInterfaces.Any(
+            currentInterface =>
+                currentInterface.OriginalDefinition.MetadataName == interfaceName &&
+                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() ==
+                "AnyCli.Parameters.Binding" &&
+                currentInterface.TypeArguments.Length == 1 &&
+                SymbolEqualityComparer.Default.Equals(
+                    currentInterface.TypeArguments[0],
+                    targetType));
+
+    private static bool TryGetDefaultValueFallback(
+        IPropertySymbol property,
+        Compilation compilation,
+        out string? expression)
+    {
+        expression = null;
+        var initializer = GetPropertyInitializer(property);
+        if (initializer is null)
         {
             return false;
         }
 
-        if (SymbolEqualityComparer.Default.Equals(targetType, sourceType))
+        var semanticModel = compilation.GetSemanticModel(initializer.SyntaxTree);
+        if (TryGetConstantExpression(
+                initializer,
+                semanticModel,
+                property.Type,
+                out expression))
         {
             return true;
         }
 
-        var unwrappedTarget = UnwrapNullable(targetType);
-        if (SymbolEqualityComparer.Default.Equals(unwrappedTarget, sourceType))
+        var elements = GetCollectionElements(initializer);
+        if (elements is null ||
+            !TryGetVariadicCollection(property.Type, out var elementType, out _))
         {
-            return true;
+            return false;
         }
 
-        return compilation.ClassifyConversion(sourceType, targetType).IsImplicit;
-    }
-
-    private static bool TryFormatDefaultValue(
-        TypedConstant value,
-        out string? expression)
-    {
-        expression = null;
-
-        if (value.IsNull)
+        var elementExpressions = new List<string>(elements.Count);
+        foreach (var element in elements)
         {
-            expression = "null";
-            return true;
-        }
-
-        if (value.Kind == TypedConstantKind.Enum)
-        {
-            var enumType = value.Type?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            if (enumType is null || value.Value is null)
+            if (!TryGetConstantExpression(
+                    element,
+                    semanticModel,
+                    elementType,
+                    out var elementExpression))
             {
+                expression = null;
                 return false;
             }
 
-            expression = $"({enumType})({FormatPrimitiveValue(value.Value)})";
-            return true;
+            elementExpressions.Add(elementExpression!);
         }
 
-        if (value.Kind == TypedConstantKind.Primitive)
+        expression = $"new {GetTypeName(elementType)}[] {{ " +
+            string.Join(", ", elementExpressions) + " }";
+        return true;
+    }
+
+    private static ExpressionSyntax? GetPropertyInitializer(IPropertySymbol property)
+    {
+        for (var current = property; current is not null; current = current.OverriddenProperty)
         {
-            expression = FormatPrimitiveValue(value.Value);
-            return true;
+            foreach (var reference in current.DeclaringSyntaxReferences)
+            {
+                if (reference.GetSyntax() is PropertyDeclarationSyntax
+                    {
+                        Initializer.Value: { } initializer,
+                    })
+                {
+                    return initializer;
+                }
+            }
         }
 
-        if (value.Kind == TypedConstantKind.Type && value.Value is ITypeSymbol type)
+        return null;
+    }
+
+    private static bool TryGetConstantExpression(
+        ExpressionSyntax expression,
+        SemanticModel semanticModel,
+        ITypeSymbol targetType,
+        out string? result)
+    {
+        result = null;
+        var constant = semanticModel.GetConstantValue(expression);
+        if (!constant.HasValue)
         {
-            expression = $"typeof({type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)})";
+            return false;
+        }
+
+        if (constant.Value is null)
+        {
+            result = "null";
             return true;
         }
 
-        return false;
+        var typeInfo = semanticModel.GetTypeInfo(expression);
+        var expressionType = typeInfo.ConvertedType ?? typeInfo.Type ?? targetType;
+        if (expressionType.TypeKind == TypeKind.Enum)
+        {
+            result = $"({GetTypeName(expressionType)})({FormatPrimitiveValue(constant.Value)})";
+            return true;
+        }
+
+        result = FormatPrimitiveValue(constant.Value);
+        return true;
+    }
+
+    private static IReadOnlyList<ExpressionSyntax>? GetCollectionElements(
+        ExpressionSyntax expression)
+    {
+        return expression switch
+        {
+            ArrayCreationExpressionSyntax { Initializer: { } initializer } =>
+                [.. initializer.Expressions],
+            ImplicitArrayCreationExpressionSyntax { Initializer: { } initializer } =>
+                [.. initializer.Expressions],
+            CollectionExpressionSyntax collection =>
+                GetCollectionExpressionElements(collection),
+            _ => null,
+        };
+    }
+
+    private static IReadOnlyList<ExpressionSyntax>? GetCollectionExpressionElements(
+        CollectionExpressionSyntax collection)
+    {
+        var elements = new List<ExpressionSyntax>(collection.Elements.Count);
+        foreach (var element in collection.Elements)
+        {
+            if (element is not ExpressionElementSyntax expressionElement)
+            {
+                return null;
+            }
+
+            elements.Add(expressionElement.Expression);
+        }
+
+        return elements;
     }
 
     private static string FormatPrimitiveValue(object? value)
@@ -1586,7 +1807,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             source.Append(indent)
                 .Append("    public static ")
                 .Append(model.FullTypeName)
-                .AppendLine(" Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
+                .AppendLine(
+                    " Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
             source.Append(indent).AppendLine("    {");
             if (useInitializerTargets)
             {
@@ -1616,7 +1838,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 model,
                 useInitializerTargets,
                 initializerProperties,
-                initializerLocals);
+                initializerLocals,
+                returnValueTask: false,
+                asyncMethod: false);
             source.Append(indent).AppendLine("    }");
             source.Append(indent).AppendLine("}");
 
@@ -1666,13 +1890,34 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .AppendLine(");");
             }
 
-            if (argument.DefaultValueExpression is not null)
+            if (argument.HasInitializer)
+            {
+                source.Append(indent)
+                    .AppendLine("        parameters.Arguments.SetHasInitializer();");
+            }
+
+            if (!argument.DefaultValueDisplay.IsEmpty)
+            {
+                source.Append(indent)
+                    .Append("        parameters.Arguments.SetDefaultValueDisplay(")
+                    .Append(GetHelpTextExpression(argument.DefaultValueDisplay))
+                    .AppendLine(");");
+            }
+
+            if (argument.DefaultValueProviderTypeName is not null)
+            {
+                source.Append(indent)
+                    .Append("        parameters.Arguments.SetDefaultValueProvider(typeof(")
+                    .Append(argument.DefaultValueProviderTypeName)
+                    .AppendLine("));");
+            }
+            else if (argument.DefaultValueFallbackExpression is not null)
             {
                 source.Append(indent)
                     .Append("        parameters.Arguments.")
                     .Append(argument.Variadic ? "SetDefaultValues" : "SetDefaultValue")
                     .Append('(')
-                    .Append(argument.DefaultValueExpression)
+                    .Append(argument.DefaultValueFallbackExpression)
                     .AppendLine(");");
             }
         }
@@ -1682,14 +1927,31 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         source.Append(indent).AppendLine("    }");
         source.AppendLine();
 
+        var hasAsyncProvider =
+            model.Arguments.Any(argument =>
+                argument.DefaultValueProviderKind == DefaultValueProviderKind.Async) ||
+            model.Options.Any(option =>
+                option.DefaultValueProviderKind == DefaultValueProviderKind.Async) ||
+            model.GlobalOptions.Any(option =>
+                option.DefaultValueProviderKind == DefaultValueProviderKind.Async);
         source.Append(indent)
-            .Append("    public static ")
+            .Append("    public static ");
+        if (hasAsyncProvider)
+        {
+            source.Append("async ");
+        }
+
+        source.Append("global::System.Threading.Tasks.ValueTask<")
             .Append(model.FullTypeName)
-            .AppendLine(" Bind(")
+            .AppendLine("> BindAsync(")
             .Append(indent)
             .AppendLine("        global::AnyCli.Parameters.Binding.ParsedCommandParameters parameterValues,")
             .Append(indent)
-            .AppendLine("        global::AnyCli.Parameters.Options.CommandOptionValues globalOptionValues)");
+            .AppendLine("        global::AnyCli.Parameters.Options.CommandOptionValues globalOptionValues,")
+            .Append(indent)
+            .AppendLine("        global::System.Threading.CancellationToken cancellationToken,")
+            .Append(indent)
+            .AppendLine("        global::System.IServiceProvider? services)");
         source.Append(indent).AppendLine("    {");
         if (useInitializerTargets)
         {
@@ -1721,7 +1983,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .Append(literalName)
                     .AppendLine(");");
 
-                if (argument.DefaultValueExpression is not null)
+                var hasArgumentDefaultBranch = argument.HasInitializer ||
+                    argument.DefaultValueProviderTypeName is not null;
+                if (hasArgumentDefaultBranch)
                 {
                     source.Append(indent)
                         .Append("        if (")
@@ -1773,22 +2037,24 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         valuesLocal),
                     GetInitializerLocal(initializerLocals, argument.PropertyName));
 
-                if (argument.DefaultValueExpression is not null)
+                if (hasArgumentDefaultBranch)
                 {
                     source.Append(indent).AppendLine("        }");
-                    source.Append(indent).AppendLine("        else");
-                    source.Append(indent).AppendLine("        {");
-                    EmitAssignment(
-                        source,
-                        indent,
-                        argument.PropertyName,
-                        argument.IsInitOnly,
-                        GetCollectionExpression(
-                            argument.CollectionKind,
-                            argument.ElementTypeFullName,
-                            argument.DefaultValueExpression),
-                        GetInitializerLocal(initializerLocals, argument.PropertyName));
-                    source.Append(indent).AppendLine("        }");
+                    if (argument.DefaultValueProviderTypeName is not null)
+                    {
+                        source.Append(indent).AppendLine("        else");
+                        source.Append(indent).AppendLine("        {");
+                        EmitAssignment(
+                            source,
+                            indent,
+                            argument.PropertyName,
+                            argument.IsInitOnly,
+                            GetDefaultValueProviderExpression(
+                            argument.DefaultValueProviderTypeName,
+                            argument.DefaultValueProviderKind),
+                            GetInitializerLocal(initializerLocals, argument.PropertyName));
+                        source.Append(indent).AppendLine("        }");
+                    }
                 }
             }
             else if (argument.Optional)
@@ -1814,7 +2080,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     GetInitializerLocal(initializerLocals, argument.PropertyName));
                 source.Append(indent).AppendLine("        }");
 
-                if (argument.DefaultValueExpression is not null)
+                if (argument.DefaultValueProviderTypeName is not null)
                 {
                     source.Append(indent).AppendLine("        else");
                     source.Append(indent).AppendLine("        {");
@@ -1823,7 +2089,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         indent,
                         argument.PropertyName,
                         argument.IsInitOnly,
-                        argument.DefaultValueExpression,
+                        GetDefaultValueProviderExpression(
+                            argument.DefaultValueProviderTypeName,
+                            argument.DefaultValueProviderKind),
                         GetInitializerLocal(initializerLocals, argument.PropertyName));
                     source.Append(indent).AppendLine("        }");
                 }
@@ -1870,7 +2138,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             model,
             useInitializerTargets,
             initializerProperties,
-            initializerLocals);
+            initializerLocals,
+            returnValueTask: true,
+            asyncMethod: hasAsyncProvider);
         source.Append(indent).AppendLine("    }");
         source.Append(indent).AppendLine("}");
 
@@ -1947,13 +2217,40 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     .AppendLine(");");
             }
 
-            if (option.DefaultValueExpression is not null)
+            if (option.HasInitializer)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .AppendLine(".SetHasInitializer();");
+            }
+
+            if (!option.DefaultValueDisplay.IsEmpty)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .Append(".SetDefaultValueDisplay(")
+                    .Append(GetHelpTextExpression(option.DefaultValueDisplay))
+                    .AppendLine(");");
+            }
+
+            if (option.DefaultValueProviderTypeName is not null)
+            {
+                source.Append(indent)
+                    .Append("        ")
+                    .Append(local)
+                    .Append(".SetDefaultValueProvider(typeof(")
+                    .Append(option.DefaultValueProviderTypeName)
+                    .AppendLine("));");
+            }
+            else if (option.DefaultValueFallbackExpression is not null)
             {
                 source.Append(indent)
                     .Append("        ")
                     .Append(local)
                     .Append(".SetDefaultValue(")
-                    .Append(option.DefaultValueExpression)
+                    .Append(option.DefaultValueFallbackExpression)
                     .AppendLine(");");
             }
 
@@ -2034,16 +2331,27 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         ParametersModel model,
         bool useInitializerTargets,
         IReadOnlyList<string> properties,
-        IReadOnlyDictionary<string, string> locals)
+        IReadOnlyDictionary<string, string> locals,
+        bool returnValueTask,
+        bool asyncMethod)
     {
+        var expressionPrefix = returnValueTask && !asyncMethod
+            ? "        return global::System.Threading.Tasks.ValueTask.FromResult("
+            : "        return ";
+        var expressionSuffix = returnValueTask && !asyncMethod ? ");" : ";";
+
         if (!useInitializerTargets)
         {
-            source.Append(indent).AppendLine("        return parameters;");
+            source.Append(indent)
+                .Append(expressionPrefix)
+                .Append("parameters")
+                .AppendLine(expressionSuffix);
             return;
         }
 
         source.Append(indent)
-            .Append("        return new ")
+            .Append(expressionPrefix)
+            .Append("new ")
             .Append(model.FullTypeName)
             .AppendLine();
         source.Append(indent).AppendLine("        {");
@@ -2058,7 +2366,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 .AppendLine(",");
         }
 
-        source.Append(indent).AppendLine("        };");
+        source.Append(indent)
+            .Append("        }")
+            .AppendLine(expressionSuffix);
     }
 
     private static void EmitAssignment(
@@ -2116,7 +2426,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 var valuesLocal = "__values" + localIndex;
                 var indexLocal = "__i" + localIndex;
 
-                if (option.DefaultValueExpression is not null)
+                var hasOptionDefaultBranch = option.HasInitializer ||
+                    option.DefaultValueProviderTypeName is not null;
+                if (hasOptionDefaultBranch)
                 {
                     source.Append(indent)
                         .Append("        if (")
@@ -2178,22 +2490,24 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         valuesLocal),
                     initializerLocal);
 
-                if (option.DefaultValueExpression is not null)
+                if (hasOptionDefaultBranch)
                 {
                     source.Append(indent).AppendLine("        }");
-                    source.Append(indent).AppendLine("        else");
-                    source.Append(indent).AppendLine("        {");
-                    EmitAssignment(
-                        source,
-                        indent,
-                        option.PropertyName,
-                        option.IsInitOnly,
-                        GetCollectionExpression(
-                            option.CollectionKind,
-                            option.ElementTypeFullName,
-                            option.DefaultValueExpression),
-                        initializerLocal);
-                    source.Append(indent).AppendLine("        }");
+                    if (option.DefaultValueProviderTypeName is not null)
+                    {
+                        source.Append(indent).AppendLine("        else");
+                        source.Append(indent).AppendLine("        {");
+                        EmitAssignment(
+                            source,
+                            indent,
+                            option.PropertyName,
+                            option.IsInitOnly,
+                            GetDefaultValueProviderExpression(
+                            option.DefaultValueProviderTypeName,
+                            option.DefaultValueProviderKind),
+                            initializerLocal);
+                        source.Append(indent).AppendLine("        }");
+                    }
                 }
             }
             else
@@ -2228,7 +2542,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
                 source.Append(indent).AppendLine("        }");
 
-                if (option.DefaultValueExpression is not null)
+                if (option.DefaultValueProviderTypeName is not null)
                 {
                     source.Append(indent).AppendLine("        else");
                     source.Append(indent).AppendLine("        {");
@@ -2237,7 +2551,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         indent,
                         option.PropertyName,
                         option.IsInitOnly,
-                        option.DefaultValueExpression,
+                        GetDefaultValueProviderExpression(
+                            option.DefaultValueProviderTypeName,
+                            option.DefaultValueProviderKind),
                         initializerLocal);
                     source.Append(indent).AppendLine("        }");
                 }
@@ -2298,6 +2614,17 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 $"new global::System.Collections.Generic.List<{elementTypeFullName}>({valuesExpression})",
         };
 
+    private static string GetDefaultValueProviderExpression(
+        string providerTypeName,
+        DefaultValueProviderKind providerKind)
+    {
+        var provider = $"global::AnyCli.Parameters.Binding.DefaultValueProviderResolver.Resolve<{providerTypeName}>(" +
+            "services)";
+        return providerKind == DefaultValueProviderKind.Async
+            ? $"await {provider}.CreateDefaultAsync(cancellationToken).ConfigureAwait(false)"
+            : $"{provider}.CreateDefault()";
+    }
+
     private static string GetParseExpression(
         ParsePlan parsePlan,
         string rawExpression,
@@ -2346,7 +2673,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         bool isCollection,
         string elementTypeFullName,
         VariadicCollectionKind collectionKind,
-        string? defaultValueExpression,
+        string? defaultValueFallbackExpression,
+        string? defaultValueProviderTypeName,
+        DefaultValueProviderKind defaultValueProviderKind,
+        bool hasInitializer,
+        HelpTextModel defaultValueDisplay,
         ParsePlan parsePlan)
     {
         public string Name { get; } = name;
@@ -2371,7 +2702,15 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         public VariadicCollectionKind CollectionKind { get; } = collectionKind;
 
-        public string? DefaultValueExpression { get; } = defaultValueExpression;
+        public string? DefaultValueFallbackExpression { get; } = defaultValueFallbackExpression;
+
+        public string? DefaultValueProviderTypeName { get; } = defaultValueProviderTypeName;
+
+        public DefaultValueProviderKind DefaultValueProviderKind { get; } = defaultValueProviderKind;
+
+        public bool HasInitializer { get; } = hasInitializer;
+
+        public HelpTextModel DefaultValueDisplay { get; } = defaultValueDisplay;
 
         public ParsePlan ParsePlan { get; } = parsePlan;
     }
@@ -2454,7 +2793,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             VariadicCollectionKind collectionKind,
             int minimumCount,
             int maximumCount,
-            string? defaultValueExpression,
+            string? defaultValueFallbackExpression,
+            string? defaultValueProviderTypeName,
+            DefaultValueProviderKind defaultValueProviderKind,
+            bool hasInitializer,
+            HelpTextModel defaultValueDisplay,
             ParsePlan parsePlan)
         {
             Name = name;
@@ -2469,7 +2812,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             CollectionKind = collectionKind;
             MinimumCount = minimumCount;
             MaximumCount = maximumCount;
-            DefaultValueExpression = defaultValueExpression;
+            DefaultValueFallbackExpression = defaultValueFallbackExpression;
+            DefaultValueProviderTypeName = defaultValueProviderTypeName;
+            DefaultValueProviderKind = defaultValueProviderKind;
+            HasInitializer = hasInitializer;
+            DefaultValueDisplay = defaultValueDisplay;
             ParsePlan = parsePlan;
         }
 
@@ -2497,7 +2844,15 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         public int MaximumCount { get; }
 
-        public string? DefaultValueExpression { get; }
+        public string? DefaultValueFallbackExpression { get; }
+
+        public string? DefaultValueProviderTypeName { get; }
+
+        public DefaultValueProviderKind DefaultValueProviderKind { get; }
+
+        public bool HasInitializer { get; }
+
+        public HelpTextModel DefaultValueDisplay { get; }
 
         public ParsePlan ParsePlan { get; }
     }
@@ -2556,6 +2911,20 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         ImmutableArray,
         ImmutableList,
         ImmutableHashSet,
+    }
+
+    private enum DefaultValueProviderKind
+    {
+        Sync,
+        Async,
+    }
+
+    private enum DefaultValueProviderValidation
+    {
+        Invalid,
+        Sync,
+        Async,
+        Ambiguous,
     }
 
     private enum ParseKind

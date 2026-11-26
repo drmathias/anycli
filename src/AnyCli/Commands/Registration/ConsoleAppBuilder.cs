@@ -20,9 +20,9 @@ public sealed class ConsoleAppBuilder
     private Func<IServiceProvider?, ICommandErrorMessageProvider>? _errorMessageProviderFactory;
     private Func<IServiceProvider?, ICommandErrorWriter> _errorWriterFactory =
         static _ => new PlainCommandErrorWriter();
+    private readonly HelpFormattingOptions _helpFormatting = new();
     private IGlobalOptionsDefinition? _globalOptionsDefinition;
     private Func<HelpProviderContext, IHelpProvider>? _helpProviderFactory;
-    private Func<IServiceProvider?, IHelpTextProvider>? _helpTextProviderFactory;
     private LocalizationOptions _localization = LocalizationOptions.Default;
     private IServiceProvider? _serviceProvider;
     private string? _name;
@@ -260,11 +260,15 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments, globalOptionValues, _) =>
+            async (serviceProvider, context, commandArguments, globalOptionValues, cancellationToken) =>
             {
-                var parameters = TParameters.Bind(commandArguments, globalOptionValues);
-                return Task.FromResult(
-                    ResolveCommand<TCommand>(serviceProvider).Execute(context, parameters));
+                var parameters = await TParameters.BindAsync(
+                    commandArguments,
+                    globalOptionValues,
+                    cancellationToken,
+                    serviceProvider)
+                    .ConfigureAwait(false);
+                return ResolveCommand<TCommand>(serviceProvider).Execute(context, parameters);
             },
             definitions.Arguments,
             definitions.Options)
@@ -301,11 +305,16 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments, globalOptionValues, _) =>
+            async (serviceProvider, context, commandArguments, globalOptionValues, cancellationToken) =>
             {
-                var parameters = TParameters.Bind(commandArguments, globalOptionValues);
+                var parameters = await TParameters.BindAsync(
+                    commandArguments,
+                    globalOptionValues,
+                    cancellationToken,
+                    serviceProvider)
+                    .ConfigureAwait(false);
                 var exitCode = ResolveCommand<TCommand>(serviceProvider).Execute(context, parameters);
-                return Task.FromResult(Convert.ToInt32(exitCode, CultureInfo.InvariantCulture));
+                return Convert.ToInt32(exitCode, CultureInfo.InvariantCulture);
             },
             definitions.Arguments,
             definitions.Options)
@@ -339,10 +348,17 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments, globalOptionValues, cancellationToken) =>
+            async (serviceProvider, context, commandArguments, globalOptionValues, cancellationToken) =>
             {
-                var parameters = TParameters.Bind(commandArguments, globalOptionValues);
-                return ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters, cancellationToken);
+                var parameters = await TParameters.BindAsync(
+                    commandArguments,
+                    globalOptionValues,
+                    cancellationToken,
+                    serviceProvider)
+                    .ConfigureAwait(false);
+                return await ResolveCommand<TCommand>(serviceProvider)
+                    .ExecuteAsync(context, parameters, cancellationToken)
+                    .ConfigureAwait(false);
             },
             definitions.Arguments,
             definitions.Options)
@@ -379,11 +395,17 @@ public sealed class ConsoleAppBuilder
 
         var definitions = BuildParametersDefinitions<TParameters>();
         var registration = new CommandRegistration(
-            (serviceProvider, context, commandArguments, globalOptionValues, cancellationToken) =>
+            async (serviceProvider, context, commandArguments, globalOptionValues, cancellationToken) =>
             {
-                var parameters = TParameters.Bind(commandArguments, globalOptionValues);
-                return ConvertExitCodeAsync(
-                    ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters, cancellationToken));
+                var parameters = await TParameters.BindAsync(
+                    commandArguments,
+                    globalOptionValues,
+                    cancellationToken,
+                    serviceProvider)
+                    .ConfigureAwait(false);
+                return await ConvertExitCodeAsync(
+                    ResolveCommand<TCommand>(serviceProvider).ExecuteAsync(context, parameters, cancellationToken))
+                    .ConfigureAwait(false);
             },
             definitions.Arguments,
             definitions.Options)
@@ -476,6 +498,8 @@ public sealed class ConsoleAppBuilder
         return this;
     }
 
+    internal HelpFormattingOptions HelpFormatting => _helpFormatting;
+
     internal void UseHelpProviderCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
         where THelpProvider : class, IHelpProvider
@@ -486,29 +510,6 @@ public sealed class ConsoleAppBuilder
     internal void UseHelpProviderCore(Func<HelpProviderContext, IHelpProvider> factory)
     {
         _helpProviderFactory = factory;
-    }
-
-    internal void UseHelpTextProviderCore<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
-        where TProvider : class, IHelpTextProvider
-    {
-        _helpTextProviderFactory = ResolveHelpTextProvider<TProvider>;
-    }
-
-    internal void UseLocalizedHelpTextProviderCore(
-        IEnumerable<ResourceManager> descriptionResources)
-    {
-        _helpTextProviderFactory = _ => new LocalizedHelpTextProvider(
-            descriptionResources,
-            _localization);
-    }
-
-    internal void UseLocalizedHelpTextProviderCore(
-        Func<IServiceProvider?, IEnumerable<ResourceManager>> descriptionResourcesFactory)
-    {
-        _helpTextProviderFactory = serviceProvider => new LocalizedHelpTextProvider(
-            descriptionResourcesFactory(serviceProvider),
-            _localization);
     }
 
     /// <summary>
@@ -628,14 +629,22 @@ public sealed class ConsoleAppBuilder
     private Func<IServiceProvider?, IHelpProvider> CreateHelpProviderFactory() =>
         serviceProvider =>
         {
-            var textProvider = _helpTextProviderFactory?.Invoke(serviceProvider) ??
+            var defaultContext = new HelpProviderContext(
+                serviceProvider,
                 new LocalizedHelpTextProvider(
                     descriptionResources: null,
-                    _localization);
+                    _localization),
+                new DefaultHelpValueFormatter(),
+                _localization);
+            var context = defaultContext with
+            {
+                TextProvider = _helpFormatting.CreateTextProvider(defaultContext),
+                ValueFormatter = _helpFormatting.CreateValueFormatter(defaultContext),
+            };
 
             return _helpProviderFactory is null
-                ? new DefaultHelpProvider(textProvider)
-                : _helpProviderFactory(new HelpProviderContext(serviceProvider, textProvider));
+                ? new DefaultHelpProvider(context.TextProvider, context.ValueFormatter)
+                : _helpProviderFactory(context);
         };
 
     private Func<IServiceProvider?, ICommandErrorHandler> CreateDefaultErrorHandlerFactory() =>
@@ -751,20 +760,6 @@ public sealed class ConsoleAppBuilder
     private static async Task<int> ConvertExitCodeAsync<TExitCode>(Task<TExitCode> exitCode)
         where TExitCode : struct, Enum =>
         Convert.ToInt32(await exitCode.ConfigureAwait(false), CultureInfo.InvariantCulture);
-
-    private static TProvider ResolveHelpTextProvider<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>(
-        IServiceProvider? serviceProvider)
-        where TProvider : class, IHelpTextProvider
-    {
-        return serviceProvider is null
-            ? Activator.CreateInstance<TProvider>()
-                ?? throw new InvalidOperationException(
-                    $"Could not create help text provider '{typeof(TProvider).FullName}'.")
-            : serviceProvider.GetService(typeof(TProvider)) as TProvider
-                ?? throw new InvalidOperationException(
-                    $"Service '{typeof(TProvider).FullName}' is not registered.");
-    }
 
     private static THelpProvider ResolveHelpProvider<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>(

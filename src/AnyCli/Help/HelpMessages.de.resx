@@ -79,6 +79,9 @@
   <data name="CommandPlaceholder" xml:space="preserve">
     <value>BEFEHL</value>
   </data>
+  <data name="DefaultValue" xml:space="preserve">
+    <value>Standard</value>
+  </data>
   <data name="HelpOptionDescription" xml:space="preserve">
     <value>Zeigt Hilfeinformationen an</value>
   </data>

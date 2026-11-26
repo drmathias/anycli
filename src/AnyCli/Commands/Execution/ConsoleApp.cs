@@ -507,8 +507,7 @@ public sealed class ConsoleApp
                         argument.DeclaredType,
                         argument.Arity)
                     {
-                        DefaultValue = argument.DefaultValue,
-                        HasDefaultValue = argument.HasDefaultValue,
+                        DefaultValue = argument.GetDefaultValueInfo(),
                     })],
             Options = command is null
                 ? []
@@ -517,11 +516,10 @@ public sealed class ConsoleApp
                         option.Names,
                         option.Description,
                         option.Required,
-                        option.TakesValue,
+                        option.ValueKind,
                         option.DeclaredType)
                     {
-                        DefaultValue = option.DefaultValue,
-                        HasDefaultValue = option.HasDefaultValue,
+                        DefaultValue = option.GetDefaultValueInfo(),
                     })],
             Children = [.. node.Children.Select(child => CreateCommandInfo(child, path))],
         };
@@ -600,11 +598,10 @@ public sealed class ConsoleApp
                 option.Names,
                 option.Description,
                 option.Required,
-                option.TakesValue,
+                option.ValueKind,
                 option.DeclaredType)
             {
-                DefaultValue = option.DefaultValue,
-                HasDefaultValue = option.HasDefaultValue,
+                DefaultValue = option.GetDefaultValueInfo(),
             });
         }
 
@@ -612,7 +609,9 @@ public sealed class ConsoleApp
             ["-h", "--help"],
             new HelpText(
                 "Prints help information",
-                HelpTextResourceKeys.HelpOptionDescription)));
+                HelpTextResourceKeys.HelpOptionDescription),
+            IsRequired: false,
+            ValueKind: OptionValueKind.Flag));
 
         if (_version is not null)
         {
@@ -620,7 +619,9 @@ public sealed class ConsoleApp
                 ["-v", "--version"],
                 new HelpText(
                     "Prints version information",
-                    HelpTextResourceKeys.VersionOptionDescription)));
+                    HelpTextResourceKeys.VersionOptionDescription),
+                IsRequired: false,
+                ValueKind: OptionValueKind.Flag));
         }
 
         return options;

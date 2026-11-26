@@ -29,40 +29,53 @@ This page lists the console, help, and command-line error types used by AnyCLI.
 | --- | --- |
 | `IHelpProvider` | Renders root help and command help. |
 | `DefaultHelpProvider` | The built-in plain-text help renderer. |
-| `IHelpTextProvider` | Supplies headings, usage placeholders, and descriptions. |
+| `IHelpTextProvider` | Supplies headings, labels, usage placeholders, descriptions, default value display text, and the formatting culture. |
 | `LocalizedHelpTextProvider` | The built-in resource-based text provider. |
+| `IHelpValueFormatter` | Formats fallback default values such as enums and collections. |
+| `DefaultHelpValueFormatter` | The built-in formatter; uses lower kebab-case for enum members. |
 | `HelpContext` | Shared help data: app name, console, and global options. |
 | `RootHelpContext` | Root help data, including top-level commands. |
 | `CommandHelpContext` | Command help data, including the selected command or group. |
-| `HelpProviderContext` | Inputs for creating a help provider: service provider and text provider. |
+| `HelpProviderContext` | Inputs for creating a help provider: service provider, configured text provider, value formatter, and localization. |
 | `HelpDescriptionContext` | Inputs for resolving a command, option, or argument description. |
 | `HelpText` | Literal text, a resource key, or both. |
 | `ResourceDescriptionAttribute` | Associates a parameter property with a resource key. |
+| `DefaultValueDisplayAttribute` | Supplies literal default value display text for help output. |
+| `DefaultValueDisplayResourceAttribute` | Supplies a localizable default value display resource key. |
+| `DefaultValueInfo` | Pattern-matchable default source: initializer value or provider type, with optional display text. |
 
 ### Help configuration
 
+`ConfigureHelp` configures shared help services and selects the help provider:
+
 | Method | Effect |
 | --- | --- |
-| `UseProvider<TProvider>()` | Replaces the help renderer. |
-| `UseProvider(Func<HelpProviderContext, IHelpProvider>)` | Creates the renderer with access to services and the text provider. |
 | `UseTextProvider<TProvider>()` | Replaces the help text provider. |
 | `UseLocalizedTextProvider(params ResourceManager[])` | Uses `LocalizedHelpTextProvider` with description resources. |
 | `UseLocalizedTextProvider(Func<IServiceProvider?, IEnumerable<ResourceManager>>)` | Creates description resources through a factory. |
 | `UseLocalizedTextProvider(string baseName, Assembly assembly)` | Creates a `ResourceManager` from a base name and assembly. |
+| `UseValueFormatter<TFormatter>()` | Replaces the default value formatter. |
+| `UseValueFormatter(IHelpValueFormatter)` | Uses the specified value formatter instance. |
+| `UseValueFormatter(Func<IServiceProvider?, IHelpValueFormatter>)` | Creates the value formatter through a factory. |
+| `UseProvider<TProvider>()` | Replaces the help renderer. |
+| `UseProvider(Func<HelpProviderContext, IHelpProvider>)` | Creates the renderer with access to services and configured help services. |
 
-When no help provider is configured, `DefaultHelpProvider` is used. When no help text provider is configured, `LocalizedHelpTextProvider` is used.
+The configured text provider and value formatter apply to every provider factory through `HelpProviderContext`. This includes custom providers.
 
-A help provider may be resolved from DI when a service provider is configured. Otherwise it needs a public parameterless constructor.
+When no help provider is configured, `DefaultHelpProvider` is used. When no help text provider is configured, `LocalizedHelpTextProvider` is used. When no value formatter is configured, `DefaultHelpValueFormatter` is used.
+
+A help provider resolved with `UseProvider<TProvider>()` may be resolved from DI when a service provider is configured. Otherwise it needs a public parameterless constructor. Use `UseProvider(Func<HelpProviderContext, IHelpProvider>)` when a custom provider needs the configured help services.
 
 ### Resource keys
 
-`HelpTextResourceKeys` defines the keys used for built-in headings and placeholders:
+`HelpTextResourceKeys` defines the keys used for built-in headings, labels, and placeholders:
 
 - `Usage`
 - `Description`
 - `Commands`
 - `Arguments`
 - `Options`
+- `DefaultValue`
 - `OptionsPlaceholder`
 - `CommandPlaceholder`
 - `HelpOptionDescription`

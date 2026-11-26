@@ -23,7 +23,7 @@ deploy -e staging
 
 If the option is omitted, AnyCLI reports a structured command-line error before the command runs. The default command-line error exit code is `2`.
 
-`[RequiredOption]` does not have a `DefaultValue`; use `[Option]` with a default when omission is allowed.
+`[RequiredOption]` does not support supplying default values; use `[Option]` with a default when omission is allowed.
 
 ## Related
 

@@ -22,6 +22,8 @@ AnyCLI resolves a parser for every argument and option value at compile time. It
 
 Explicit and registered parsers override enum handling for a specific enum type.
 
+The default enum parser matches member names case-insensitively. Kebab-case values are derived from member names, so `very-slow` matches `VerySlow`.
+
 ## Parsing contracts
 
 | Contract | Member used |

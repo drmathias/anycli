@@ -79,6 +79,9 @@
   <data name="CommandPlaceholder" xml:space="preserve">
     <value>OPDRACHT</value>
   </data>
+  <data name="DefaultValue" xml:space="preserve">
+    <value>standaard</value>
+  </data>
   <data name="HelpOptionDescription" xml:space="preserve">
     <value>Toont helpinformatie</value>
   </data>

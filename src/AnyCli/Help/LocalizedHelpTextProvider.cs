@@ -66,15 +66,25 @@ public class LocalizedHelpTextProvider : IHelpTextProvider
     public virtual string GetDescription(HelpDescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        return GetHelpText(context.Description);
+    }
 
-        if (!string.IsNullOrWhiteSpace(context.Description.ResourceKey))
+    /// <inheritdoc/>
+    public string GetDefaultValueLabel() => Format(HelpTextResourceKeys.DefaultValue);
+
+    /// <inheritdoc/>
+    public string GetDefaultValueText(HelpText text) => GetHelpText(text);
+
+    private string GetHelpText(HelpText text)
+    {
+        if (!string.IsNullOrWhiteSpace(text.ResourceKey))
         {
             var culture = GetUICulture();
             foreach (var resources in _descriptionResources)
             {
                 var resourceValue = TryGetString(
                     resources,
-                    context.Description.ResourceKey,
+                    text.ResourceKey,
                     culture);
 
                 if (resourceValue is not null)
@@ -84,7 +94,7 @@ public class LocalizedHelpTextProvider : IHelpTextProvider
             }
         }
 
-        return context.Description.Text ?? string.Empty;
+        return text.Text ?? string.Empty;
     }
 
     /// <summary>
@@ -94,11 +104,8 @@ public class LocalizedHelpTextProvider : IHelpTextProvider
     protected virtual CultureInfo GetUICulture() =>
         _localization.GetUICulture();
 
-    /// <summary>
-    /// Gets the culture used to format values in help text.
-    /// </summary>
-    /// <returns>The formatting culture.</returns>
-    protected virtual CultureInfo GetFormatCulture() =>
+    /// <inheritdoc/>
+    public virtual CultureInfo GetFormatCulture() =>
         _localization.GetFormatCulture();
 
     private string Format(string resourceKey) =>

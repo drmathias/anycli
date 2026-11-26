@@ -136,8 +136,8 @@ public class HelpCommandTests
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo(
-            "--config:True:True|--output,-o:False:True|--verbose,-v:False:False|" +
-            "--quiet,-q:False:False|--tag:False:True|--count:False:True|--dry-run:False:False");
+            "--config:True:Value|--output,-o:False:Value|--verbose,-v:False:Flag|" +
+            "--quiet,-q:False:Flag|--tag:False:Collection|--count:False:Value|--dry-run:False:Flag");
         await Assert.That(result.Error).IsEmpty();
     }
 
@@ -193,7 +193,7 @@ public class HelpCommandTests
                 string.Join(
                     "|",
                     context.Command.Options.Select(option =>
-                        $"{string.Join(",", option.Names)}:{option.IsRequired}:{option.TakesValue}")));
+                        $"{string.Join(",", option.Names)}:{option.IsRequired}:{option.ValueKind}")));
             return ValueTask.CompletedTask;
         }
     }
@@ -228,7 +228,7 @@ public class HelpCommandTests
                     ",",
                     context.Command.Arguments.Select(argument =>
                         $"{argument.DeclaredType.Name}:{argument.Arity.Minimum}:{argument.Arity.Maximum}:" +
-                        $"{argument.IsRequired}:{argument.IsVariadic}")));
+                        $"{argument.IsRequired}:{argument.Arity.IsVariadic}")));
             return ValueTask.CompletedTask;
         }
     }
@@ -253,7 +253,7 @@ public class HelpCommandTests
 
             var arguments = string.Join(
                 " ",
-                command.Arguments.Select(argument => argument.IsVariadic
+                command.Arguments.Select(argument => argument.Arity.IsVariadic
                     ? $"<{argument.Name}>..."
                     : $"<{argument.Name}>"));
             output.WriteLine($"    {context.AppName} {command.Name} {arguments} [OPTIONS]");

@@ -29,7 +29,7 @@ The adapter is a presentation layer. It does not replace:
 - the error exit-code configuration
 - command registration or parameter binding
 
-`UseSpectreHelp` replaces the help renderer but uses the configured `IHelpTextProvider`. `UseSpectreErrors` replaces only the error writer; the message provider and exit code still come from the core error pipeline.
+`UseSpectreHelp` replaces the help renderer while using the shared help text provider and value formatter configured on `ConfigureHelp`. `UseSpectreErrors` replaces only the error writer; the message provider and exit code still come from the core error pipeline.
 
 That separation means localization, message changes, and exit codes keep working when the adapter is enabled.
 

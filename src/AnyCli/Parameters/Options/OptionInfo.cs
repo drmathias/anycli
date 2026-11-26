@@ -10,22 +10,17 @@ namespace AnyCli.Parameters.Options;
 /// <param name="Names">The option names, such as <c>-h</c> and <c>--help</c>.</param>
 /// <param name="Description">A short description of the option.</param>
 /// <param name="IsRequired">Whether the option must be supplied.</param>
-/// <param name="TakesValue">Whether the option consumes a value.</param>
+/// <param name="ValueKind">How the option consumes command-line values.</param>
 /// <param name="DeclaredType">The declared option value or collection type.</param>
 public sealed record OptionInfo(
     IReadOnlyList<string> Names,
     HelpText Description,
-    bool IsRequired = false,
-    bool TakesValue = false,
+    bool IsRequired,
+    OptionValueKind ValueKind,
     Type? DeclaredType = null)
 {
     /// <summary>
-    /// Gets the configured default value, when one is defined.
+    /// Gets the configured default value source, when one is defined.
     /// </summary>
-    public object? DefaultValue { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the option has a configured default value.
-    /// </summary>
-    public bool HasDefaultValue { get; init; }
+    public DefaultValueInfo? DefaultValue { get; init; }
 }
