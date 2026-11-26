@@ -25,6 +25,11 @@ public interface IGlobalOptions<TSelf>
     /// Creates typed global options from parsed option values.
     /// </summary>
     /// <param name="values">The parsed option values.</param>
+    /// <param name="cancellationToken">The cancellation token for the current invocation.</param>
+    /// <param name="services">The configured service provider, or <see langword="null"/>.</param>
     /// <returns>The global options instance.</returns>
-    static abstract TSelf Bind(CommandOptionValues values);
+    static abstract ValueTask<TSelf> BindAsync(
+        CommandOptionValues values,
+        CancellationToken cancellationToken,
+        IServiceProvider? services);
 }

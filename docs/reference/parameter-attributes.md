@@ -103,7 +103,7 @@ Required options do not support supplying default values; the option must be pre
 | `MaximumCount` | `[VariadicArgument]` | Maximum number of values |
 | `Parser` | Argument and option attributes | Custom `IParameterParser<T>` implementation |
 
-Provider types may implement `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>`. Default value providers are not supported on global options.
+Provider types may implement `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>`.
 
 ## Defaults
 

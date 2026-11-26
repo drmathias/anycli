@@ -23,6 +23,14 @@ public sealed class CommandOptionValues
         _defaults = defaults ?? EmptyDefaults;
     }
 
+    /// <summary>
+    /// Gets the bound global options instance for the current invocation, when one is available.
+    /// </summary>
+    /// <remarks>
+    /// This value is populated by the framework and used by generated parameter binding.
+    /// </remarks>
+    public object? BoundGlobalOptions { get; internal set; }
+
     internal IReadOnlyDictionary<string, object?> ToDictionary()
     {
         var values = new Dictionary<string, object?>(

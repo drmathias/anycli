@@ -5,6 +5,7 @@ using System.ComponentModel;
 // SPDX-License-Identifier: MIT
 
 using AnyCli.Tests.Fixtures;
+using AnyCli.Tests.Helpers;
 
 namespace AnyCli.Tests;
 
@@ -169,6 +170,87 @@ public class GlobalOptionTests
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo("debug");
     }
+
+    [Test]
+    public async Task GlobalOptionDefaultProvider_IsUsedOnce()
+    {
+        var provider = new GlobalLevelProvider("provider");
+        var serviceProvider = new StubServiceProvider();
+        serviceProvider.Add(() => provider);
+        serviceProvider.Add(() => new ProviderGlobalEchoCommand());
+
+        var app = CreateProviderApp(serviceProvider);
+
+        var result = await TestAppHarness.RunAsync(app, ["run"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("provider|provider");
+        await Assert.That(provider.Invocations).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task GlobalOptionDefaultProvider_YieldsToSuppliedValue()
+    {
+        var provider = new GlobalLevelProvider("provider");
+        var serviceProvider = new StubServiceProvider();
+        serviceProvider.Add(() => provider);
+        serviceProvider.Add(() => new ProviderGlobalEchoCommand());
+
+        var app = CreateProviderApp(serviceProvider);
+
+        var result = await TestAppHarness.RunAsync(app, ["--level", "cli", "run"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("cli|cli");
+        await Assert.That(provider.Invocations).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task AsyncGlobalOptionDefaultProvider_IsAwaited()
+    {
+        var provider = new AsyncGlobalLevelProvider("async-provider");
+        var serviceProvider = new StubServiceProvider();
+        serviceProvider.Add(() => provider);
+        serviceProvider.Add(() => new AsyncProviderGlobalEchoCommand());
+
+        var app = ConsoleAppBuilder.Create()
+            .UseServiceProvider(serviceProvider)
+            .AddGlobalOptions<AsyncProviderGlobalOptions>()
+            .ConfigureCommands(commands =>
+                commands.AddCommand<AsyncProviderGlobalEchoCommand, AsyncProviderGlobalParameters>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["run"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("async-provider|async-provider");
+        await Assert.That(provider.Invocations).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task GlobalOptionDefaultProvider_IsNotInvokedForHelp()
+    {
+        var provider = new GlobalLevelProvider("provider");
+        var serviceProvider = new StubServiceProvider();
+        serviceProvider.Add(() => provider);
+        serviceProvider.Add(() => new ProviderGlobalEchoCommand());
+
+        var app = CreateProviderApp(serviceProvider);
+
+        var result = await TestAppHarness.RunAsync(app, ["run", "--help"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("--level");
+        await Assert.That(provider.Invocations).IsEqualTo(0);
+    }
+
+    private static ConsoleApp CreateProviderApp(StubServiceProvider serviceProvider) =>
+        ConsoleAppBuilder.Create()
+            .UseServiceProvider(serviceProvider)
+            .AddGlobalOptions<ProviderGlobalOptions>()
+            .ConfigureCommands(commands =>
+                commands.AddCommand<ProviderGlobalEchoCommand, ProviderGlobalParameters>("run"))
+            .Build();
 
     [Test]
     public async Task RequiredGlobalOption_IsEnforced()
@@ -439,6 +521,26 @@ public class GlobalOptionTests
         }
     }
 
+    private sealed class AsyncProviderGlobalEchoCommand : ICommand<AsyncProviderGlobalParameters>
+    {
+        public int Execute(CommandContext context, AsyncProviderGlobalParameters parameters)
+        {
+            var globalOptions = ((CommandContext<AsyncProviderGlobalOptions>)context).GlobalOptions;
+            context.Console.Output.Write($"{globalOptions.Level}|{parameters.Level}");
+            return 0;
+        }
+    }
+
+    private sealed class ProviderGlobalEchoCommand : ICommand<ProviderGlobalParameters>
+    {
+        public int Execute(CommandContext context, ProviderGlobalParameters parameters)
+        {
+            var globalOptions = ((CommandContext<ProviderGlobalOptions>)context).GlobalOptions;
+            context.Console.Output.Write($"{globalOptions.Level}|{parameters.Level}");
+            return 0;
+        }
+    }
+
     private sealed class CollectionDefaultEchoCommand : ICommand<CollectionDefaultEchoParameters>
     {
         public int Execute(CommandContext context, CollectionDefaultEchoParameters parameters)
@@ -557,4 +659,50 @@ public sealed partial class NonGlobalParameters
 {
     [Argument(0)]
     public string Value { get; set; } = "";
+}
+
+
+[GlobalOptions]
+public partial class ProviderGlobalOptions
+{
+    [Option("--level", DefaultValueProvider = typeof(GlobalLevelProvider))]
+    public string Level { get; set; } = "initializer";
+}
+
+public sealed partial class ProviderGlobalParameters : ProviderGlobalOptions
+{
+}
+
+[GlobalOptions]
+public partial class AsyncProviderGlobalOptions
+{
+    [Option("--level", DefaultValueProvider = typeof(AsyncGlobalLevelProvider))]
+    public string Level { get; set; } = "initializer";
+}
+
+public sealed partial class AsyncProviderGlobalParameters : AsyncProviderGlobalOptions
+{
+}
+
+public sealed class GlobalLevelProvider(string value) : IDefaultValueProvider<string>
+{
+    public int Invocations { get; private set; }
+
+    public string CreateDefault()
+    {
+        Invocations++;
+        return value;
+    }
+}
+
+public sealed class AsyncGlobalLevelProvider(string value) : IAsyncDefaultValueProvider<string>
+{
+    public int Invocations { get; private set; }
+
+    public ValueTask<string> CreateDefaultAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Invocations++;
+        return ValueTask.FromResult(value);
+    }
 }

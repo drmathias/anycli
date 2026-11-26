@@ -770,7 +770,9 @@ public class GeneratorDiagnosticTests
         await Assert.That(generated).Contains("IGlobalOptions<");
         await Assert.That(generated).Contains("GlobalOptionBuilder options");
         await Assert.That(generated).Contains(
-            "Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
+            "BindAsync(");
+        await Assert.That(generated).Contains(
+            "global::System.Threading.CancellationToken cancellationToken");
         await Assert.That(generated).DoesNotContain("ICommandParameters<");
     }
 
@@ -961,7 +963,7 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task ReportsDefaultValueProviderOnGlobalOption()
+    public async Task GeneratesDefaultValueProviderOnGlobalOption()
     {
         var result = RunGenerator(
             """
@@ -975,18 +977,20 @@ public class GeneratorDiagnosticTests
             }
 
             [GlobalOptions]
-            public sealed partial class BadOptions
+            public sealed partial class AppOptions
             {
                 [Option("--level", DefaultValueProvider = typeof(LevelProvider))]
                 public string Level { get; set; } = "";
             }
             """);
 
-        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI024");
+        var generated = result.GeneratedSourceTexts.Single();
 
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
-        await Assert.That(diagnostic.GetMessage()).Contains("Level");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(generated).Contains(
+            "SetDefaultValueProvider(typeof(global::LevelProvider))");
+        await Assert.That(generated).Contains("LevelProvider");
+        await Assert.That(generated).Contains("CreateDefault()");
     }
 
     [Test]

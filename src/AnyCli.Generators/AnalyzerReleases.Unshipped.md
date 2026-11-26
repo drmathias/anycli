@@ -22,5 +22,4 @@ ANYCLI019 | AnyCli | Error | Interceptor exit code mismatch
 ANYCLI020 | AnyCli | Error | Invalid default value provider
 ANYCLI022 | AnyCli | Error | Default value display on required parameter
 ANYCLI023 | AnyCli | Error | Default value display without default value
-ANYCLI024 | AnyCli | Error | Default value provider on global option
 ANYCLI025 | AnyCli | Error | Ambiguous default value provider

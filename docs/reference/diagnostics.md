@@ -27,7 +27,6 @@ The AnyCli source generator and analyzer emit the following compile-time diagnos
 | `ANYCLI020` | Invalid default value provider | A `DefaultValueProvider` type is not a non-abstract class implementing `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>` for the parameter property type. Use a compatible provider type. |
 | `ANYCLI022` | Default value display on required parameter | A required argument, required option, or required variadic parameter has `DefaultValueDisplay` or `DefaultValueDisplayResource`. Default display metadata is only valid for optional parameters. |
 | `ANYCLI023` | Default value display without default value | A parameter has default display metadata but no provider or property initializer. Add a default or remove the display metadata. |
-| `ANYCLI024` | Default value provider on global option | A global option uses `DefaultValueProvider`. Global options do not support computed default providers. |
 | `ANYCLI025` | Ambiguous default value provider | A provider type implements both `IDefaultValueProvider<T>` and `IAsyncDefaultValueProvider<T>`. Implement only one interface. |
 
 Parameter diagnostics are emitted by the source generator before parameter code is generated. Interceptor diagnostics are reported on the `AddInterceptor<T>()` call. Fixing the diagnostic is required for the application to compile.

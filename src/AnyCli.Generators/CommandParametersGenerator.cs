@@ -146,15 +146,6 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor DefaultValueProviderOnGlobalOptionDiagnostic = new(
-        id: "ANYCLI024",
-        title: "Default value provider on global option",
-        messageFormat:
-            "Global option property '{0}' cannot use DefaultValueProvider",
-        category: "AnyCli",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
     private static readonly DiagnosticDescriptor InvalidVariadicMinimumCountDiagnostic = new(
         id: "ANYCLI005",
         title: "Invalid variadic minimum count",
@@ -349,16 +340,6 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         diagnostics);
                     if (option is not null)
                     {
-                        if (isGlobalOptions &&
-                            option.DefaultValueProviderTypeName is not null)
-                        {
-                            diagnostics.Add(new DiagnosticModel(
-                                DefaultValueProviderOnGlobalOptionDiagnostic,
-                                GetLocation(property),
-                                property.Name));
-                            continue;
-                        }
-
                         if (isGlobalOptionProperty)
                         {
                             globalOptions.Add(option);
@@ -618,6 +599,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 type.IsRecord,
                 needsSetsRequiredMembersConstructor,
                 isGlobalOptions,
+                globalOptionsBase?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 ImplementsGlobalOptionsInterface(type),
                 ImplementsParametersInterface(type),
                 [.. arguments.OrderBy(argument => argument.Position)],
@@ -1804,11 +1786,23 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             source.Append(indent).AppendLine("    }");
             source.AppendLine();
 
-            source.Append(indent)
-                .Append("    public static ")
+            var hasGlobalAsyncProvider = model.Options.Any(option =>
+                option.DefaultValueProviderKind == DefaultValueProviderKind.Async);
+            source.Append(indent).Append("    public static ");
+            if (hasGlobalAsyncProvider)
+            {
+                source.Append("async ");
+            }
+
+            source.Append("global::System.Threading.Tasks.ValueTask<")
                 .Append(model.FullTypeName)
-                .AppendLine(
-                    " Bind(global::AnyCli.Parameters.Options.CommandOptionValues values)");
+                .AppendLine("> BindAsync(")
+                .Append(indent)
+                .AppendLine("        global::AnyCli.Parameters.Options.CommandOptionValues values,")
+                .Append(indent)
+                .AppendLine("        global::System.Threading.CancellationToken cancellationToken,")
+                .Append(indent)
+                .AppendLine("        global::System.IServiceProvider? services)");
             source.Append(indent).AppendLine("    {");
             if (useInitializerTargets)
             {
@@ -1839,8 +1833,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 useInitializerTargets,
                 initializerProperties,
                 initializerLocals,
-                returnValueTask: false,
-                asyncMethod: false);
+                returnValueTask: true,
+                asyncMethod: hasGlobalAsyncProvider);
             source.Append(indent).AppendLine("    }");
             source.Append(indent).AppendLine("}");
 
@@ -2114,13 +2108,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             localIndex++;
         }
 
-        EmitOptionBindings(
+        EmitGlobalOptionBindings(
             source,
             indent,
-            model.GlobalOptions,
-            "globalOptionValues",
+            model,
             localIndex,
-            "global::AnyCli.Errors.ParameterSource.GlobalOption",
             useInitializerTargets ? initializerLocals : null);
         localIndex += model.GlobalOptions.Count;
         EmitOptionBindings(
@@ -2404,6 +2396,58 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 .Append(valueExpression)
                 .AppendLine(";");
         }
+    }
+
+    private static void EmitGlobalOptionBindings(
+        StringBuilder source,
+        string indent,
+        ParametersModel model,
+        int localIndex,
+        IReadOnlyDictionary<string, string>? initializerLocals)
+    {
+        if (model.GlobalOptions.Count == 0 || model.GlobalOptionsBaseFullTypeName is null)
+        {
+            EmitOptionBindings(
+                source,
+                indent,
+                model.GlobalOptions,
+                "globalOptionValues",
+                localIndex,
+                "global::AnyCli.Errors.ParameterSource.GlobalOption",
+                initializerLocals);
+            return;
+        }
+
+        source.Append(indent)
+            .Append("        var __boundGlobalOptions = globalOptionValues.BoundGlobalOptions as ")
+            .Append(model.GlobalOptionsBaseFullTypeName)
+            .AppendLine(";");
+        source.Append(indent).AppendLine("        if (__boundGlobalOptions is not null)");
+        source.Append(indent).AppendLine("        {");
+
+        foreach (var option in model.GlobalOptions)
+        {
+            EmitAssignment(
+                source,
+                indent,
+                option.PropertyName,
+                option.IsInitOnly,
+                "__boundGlobalOptions." + option.PropertyName,
+                GetInitializerLocal(initializerLocals, option.PropertyName));
+        }
+
+        source.Append(indent).AppendLine("        }");
+        source.Append(indent).AppendLine("        else");
+        source.Append(indent).AppendLine("        {");
+        EmitOptionBindings(
+            source,
+            indent,
+            model.GlobalOptions,
+            "globalOptionValues",
+            localIndex,
+            "global::AnyCli.Errors.ParameterSource.GlobalOption",
+            initializerLocals);
+        source.Append(indent).AppendLine("        }");
     }
 
     private static void EmitOptionBindings(
@@ -2726,6 +2770,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             bool isRecord,
             bool needsSetsRequiredMembersConstructor,
             bool isGlobalOptions,
+            string? globalOptionsBaseFullTypeName,
             bool implementsGlobalOptionsInterface,
             bool implementsParametersInterface,
             IReadOnlyList<ArgumentModel> arguments,
@@ -2741,6 +2786,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             IsRecord = isRecord;
             NeedsSetsRequiredMembersConstructor = needsSetsRequiredMembersConstructor;
             IsGlobalOptions = isGlobalOptions;
+            GlobalOptionsBaseFullTypeName = globalOptionsBaseFullTypeName;
             ImplementsGlobalOptionsInterface = implementsGlobalOptionsInterface;
             ImplementsParametersInterface = implementsParametersInterface;
             Arguments = arguments;
@@ -2764,6 +2810,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         public bool NeedsSetsRequiredMembersConstructor { get; }
 
         public bool IsGlobalOptions { get; }
+
+        public string? GlobalOptionsBaseFullTypeName { get; }
 
         public bool ImplementsGlobalOptionsInterface { get; }
 

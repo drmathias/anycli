@@ -6,10 +6,12 @@ namespace AnyCli.Commands.Registration;
 
 internal interface IGlobalOptionsDefinition
 {
-    CommandContext CreateContext(
+    ValueTask<CommandContext> CreateContextAsync(
         IReadOnlyList<string> commandPath,
         IConsole console,
-        CommandOptionValues values);
+        CommandOptionValues values,
+        CancellationToken cancellationToken,
+        IServiceProvider? services);
 
     CommandInterceptorContext CreateInterceptorContext(
         CommandContext context,
@@ -21,14 +23,21 @@ internal interface IGlobalOptionsDefinition
 internal sealed class GlobalOptionsDefinition<TGlobalOptions> : IGlobalOptionsDefinition
     where TGlobalOptions : class, IGlobalOptions<TGlobalOptions>
 {
-    public CommandContext CreateContext(
+    public async ValueTask<CommandContext> CreateContextAsync(
         IReadOnlyList<string> commandPath,
         IConsole console,
-        CommandOptionValues values) =>
-        new CommandContext<TGlobalOptions>(
-            commandPath,
-            console,
-            TGlobalOptions.Bind(values));
+        CommandOptionValues values,
+        CancellationToken cancellationToken,
+        IServiceProvider? services)
+    {
+        var globalOptions = await TGlobalOptions.BindAsync(
+                values,
+                cancellationToken,
+                services)
+            .ConfigureAwait(false);
+        values.BoundGlobalOptions = globalOptions;
+        return new CommandContext<TGlobalOptions>(commandPath, console, globalOptions);
+    }
 
     public CommandInterceptorContext CreateInterceptorContext(
         CommandContext context,

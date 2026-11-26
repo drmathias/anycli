@@ -131,8 +131,6 @@ The generator detects whether the provider implements the sync or async interfac
 
 Async providers receive only a `CancellationToken`; sync providers receive no invocation arguments. Resolve dependencies through constructor injection; the provider type is resolved from the configured service provider when one is available.
 
-Default value providers are not supported on global options because global options are bound while the command context is being created.
-
 ## Help output
 
 Simple initializers are captured by the generator and shown as the default in help output:
@@ -199,7 +197,6 @@ The generator reports incorrect default configurations:
 - `ANYCLI020` — the provider type is invalid.
 - `ANYCLI022` — default display metadata is used on a required parameter.
 - `ANYCLI023` — default display metadata is used without a provider or property initializer.
-- `ANYCLI024` — a global option uses `DefaultValueProvider`.
 - `ANYCLI025` — a provider implements both sync and async interfaces.
 
 ## Related

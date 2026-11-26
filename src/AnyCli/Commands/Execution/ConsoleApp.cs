@@ -377,10 +377,13 @@ public sealed class ConsoleApp
         var suppliedGlobalOptionValues = new CommandOptionValues(globalOptionValues);
         var context = _globalOptionsDefinition is null
             ? new CommandContext(path, console)
-            : _globalOptionsDefinition.CreateContext(
-                path,
-                console,
-                suppliedGlobalOptionValues);
+            : await _globalOptionsDefinition.CreateContextAsync(
+                    path,
+                    console,
+                    suppliedGlobalOptionValues,
+                    cancellationToken,
+                    _serviceProvider)
+                .ConfigureAwait(false);
 
         cancellationToken.ThrowIfCancellationRequested();
 

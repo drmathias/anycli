@@ -230,7 +230,11 @@ public class InterceptorUsageAnalyzerTests
                 {
                 }
 
-                public static TestOptions Bind(CommandOptionValues values) => new();
+                public static ValueTask<TestOptions> BindAsync(
+                    CommandOptionValues values,
+                    CancellationToken cancellationToken,
+                    IServiceProvider? services) =>
+                    ValueTask.FromResult(new TestOptions());
             }
 
             public sealed class OtherOptions : IGlobalOptions<OtherOptions>
@@ -239,7 +243,11 @@ public class InterceptorUsageAnalyzerTests
                 {
                 }
 
-                public static OtherOptions Bind(CommandOptionValues values) => new();
+                public static ValueTask<OtherOptions> BindAsync(
+                    CommandOptionValues values,
+                    CancellationToken cancellationToken,
+                    IServiceProvider? services) =>
+                    ValueTask.FromResult(new OtherOptions());
             }
 
             public enum TestExitCode
