@@ -9,7 +9,8 @@ namespace AnyCli.Parameters.Parsing;
 /// </summary>
 /// <remarks>
 /// Register an implementation with <see cref="EnumParameterParserAttribute{TParser}"/> to override
-/// the default enum parsing behavior for the application.
+/// the default enum parsing behavior for the application. Implement
+/// <see cref="IAsyncEnumParameterParser"/> instead when parsing requires asynchronous work.
 /// </remarks>
 public interface IEnumParameterParser
 {

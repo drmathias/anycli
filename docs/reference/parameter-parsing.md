@@ -31,9 +31,13 @@ The default enum parser matches member names case-insensitively. Kebab-case valu
 | `IParsable<T>` | `static bool TryParse(string? value, IFormatProvider? provider, out T result)` |
 | `ISpanParsable<T>` | `static bool TryParse(ReadOnlySpan<char> value, IFormatProvider? provider, out T result)` |
 | `IParameterParser<T>` | `static bool TryParse(string value, IFormatProvider? provider, out T result)` |
+| `IAsyncParameterParser<T>` | `ValueTask<ParameterParseResult<T>> TryParseAsync(string value, IFormatProvider? provider, CancellationToken cancellationToken)` |
 | `IEnumParameterParser` | `static bool TryParse<TEnum>(string value, IFormatProvider? provider, out TEnum result)` |
+| `IAsyncEnumParameterParser` | `ValueTask<ParameterParseResult<TEnum>> TryParseAsync<TEnum>(string value, IFormatProvider? provider, CancellationToken cancellationToken)` |
 
 `ISpanParsable<T>` extends `IParsable<T>`. A type implementing it must provide both string and span members. AnyCLI checks `ISpanParsable<T>` before `IParsable<T>`.
+
+A parser type must implement either the sync or async parser interface for the target type, not both. Async parsers are resolved from the configured service provider, or created with a public parameterless constructor when no service provider is configured. They also receive the command's cancellation token.
 
 BCL types such as `int`, `Guid`, `DateOnly`, `TimeSpan`, and `decimal` already implement these interfaces and need no custom parser.
 
@@ -47,15 +51,13 @@ BCL types such as `int`, `Guid`, `DateOnly`, `TimeSpan`, and `decimal` already i
 
 `ParameterValueParserAttribute` may be applied more than once for different value types. Registering more than one parser for the same value type produces `ANYCLI004`.
 
-`EnumParameterParserAttribute` may be applied once. It supplies the application-wide enum parser.
+`EnumParameterParserAttribute` may be applied once. It supplies the application-wide enum parser. Both attributes accept sync and async parsers.
+
+Parser-related diagnostics such as `ANYCLI001`, `ANYCLI002`, `ANYCLI004`, and [`ANYCLI026`](diagnostics.md) are listed in the [diagnostics reference](diagnostics.md).
 
 ## Collections and nullable values
 
 For a collection parameter, the element type is resolved through the same hierarchy. Nullable value types are unwrapped before resolution.
-
-## Diagnostics
-
-Parser-related diagnostics such as `ANYCLI001`, `ANYCLI002`, and `ANYCLI004` are listed in the [diagnostics reference](diagnostics.md).
 
 ## Related
 

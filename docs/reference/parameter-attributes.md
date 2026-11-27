@@ -101,7 +101,7 @@ Required options do not support supplying default values; the option must be pre
 | `DefaultValueProvider` | Optional/variadic arguments and options | Provider type implementing `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>` |
 | `MinimumCount` | `[VariadicArgument]` | Minimum number of values |
 | `MaximumCount` | `[VariadicArgument]` | Maximum number of values |
-| `Parser` | Argument and option attributes | Custom `IParameterParser<T>` implementation |
+| `Parser` | Argument and option attributes | Custom `IParameterParser<T>` or `IAsyncParameterParser<T>` implementation |
 
 Provider types may implement `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>`.
 

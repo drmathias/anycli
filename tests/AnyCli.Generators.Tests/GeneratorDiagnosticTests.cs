@@ -1030,6 +1030,148 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
+    public async Task GeneratesAsyncParameterParser()
+    {
+        var result = RunGenerator(
+            """
+            using System;
+            using System.Threading;
+            using System.Threading.Tasks;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Parsing;
+
+            public sealed record Widget(string Name);
+
+            public sealed class AsyncWidgetParser : IAsyncParameterParser<Widget>
+            {
+                public ValueTask<ParameterParseResult<Widget>> TryParseAsync(
+                    string value,
+                    IFormatProvider? provider,
+                    CancellationToken cancellationToken) =>
+                    ValueTask.FromResult(
+                        ParameterParseResult<Widget>.Succeeded(new Widget(value)));
+            }
+
+            public sealed partial class Parameters
+            {
+                [Argument(0, Parser = typeof(AsyncWidgetParser))]
+                public Widget Widget { get; set; } = new("");
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(generated).Contains("async global::System.Threading.Tasks.ValueTask");
+        await Assert.That(generated).Contains("ParseCustomAsync");
+        await Assert.That(generated).Contains("cancellationToken");
+    }
+
+    [Test]
+    public async Task GeneratesAsyncEnumParameterParser()
+    {
+        var result = RunGenerator(
+            """
+            using System;
+            using System.Threading;
+            using System.Threading.Tasks;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Parsing;
+
+            [assembly: EnumParameterParser<AsyncModeParser>]
+
+            public enum Mode
+            {
+                Alpha,
+                Beta,
+            }
+
+            public sealed class AsyncModeParser : IAsyncEnumParameterParser
+            {
+                public ValueTask<ParameterParseResult<TEnum>> TryParseAsync<TEnum>(
+                    string value,
+                    IFormatProvider? provider,
+                    CancellationToken cancellationToken)
+                    where TEnum : struct, Enum =>
+                    ValueTask.FromResult(
+                        Enum.TryParse<TEnum>(value, ignoreCase: true, out var result)
+                            ? ParameterParseResult<TEnum>.Succeeded(result)
+                            : ParameterParseResult<TEnum>.Failed);
+            }
+
+            public sealed partial class Parameters
+            {
+                [Argument(0)]
+                public Mode Mode { get; set; }
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(generated).Contains("async global::System.Threading.Tasks.ValueTask");
+        await Assert.That(generated).Contains("ParseEnumCustomAsync");
+    }
+
+    [Test]
+    public async Task ReportsAmbiguousParameterParser()
+    {
+        var result = RunGenerator(
+            """
+            using System;
+            using System.Threading;
+            using System.Threading.Tasks;
+            using AnyCli.Parameters.Arguments;
+            using AnyCli.Parameters.Parsing;
+
+            public sealed record Widget(string Name);
+
+            public sealed class AmbiguousParser :
+                IParameterParser<Widget>,
+                IAsyncParameterParser<Widget>
+            {
+                public static bool TryParse(
+                    string value,
+                    IFormatProvider? provider,
+                    out Widget result)
+                {
+                    result = new Widget(value);
+                    return true;
+                }
+
+                public ValueTask<ParameterParseResult<Widget>> TryParseAsync(
+                    string value,
+                    IFormatProvider? provider,
+                    CancellationToken cancellationToken) =>
+                    ValueTask.FromResult(
+                        ParameterParseResult<Widget>.Succeeded(new Widget(value)));
+            }
+
+            public sealed partial class BadParameters
+            {
+                [Argument(0, Parser = typeof(AmbiguousParser))]
+                public Widget Widget { get; set; } = new("");
+            }
+            """);
+
+        var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI026");
+
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.GetMessage()).Contains("Widget");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task ReportsAmbiguousDefaultValueProvider()
     {
         var result = RunGenerator(

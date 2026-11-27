@@ -23,3 +23,4 @@ ANYCLI020 | AnyCli | Error | Invalid default value provider
 ANYCLI022 | AnyCli | Error | Default value display on required parameter
 ANYCLI023 | AnyCli | Error | Default value display without default value
 ANYCLI025 | AnyCli | Error | Ambiguous default value provider
+ANYCLI026 | AnyCli | Error | Ambiguous parameter parser

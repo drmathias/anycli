@@ -34,6 +34,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private const string ParameterValueParserAttributeName = "ParameterValueParserAttribute`2";
     private const string EnumParameterParserAttributeName = "EnumParameterParserAttribute`1";
     private const string ParameterParserInterfaceName = "IParameterParser`1";
+    private const string AsyncParameterParserInterfaceName = "IAsyncParameterParser`1";
+    private const string EnumParameterParserInterfaceName = "IEnumParameterParser";
+    private const string AsyncEnumParameterParserInterfaceName = "IAsyncEnumParameterParser";
     private const string ParsableInterfaceName = "IParsable`1";
     private const string SpanParsableInterfaceName = "ISpanParsable`1";
     private const string SetsRequiredMembersAttributeName =
@@ -52,7 +55,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         id: "ANYCLI002",
         title: "Invalid parameter parser",
         messageFormat:
-            "Parser '{1}' for parameter property '{0}' must implement IParameterParser<{2}>",
+            "Parser '{1}' for parameter property '{0}' must implement IParameterParser<{2}> or IAsyncParameterParser<{2}>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -124,6 +127,15 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         title: "Ambiguous default value provider",
         messageFormat:
             "DefaultValueProvider type '{1}' for parameter property '{0}' implements both IDefaultValueProvider<{2}> and IAsyncDefaultValueProvider<{2}>",
+        category: "AnyCli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor AmbiguousParameterParserDiagnostic = new(
+        id: "ANYCLI026",
+        title: "Ambiguous parameter parser",
+        messageFormat:
+            "Parser '{1}' for parameter property '{0}' implements both sync and async parser interfaces for '{2}'",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -543,20 +555,16 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     parserType,
                     registrations.Parsers,
                     registrations.EnumParser,
-                    out var parsePlan))
+                    out var parsePlan,
+                    out var failingParserType,
+                    out var parsePlanFailure))
                 {
-                    diagnostics.Add(parserType is null
-                        ? new DiagnosticModel(
-                            UnsupportedParameterTypeDiagnostic,
-                            GetLocation(property),
-                            property.Name,
-                            argumentType.ToDisplayString())
-                        : new DiagnosticModel(
-                            InvalidParameterParserDiagnostic,
-                            GetLocation(property),
-                            property.Name,
-                            parserType.ToDisplayString(),
-                            valueType.ToDisplayString()));
+                    diagnostics.Add(CreateParsePlanDiagnostic(
+                        property,
+                        argumentType,
+                        valueType,
+                        failingParserType,
+                        parsePlanFailure));
                     continue;
                 }
 
@@ -993,20 +1001,16 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 parserType,
                 registrations.Parsers,
                 registrations.EnumParser,
-                out var parsePlan))
+                out var parsePlan,
+                out var failingParserType,
+                out var parsePlanFailure))
         {
-            diagnostics.Add(parserType is null
-                ? new DiagnosticModel(
-                    UnsupportedParameterTypeDiagnostic,
-                    GetLocation(property),
-                    property.Name,
-                    argumentType.ToDisplayString())
-                : new DiagnosticModel(
-                    InvalidParameterParserDiagnostic,
-                    GetLocation(property),
-                    property.Name,
-                    parserType.ToDisplayString(),
-                    valueType.ToDisplayString()));
+            diagnostics.Add(CreateParsePlanDiagnostic(
+                property,
+                argumentType,
+                valueType,
+                failingParserType,
+                parsePlanFailure));
             return null;
         }
 
@@ -1447,30 +1451,32 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         ITypeSymbol? parserType,
         IReadOnlyDictionary<ITypeSymbol, ITypeSymbol> registeredParsers,
         ITypeSymbol? enumParser,
-        out ParsePlan parsePlan)
+        out ParsePlan parsePlan,
+        out ITypeSymbol? failingParserType,
+        out ParsePlanFailure failure)
     {
+        parsePlan = null!;
+        failingParserType = null;
+        failure = ParsePlanFailure.None;
+
         if (parserType is not null)
         {
-            if (!IsValidParameterParser(parserType, valueType))
-            {
-                parsePlan = null!;
-                return false;
-            }
-
-            parsePlan = new ParsePlan(
-                ParseKind.Custom,
-                valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                parserType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-            return true;
+            return TryCreateCustomParsePlan(
+                parserType,
+                valueType,
+                out parsePlan,
+                out failingParserType,
+                out failure);
         }
 
         if (registeredParsers.TryGetValue(valueType, out var registeredParser))
         {
-            parsePlan = new ParsePlan(
-                ParseKind.Custom,
-                valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                registeredParser.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-            return true;
+            return TryCreateCustomParsePlan(
+                registeredParser,
+                valueType,
+                out parsePlan,
+                out failingParserType,
+                out failure);
         }
 
         if (argumentType.SpecialType == SpecialType.System_String)
@@ -1484,15 +1490,36 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         if (valueType.TypeKind == TypeKind.Enum)
         {
-            parsePlan = enumParser is null
-                ? new ParsePlan(
+            if (enumParser is null)
+            {
+                parsePlan = new ParsePlan(
                     ParseKind.Enum,
                     valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                    null)
-                : new ParsePlan(
-                    ParseKind.EnumCustom,
-                    valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                    enumParser.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                    null);
+                return true;
+            }
+
+            var enumParserKind = GetEnumParserKind(enumParser);
+            if (enumParserKind == ParserKind.None)
+            {
+                failingParserType = enumParser;
+                failure = ParsePlanFailure.InvalidParser;
+                return false;
+            }
+
+            if (enumParserKind == ParserKind.Ambiguous)
+            {
+                failingParserType = enumParser;
+                failure = ParsePlanFailure.AmbiguousParser;
+                return false;
+            }
+
+            parsePlan = new ParsePlan(
+                enumParserKind == ParserKind.Async
+                    ? ParseKind.EnumCustomAsync
+                    : ParseKind.EnumCustom,
+                valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                enumParser.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
             return true;
         }
 
@@ -1514,24 +1541,111 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             return true;
         }
 
-        parsePlan = null!;
+        failure = ParsePlanFailure.Unsupported;
         return false;
     }
 
-    private static bool IsValidParameterParser(ITypeSymbol parserType, ITypeSymbol valueType)
+    private static bool TryCreateCustomParsePlan(
+        ITypeSymbol parserType,
+        ITypeSymbol valueType,
+        out ParsePlan parsePlan,
+        out ITypeSymbol? failingParserType,
+        out ParsePlanFailure failure)
     {
-        if (parserType is not INamedTypeSymbol { IsStatic: false, IsUnboundGenericType: false } parser)
+        parsePlan = null!;
+        failingParserType = null;
+        failure = ParsePlanFailure.None;
+
+        var parserKind = GetParameterParserKind(parserType, valueType);
+        if (parserKind == ParserKind.None)
         {
+            failingParserType = parserType;
+            failure = ParsePlanFailure.InvalidParser;
             return false;
         }
 
-        return parser.AllInterfaces.Any(
+        if (parserKind == ParserKind.Ambiguous)
+        {
+            failingParserType = parserType;
+            failure = ParsePlanFailure.AmbiguousParser;
+            return false;
+        }
+
+        parsePlan = new ParsePlan(
+            parserKind == ParserKind.Async
+                ? ParseKind.CustomAsync
+                : ParseKind.Custom,
+            valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            parserType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        return true;
+    }
+
+    private static ParserKind GetParameterParserKind(ITypeSymbol parserType, ITypeSymbol valueType)
+    {
+        if (parserType is not INamedTypeSymbol { IsStatic: false, IsUnboundGenericType: false } parser)
+        {
+            return ParserKind.None;
+        }
+
+        var isSync = parser.AllInterfaces.Any(
             currentInterface =>
                 currentInterface.OriginalDefinition.MetadataName == ParameterParserInterfaceName &&
                 currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli.Parameters.Parsing" &&
                 currentInterface.TypeArguments.Length == 1 &&
                 SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], valueType));
+        var isAsync = parser.AllInterfaces.Any(
+            currentInterface =>
+                currentInterface.OriginalDefinition.MetadataName == AsyncParameterParserInterfaceName &&
+                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli.Parameters.Parsing" &&
+                currentInterface.TypeArguments.Length == 1 &&
+                SymbolEqualityComparer.Default.Equals(currentInterface.TypeArguments[0], valueType));
+
+        var kind = (isSync, isAsync) switch
+        {
+            (true, true) => ParserKind.Ambiguous,
+            (true, false) => ParserKind.Sync,
+            (false, true) => ParserKind.Async,
+            _ => ParserKind.None,
+        };
+
+        return kind == ParserKind.Async && !IsInstantiableClass(parser)
+            ? ParserKind.None
+            : kind;
     }
+
+    private static ParserKind GetEnumParserKind(ITypeSymbol parserType)
+    {
+        if (parserType is not INamedTypeSymbol parser)
+        {
+            return ParserKind.None;
+        }
+
+        var isSync = parser.AllInterfaces.Any(
+            currentInterface =>
+                currentInterface.OriginalDefinition.MetadataName == EnumParameterParserInterfaceName &&
+                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli.Parameters.Parsing");
+        var isAsync = parser.AllInterfaces.Any(
+            currentInterface =>
+                currentInterface.OriginalDefinition.MetadataName == AsyncEnumParameterParserInterfaceName &&
+                currentInterface.OriginalDefinition.ContainingNamespace.ToDisplayString() == "AnyCli.Parameters.Parsing");
+
+        var kind = (isSync, isAsync) switch
+        {
+            (true, true) => ParserKind.Ambiguous,
+            (true, false) => ParserKind.Sync,
+            (false, true) => ParserKind.Async,
+            _ => ParserKind.None,
+        };
+
+        return kind == ParserKind.Async && !IsInstantiableClass(parser)
+            ? ParserKind.None
+            : kind;
+    }
+
+    private static bool IsInstantiableClass(INamedTypeSymbol parser) =>
+        parser.TypeKind == TypeKind.Class &&
+        !parser.IsAbstract &&
+        !parser.IsStatic;
 
     private static bool ImplementsGenericInterface(ITypeSymbol type, string metadataName) =>
         type.AllInterfaces.Any(
@@ -1593,6 +1707,33 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
     private static Location GetLocation(AttributeData attribute, CancellationToken cancellationToken) =>
         attribute.ApplicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation() ?? Location.None;
+
+    private static DiagnosticModel CreateParsePlanDiagnostic(
+        IPropertySymbol property,
+        ITypeSymbol argumentType,
+        ITypeSymbol valueType,
+        ITypeSymbol? parserType,
+        ParsePlanFailure failure) =>
+        failure switch
+        {
+            ParsePlanFailure.Unsupported => new DiagnosticModel(
+                UnsupportedParameterTypeDiagnostic,
+                GetLocation(property),
+                property.Name,
+                argumentType.ToDisplayString()),
+            ParsePlanFailure.AmbiguousParser => new DiagnosticModel(
+                AmbiguousParameterParserDiagnostic,
+                GetLocation(property),
+                property.Name,
+                parserType?.ToDisplayString() ?? "<null>",
+                valueType.ToDisplayString()),
+            _ => new DiagnosticModel(
+                InvalidParameterParserDiagnostic,
+                GetLocation(property),
+                property.Name,
+                parserType?.ToDisplayString() ?? "<null>",
+                valueType.ToDisplayString()),
+        };
 
     private static void ReportRegistrationDiagnostics(
         SourceProductionContext context,
@@ -1786,10 +1927,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             source.Append(indent).AppendLine("    }");
             source.AppendLine();
 
-            var hasGlobalAsyncProvider = model.Options.Any(option =>
-                option.DefaultValueProviderKind == DefaultValueProviderKind.Async);
+            var hasGlobalAsyncWork = model.Options.Any(option =>
+                option.DefaultValueProviderKind == DefaultValueProviderKind.Async ||
+                option.ParsePlan.IsAsync);
             source.Append(indent).Append("    public static ");
-            if (hasGlobalAsyncProvider)
+            if (hasGlobalAsyncWork)
             {
                 source.Append("async ");
             }
@@ -1834,7 +1976,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 initializerProperties,
                 initializerLocals,
                 returnValueTask: true,
-                asyncMethod: hasGlobalAsyncProvider);
+                asyncMethod: hasGlobalAsyncWork);
             source.Append(indent).AppendLine("    }");
             source.Append(indent).AppendLine("}");
 
@@ -1921,16 +2063,19 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         source.Append(indent).AppendLine("    }");
         source.AppendLine();
 
-        var hasAsyncProvider =
+        var hasAsyncWork =
             model.Arguments.Any(argument =>
-                argument.DefaultValueProviderKind == DefaultValueProviderKind.Async) ||
+                argument.DefaultValueProviderKind == DefaultValueProviderKind.Async ||
+                argument.ParsePlan.IsAsync) ||
             model.Options.Any(option =>
-                option.DefaultValueProviderKind == DefaultValueProviderKind.Async) ||
+                option.DefaultValueProviderKind == DefaultValueProviderKind.Async ||
+                option.ParsePlan.IsAsync) ||
             model.GlobalOptions.Any(option =>
-                option.DefaultValueProviderKind == DefaultValueProviderKind.Async);
+                option.DefaultValueProviderKind == DefaultValueProviderKind.Async ||
+                option.ParsePlan.IsAsync);
         source.Append(indent)
             .Append("    public static ");
-        if (hasAsyncProvider)
+        if (hasAsyncWork)
         {
             source.Append("async ");
         }
@@ -2132,7 +2277,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             initializerProperties,
             initializerLocals,
             returnValueTask: true,
-            asyncMethod: hasAsyncProvider);
+            asyncMethod: hasAsyncWork);
         source.Append(indent).AppendLine("    }");
         source.Append(indent).AppendLine("}");
 
@@ -2683,6 +2828,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             ParseKind.EnumCustom =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseEnumCustom<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName}, {parameterSource})",
+            ParseKind.EnumCustomAsync =>
+                $"await global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseEnumCustomAsync<{parsePlan.ValueTypeFullName}, " +
+                $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName}, {parameterSource}, cancellationToken, services).ConfigureAwait(false)",
             ParseKind.SpanParsable =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseSpanParsable<{parsePlan.ValueTypeFullName}>(" +
                 $"{rawExpression}, global::System.Globalization.CultureInfo.InvariantCulture, {literalName}, {parameterSource})",
@@ -2693,6 +2841,10 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseCustom<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, " +
                 $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName}, {parameterSource})",
+            ParseKind.CustomAsync =>
+                $"await global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseCustomAsync<{parsePlan.ValueTypeFullName}, " +
+                $"{parsePlan.ParserTypeFullName}>({rawExpression}, " +
+                $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName}, {parameterSource}, cancellationToken, services).ConfigureAwait(false)",
             _ => throw new InvalidOperationException("Unknown parse kind."),
         };
 
@@ -2927,6 +3079,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         public string ValueTypeFullName { get; } = valueTypeFullName;
 
         public string? ParserTypeFullName { get; } = parserTypeFullName;
+
+        public bool IsAsync => Kind is ParseKind.CustomAsync or ParseKind.EnumCustomAsync;
     }
 
     private sealed class DiagnosticModel(
@@ -2980,8 +3134,26 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         String,
         Enum,
         EnumCustom,
+        EnumCustomAsync,
         SpanParsable,
         Parsable,
         Custom,
+        CustomAsync,
+    }
+
+    private enum ParserKind
+    {
+        None,
+        Sync,
+        Async,
+        Ambiguous,
+    }
+
+    private enum ParsePlanFailure
+    {
+        None,
+        InvalidParser,
+        AmbiguousParser,
+        Unsupported,
     }
 }

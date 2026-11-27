@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace AnyCli.Parameters.Parsing;
@@ -67,7 +68,7 @@ public static class ParameterValueParsing
     /// <param name="source">The source of the parameter value.</param>
     /// <returns>The parsed enum value.</returns>
     /// <remarks>
-    /// Parsing ignores case and accepts kebab-case values by removing hyphens before matching,
+    /// Parsing ignores case and accepts enum member names in their canonical kebab-case form,
     /// so <c>read-only</c> matches <c>ReadOnly</c>. Numeric values are not accepted; only enum
     /// member names can be parsed.
     /// </remarks>
@@ -127,6 +128,72 @@ public static class ParameterValueParsing
         }
 
         throw CreateInvalidValue(value, parameterName, typeof(T), source);
+    }
+
+    /// <summary>
+    /// Parses a value using an asynchronous custom <see cref="IAsyncParameterParser{T}"/>.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <typeparam name="TParser">The parser type.</typeparam>
+    /// <param name="value">The raw parameter value.</param>
+    /// <param name="provider">The culture used to parse the value.</param>
+    /// <param name="parameterName">The parameter name used in error messages.</param>
+    /// <param name="source">The source of the parameter value.</param>
+    /// <param name="cancellationToken">The cancellation token for the current invocation.</param>
+    /// <param name="services">The configured service provider, or <see langword="null"/>.</param>
+    /// <returns>The parsed value.</returns>
+    /// <exception cref="CommandErrorException">The value could not be parsed.</exception>
+    public static async ValueTask<T> ParseCustomAsync<
+        T,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TParser>(
+        string value,
+        IFormatProvider? provider,
+        string parameterName,
+        ParameterSource source,
+        CancellationToken cancellationToken,
+        IServiceProvider? services)
+        where TParser : class, IAsyncParameterParser<T>
+    {
+        var parser = ParameterParserResolver.Resolve<TParser>(services);
+        var result = await parser.TryParseAsync(value, provider, cancellationToken)
+            .ConfigureAwait(false);
+        return result.Success
+            ? result.Value!
+            : throw CreateInvalidValue(value, parameterName, typeof(T), source);
+    }
+
+    /// <summary>
+    /// Parses an enum value using an asynchronous custom <see cref="IAsyncEnumParameterParser"/>.
+    /// </summary>
+    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <typeparam name="TParser">The enum parser type.</typeparam>
+    /// <param name="value">The raw parameter value.</param>
+    /// <param name="parameterName">The parameter name used in error messages.</param>
+    /// <param name="source">The source of the parameter value.</param>
+    /// <param name="cancellationToken">The cancellation token for the current invocation.</param>
+    /// <param name="services">The configured service provider, or <see langword="null"/>.</param>
+    /// <returns>The parsed enum value.</returns>
+    /// <exception cref="CommandErrorException">The value could not be parsed.</exception>
+    public static async ValueTask<TEnum> ParseEnumCustomAsync<
+        TEnum,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TParser>(
+        string value,
+        string parameterName,
+        ParameterSource source,
+        CancellationToken cancellationToken,
+        IServiceProvider? services)
+        where TEnum : struct, Enum
+        where TParser : class, IAsyncEnumParameterParser
+    {
+        var parser = ParameterParserResolver.Resolve<TParser>(services);
+        var result = await parser.TryParseAsync<TEnum>(
+                value,
+                CultureInfo.InvariantCulture,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return result.Success
+            ? result.Value!
+            : throw CreateInvalidValue(value, parameterName, typeof(TEnum), source);
     }
 
     internal static CommandErrorException CreateInvalidValue(

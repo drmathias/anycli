@@ -11,9 +11,9 @@ The AnyCli source generator and analyzer emit the following compile-time diagnos
 | ID | Diagnostic | Cause and fix |
 | --- | --- | --- |
 | `ANYCLI001` | Unsupported parameter type | The property type is not `string`, an enum, `ISpanParsable<T>`, or `IParsable<T>`, and no parser is configured. Implement a supported parsing interface, use an enum, set `Parser`, or register a `ParameterValueParserAttribute`. |
-| `ANYCLI002` | Invalid parameter parser | The configured `Parser` type does not implement `IParameterParser<T>` for the property's value type. Make the parser implement the matching closed interface. |
+| `ANYCLI002` | Invalid parameter parser | The configured `Parser` type does not implement `IParameterParser<T>` or `IAsyncParameterParser<T>` for the property's value type. Make the parser implement the matching closed interface. |
 | `ANYCLI003` | Invalid variadic parameter | A variadic argument or repeated option uses an unsupported collection type. Use an array or one of the supported collection shapes. |
-| `ANYCLI004` | Duplicate parameter parser registration | More than one `ParameterValueParserAttribute` is registered for the same value type. Remove all but one registration. |
+| `ANYCLI004` | Duplicate parameter parser registration | More than one parser is registered for the same value type. Remove all but one registration. |
 | `ANYCLI005` | Invalid variadic minimum count | `MinimumCount` is negative. Use zero or a positive value. |
 | `ANYCLI007` | Invalid argument position | Argument positions must be unique, non-negative, and contiguous starting at `0`. Correct the `Argument` or `OptionalArgument` positions. |
 | `ANYCLI009` | Invalid option name | An option name is not a valid short name such as `-o` or long name such as `--output`. Correct the `Option` name. |
@@ -28,5 +28,6 @@ The AnyCli source generator and analyzer emit the following compile-time diagnos
 | `ANYCLI022` | Default value display on required parameter | A required argument, required option, or required variadic parameter has `DefaultValueDisplay` or `DefaultValueDisplayResource`. Default display metadata is only valid for optional parameters. |
 | `ANYCLI023` | Default value display without default value | A parameter has default display metadata but no provider or property initializer. Add a default or remove the display metadata. |
 | `ANYCLI025` | Ambiguous default value provider | A provider type implements both `IDefaultValueProvider<T>` and `IAsyncDefaultValueProvider<T>`. Implement only one interface. |
+| `ANYCLI026` | Ambiguous parameter parser | A parser type implements both the sync and async parser interfaces for the parameter value type. Implement only one interface. |
 
 Parameter diagnostics are emitted by the source generator before parameter code is generated. Interceptor diagnostics are reported on the `AddInterceptor<T>()` call. Fixing the diagnostic is required for the application to compile.

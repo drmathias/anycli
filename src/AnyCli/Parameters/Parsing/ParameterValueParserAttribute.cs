@@ -12,9 +12,10 @@ namespace AnyCli.Parameters.Parsing;
 /// <remarks>
 /// Apply this attribute at the assembly level. The source generator uses the registration to
 /// emit a direct call to <typeparamref name="TParser"/> for matching command arguments and options.
+/// The parser may implement <see cref="IParameterParser{T}"/> or
+/// <see cref="IAsyncParameterParser{T}"/>.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
 public sealed class ParameterValueParserAttribute<TValue, TParser> : Attribute
-    where TParser : IParameterParser<TValue>
 {
 }

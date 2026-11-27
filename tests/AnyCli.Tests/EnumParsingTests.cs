@@ -173,21 +173,23 @@ public sealed partial class GlobalEnumParameters
     public FileAccessMode Mode { get; set; }
 }
 
-public sealed class TestEnumParameterParser : IEnumParameterParser
+public sealed class TestEnumParameterParser : IAsyncEnumParameterParser
 {
-    public static bool TryParse<TEnum>(
+    public ValueTask<ParameterParseResult<TEnum>> TryParseAsync<TEnum>(
         string value,
         IFormatProvider? provider,
-        out TEnum result)
+        CancellationToken cancellationToken)
         where TEnum : struct, Enum
     {
-        if (typeof(TEnum) == typeof(FileAccessMode) && value == "custom")
-        {
-            result = (TEnum)(object)FileAccessMode.ReadOnly;
-            return true;
-        }
+        cancellationToken.ThrowIfCancellationRequested();
 
-        return DefaultEnumParameterParser.TryParse(value, provider, out result);
+        return typeof(TEnum) == typeof(FileAccessMode) && value == "custom"
+            ? ValueTask.FromResult(ParameterParseResult<TEnum>.Succeeded(
+                (TEnum)(object)FileAccessMode.ReadOnly))
+            : ValueTask.FromResult(
+                DefaultEnumParameterParser.TryParse<TEnum>(value, provider, out var result)
+                    ? ParameterParseResult<TEnum>.Succeeded(result)
+                    : ParameterParseResult<TEnum>.Failed);
     }
 }
 

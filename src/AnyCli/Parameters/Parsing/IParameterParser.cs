@@ -10,7 +10,8 @@ namespace AnyCli.Parameters.Parsing;
 /// <typeparam name="T">The parsed value type.</typeparam>
 /// <remarks>
 /// Specify an implementation with <see cref="ArgumentAttributeBase.Parser"/> or
-/// <see cref="OptionAttributeBase.Parser"/>.
+/// <see cref="OptionAttributeBase.Parser"/>. Implement <see cref="IAsyncParameterParser{T}"/>
+/// instead when parsing requires asynchronous work.
 /// </remarks>
 public interface IParameterParser<T>
 {

@@ -83,6 +83,54 @@ public sealed class TicketIdParser : IParameterParser<TicketId>
 }
 ```
 
+## Use an asynchronous parser
+
+Implement `IAsyncParameterParser<T>` when parsing requires asynchronous work, such as a network lookup:
+
+```csharp
+using System.Globalization;
+
+using AnyCli.Parameters.Parsing;
+
+public readonly record struct TicketId(int Value);
+
+public sealed class TicketIdParser : IAsyncParameterParser<TicketId>
+{
+    private readonly ITicketValidator _validator;
+
+    public TicketIdParser(ITicketValidator validator)
+    {
+        _validator = validator;
+    }
+
+    public async ValueTask<ParameterParseResult<TicketId>> TryParseAsync(
+        string value,
+        IFormatProvider? provider,
+        CancellationToken cancellationToken)
+    {
+        if (!int.TryParse(value, NumberStyles.None, provider, out var id) || id <= 0)
+        {
+            return ParameterParseResult<TicketId>.Failed;
+        }
+
+        var validated = await _validator.ValidateAsync(id, cancellationToken);
+        return validated
+            ? ParameterParseResult<TicketId>.Succeeded(new TicketId(id))
+            : ParameterParseResult<TicketId>.Failed;
+    }
+}
+```
+
+Async parsers are resolved from the configured service provider when one is available, so dependencies can be injected through the constructor. Otherwise, the parser needs a public parameterless constructor. They also receive the command's cancellation token.
+
+Use the same `Parser` property and registration attributes for sync and async parsers:
+
+```csharp
+[assembly: ParameterValueParser<TicketId, TicketIdParser>]
+```
+
+A parser type must implement either the sync or async parser interface, not both.
+
 ## Apply the parser
 
 Set `Parser` on the specific argument or option:
