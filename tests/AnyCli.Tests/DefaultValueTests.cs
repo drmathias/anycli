@@ -19,7 +19,7 @@ public class DefaultValueTests
         var result = await TestAppHarness.RunAsync(app, ["opts"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("Fast|True|3|default");
+        await Assert.That(result.Output).IsEqualTo("Text|True|3|default");
     }
 
     [Test]
@@ -29,10 +29,10 @@ public class DefaultValueTests
 
         var result = await TestAppHarness.RunAsync(
             app,
-            ["opts", "--mode", "slow", "--verbose=false", "--count", "5", "--name", "cli"]);
+            ["opts", "--mode", "json", "--verbose=false", "--count", "5", "--name", "cli"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("Slow|False|5|cli");
+        await Assert.That(result.Output).IsEqualTo("Json|False|5|cli");
     }
 
     [Test]
@@ -46,7 +46,7 @@ public class DefaultValueTests
         var result = await TestAppHarness.RunAsync(app, ["arg"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("42|Slow");
+        await Assert.That(result.Output).IsEqualTo("42|Json");
     }
 
     [Test]
@@ -57,10 +57,10 @@ public class DefaultValueTests
                 commands.AddCommand<DefaultArgumentCommand, DefaultArgumentParameters>("arg"))
             .Build();
 
-        var result = await TestAppHarness.RunAsync(app, ["arg", "7", "fast"]);
+        var result = await TestAppHarness.RunAsync(app, ["arg", "7", "text"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("7|Fast");
+        await Assert.That(result.Output).IsEqualTo("7|Text");
     }
 
     [Test]
@@ -74,7 +74,7 @@ public class DefaultValueTests
         var result = await TestAppHarness.RunAsync(app, ["opts"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("latest,stable|Fast,Slow");
+        await Assert.That(result.Output).IsEqualTo("latest,stable|Text,Json");
     }
 
     [Test]
@@ -87,10 +87,10 @@ public class DefaultValueTests
 
         var result = await TestAppHarness.RunAsync(
             app,
-            ["opts", "--tag", "custom", "--mode", "slow"]);
+            ["opts", "--tag", "custom", "--mode", "json"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("custom|Slow");
+        await Assert.That(result.Output).IsEqualTo("custom|Json");
     }
 
     [Test]
@@ -290,7 +290,7 @@ public class DefaultValueTests
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).Contains("[default: latest, stable]");
-        await Assert.That(result.Output).Contains("[default: fast, slow]");
+        await Assert.That(result.Output).Contains("[default: text, json]");
     }
 
     [Test]
@@ -324,7 +324,7 @@ public class DefaultValueTests
         var result = await TestAppHarness.RunAsync(app, ["opts", "--help"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).Contains("[default: FAST]");
+        await Assert.That(result.Output).Contains("[default: TEXT]");
     }
 
     [Test]
@@ -342,7 +342,7 @@ public class DefaultValueTests
         var result = await TestAppHarness.RunAsync(app, ["--help"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("FAST");
+        await Assert.That(result.Output).IsEqualTo("TEXT");
     }
 
     [Test]
@@ -357,7 +357,7 @@ public class DefaultValueTests
         var result = await TestAppHarness.RunAsync(app, ["opts", "--help"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).Contains("--mode:AnyCli.Tests.DotNetDefaultMode:Fast");
+        await Assert.That(result.Output).Contains("--mode:AnyCli.Tests.DefaultOutputMode:Text");
         await Assert.That(result.Output).Contains("--verbose:System.Boolean:True");
         await Assert.That(result.Output).Contains("--count:System.Int32:3");
         await Assert.That(result.Output).Contains("--name:System.String:default");
@@ -471,7 +471,7 @@ public class DefaultValueTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             context.Console.Output.Write(
-                formatter.Format(DotNetDefaultMode.Fast, CultureInfo.InvariantCulture) ?? "null");
+                formatter.Format(DefaultOutputMode.Text, CultureInfo.InvariantCulture) ?? "null");
             return ValueTask.CompletedTask;
         }
 
@@ -481,7 +481,7 @@ public class DefaultValueTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             context.Console.Output.Write(
-                formatter.Format(DotNetDefaultMode.Fast, CultureInfo.InvariantCulture) ?? "null");
+                formatter.Format(DefaultOutputMode.Text, CultureInfo.InvariantCulture) ?? "null");
             return ValueTask.CompletedTask;
         }
     }
@@ -523,7 +523,7 @@ public class DefaultValueTests
 public sealed partial class DefaultOptionsParameters
 {
     [Option("mode")]
-    public DotNetDefaultMode Mode { get; set; } = DotNetDefaultMode.Fast;
+    public DefaultOutputMode Mode { get; set; } = DefaultOutputMode.Text;
 
     [Option("verbose")]
     public bool Verbose { get; set; } = true;
@@ -541,7 +541,7 @@ public sealed partial class DefaultArgumentParameters
     public int Count { get; set; } = 42;
 
     [OptionalArgument(1)]
-    public DotNetDefaultMode Mode { get; set; } = DotNetDefaultMode.Slow;
+    public DefaultOutputMode Mode { get; set; } = DefaultOutputMode.Json;
 }
 
 public sealed partial class CollectionDefaultsParameters
@@ -550,7 +550,7 @@ public sealed partial class CollectionDefaultsParameters
     public string[] Tags { get; set; } = ["latest", "stable"];
 
     [Option("mode")]
-    public DotNetDefaultMode[] Modes { get; set; } = [DotNetDefaultMode.Fast, DotNetDefaultMode.Slow];
+    public DefaultOutputMode[] Modes { get; set; } = [DefaultOutputMode.Text, DefaultOutputMode.Json];
 }
 
 public sealed partial class VariadicDefaultsParameters
@@ -565,10 +565,10 @@ public sealed partial class InitializerParameters
     public string Name { get; set; } = "initializer";
 }
 
-public enum DotNetDefaultMode
+public enum DefaultOutputMode
 {
-    Fast,
-    Slow,
+    Text,
+    Json,
 }
 
 public sealed partial class ProviderParameters

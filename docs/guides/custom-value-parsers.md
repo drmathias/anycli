@@ -91,13 +91,13 @@ Set `Parser` on the specific argument or option:
 public sealed partial record InspectParameters
 {
     [Argument(0, Parser = typeof(TicketIdParser))]
-    public TicketId Id { get; set; }
+    public TicketId Id { get; init; }
 }
 
 public sealed partial record CloseParameters
 {
     [Option("--ticket", Parser = typeof(TicketIdParser))]
-    public TicketId Ticket { get; set; }
+    public TicketId Ticket { get; init; }
 }
 ```
 

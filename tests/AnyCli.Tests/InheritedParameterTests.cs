@@ -19,10 +19,10 @@ public class InheritedParameterTests
 
         var result = await TestAppHarness.RunAsync(
             app,
-            ["inspect", "source.txt", "--mode", "fast", "--tag", "custom"]);
+            ["inspect", "source.txt", "--mode", "basic", "--tag", "custom"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("source.txt|3|fast|custom");
+        await Assert.That(result.Output).IsEqualTo("source.txt|3|basic|custom");
     }
 
     [Test]
@@ -36,10 +36,10 @@ public class InheritedParameterTests
 
         var result = await TestAppHarness.RunAsync(
             app,
-            ["inspect", "source.txt", "--mode", "slow"]);
+            ["inspect", "source.txt", "--mode", "advanced"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("source.txt|3|slow|base");
+        await Assert.That(result.Output).IsEqualTo("source.txt|3|advanced|base");
     }
 
     [Test]
@@ -53,10 +53,10 @@ public class InheritedParameterTests
 
         var result = await TestAppHarness.RunAsync(
             app,
-            ["inspect", "source.txt", "--mode", "fast", "--extra", "child"]);
+            ["inspect", "source.txt", "--mode", "basic", "--extra", "child"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("source.txt|fast|child|base");
+        await Assert.That(result.Output).IsEqualTo("source.txt|basic|child|base");
     }
 
     [Test]
@@ -70,10 +70,10 @@ public class InheritedParameterTests
 
         var result = await TestAppHarness.RunAsync(
             app,
-            ["override", "source.txt", "--mode", "fast"]);
+            ["override", "source.txt", "--mode", "basic"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("source.txt|fast");
+        await Assert.That(result.Output).IsEqualTo("source.txt|basic");
     }
 
     private sealed class InheritedParametersCommand : ICommand<InheritedParameters>

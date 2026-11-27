@@ -30,10 +30,10 @@ public class TypedParametersTests
             .ConfigureCommands(commands => commands.AddCommand<CopyCommand, CopyParameters>("copy", "Copies files"))
             .Build();
 
-        var result = await TestAppHarness.RunAsync(app, ["copy", "source.txt", "dest.txt", "fast", "a", "b"]);
+        var result = await TestAppHarness.RunAsync(app, ["copy", "source.txt", "dest.txt", "alpha", "a", "b"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo("source.txt|dest.txt|fast|a,b");
+        await Assert.That(result.Output).IsEqualTo("source.txt|dest.txt|alpha|a,b");
     }
 
     [Test]

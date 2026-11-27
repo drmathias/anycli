@@ -68,7 +68,7 @@ public static class ParameterValueParsing
     /// <returns>The parsed enum value.</returns>
     /// <remarks>
     /// Parsing ignores case and accepts kebab-case values by removing hyphens before matching,
-    /// so <c>very-slow</c> matches <c>VerySlow</c>. Numeric values are not accepted; only enum
+    /// so <c>read-only</c> matches <c>ReadOnly</c>. Numeric values are not accepted; only enum
     /// member names can be parsed.
     /// </remarks>
     /// <exception cref="CommandErrorException">The value could not be parsed.</exception>

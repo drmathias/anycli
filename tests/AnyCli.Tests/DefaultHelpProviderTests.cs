@@ -37,7 +37,7 @@ public class DefaultHelpProviderTests
 
         Options:
             --count        Number of items [default: three items]
-            --mode         Processing mode [default: fast]
+            --mode         Processing mode [default: text]
             --verbose      Enable verbose output
             -h, --help     Prints help information
             -v, --version  Prints version information
@@ -103,7 +103,7 @@ public class DefaultHelpProviderTests
 
         Opciones:
             --count        Número de elementos [predeterminado: tres elementos]
-            --mode         Modo de procesamiento [predeterminado: fast]
+            --mode         Modo de procesamiento [predeterminado: text]
             --verbose      Habilitar salida detallada
             -h, --help     Muestra la información de ayuda
             -v, --version  Muestra la información de versión
@@ -143,7 +143,7 @@ public class DefaultHelpProviderTests
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Error).IsEmpty();
         await Assert.That(result.Output).Contains("[default: three items]");
-        await Assert.That(result.Output).Contains("[default: fast]");
+        await Assert.That(result.Output).Contains("[default: text]");
     }
 
     [Test]
@@ -257,17 +257,17 @@ public sealed partial class RunParameters
 
     [Option("--mode")]
     [ResourceDescription("ModeDescription")]
-    public RunMode Mode { get; set; } = RunMode.Fast;
+    public OutputMode Mode { get; set; } = OutputMode.Text;
 
     [Option("--verbose")]
     [ResourceDescription("VerboseDescription")]
     public bool Verbose { get; set; }
 }
 
-public enum RunMode
+public enum OutputMode
 {
-    Fast,
-    Slow,
+    Text,
+    Json,
 }
 
 public sealed partial class VariadicCopyParameters

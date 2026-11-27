@@ -14,10 +14,10 @@ Use property initializers for defaults, and default value providers when the def
 public sealed partial record ListParameters
 {
     [Option("--status")]
-    public string Status { get; set; } = "open";
+    public string Status { get; init; } = "open";
 
     [Option("--count")]
-    public int Count { get; set; } = 10;
+    public int Count { get; init; } = 10;
 }
 ```
 
@@ -27,7 +27,7 @@ public sealed partial record ListParameters
 public sealed partial record CopyParameters
 {
     [OptionalArgument(1)]
-    public string Destination { get; set; } = "output.txt";
+    public string Destination { get; init; } = "output.txt";
 }
 ```
 
@@ -35,7 +35,7 @@ public sealed partial record CopyParameters
 
 ```csharp
 [VariadicArgument(1)]
-public string[] Values { get; set; } = ["all"];
+public string[] Values { get; init; } = ["all"];
 ```
 
 Defaults for variadic arguments are independent of `MinimumCount` and `MaximumCount` properties. When no values are supplied, the default remains. The minimum and maximum apply only to user-supplied values. When a default source exists, the argument is shown as optional in help output even if `MinimumCount` is greater than zero.
@@ -46,7 +46,7 @@ Initializers may run arbitrary code:
 
 ```csharp
 [Option("--data")]
-public string DataFile { get; set; } = GetDefaultDataFile();
+public string DataFile { get; init; } = GetDefaultDataFile();
 ```
 
 Computed initializers are used for binding, but they are not evaluated while generating help output. Add default value display metadata when the default should appear in help.
@@ -60,7 +60,7 @@ public sealed partial record SyncParameters
 {
     [Option("--data", DefaultValueProvider = typeof(DataFileDefaultProvider))]
     [DefaultValueDisplay("$HOME/.config/anycli/tasks.json")]
-    public string DataFile { get; set; } = "";
+    public string DataFile { get; init; } = "";
 }
 
 public sealed class DataFileDefaultProvider : IDefaultValueProvider<string>
@@ -137,7 +137,7 @@ Simple initializers are captured by the generator and shown as the default in he
 
 ```csharp
 [Option("--count")]
-public int Count { get; set; } = 10;
+public int Count { get; init; } = 10;
 ```
 
 ```text
@@ -150,11 +150,11 @@ Enum defaults use lower kebab-case by default:
 
 ```csharp
 [Option("--mode")]
-public RunMode Mode { get; set; } = RunMode.VerySlow;
+public OutputMode Mode { get; init; } = OutputMode.Json;
 ```
 
 ```text
---mode    Processing mode [default: very-slow]
+--mode    Processing mode [default: json]
 ```
 
 Formatting is configurable through `IHelpValueFormatter`:
@@ -172,7 +172,7 @@ Use display metadata to override the text or provide help for computed defaults:
 [Option("--data")]
 [DefaultValueDisplay("tasks.json")]
 [DefaultValueDisplayResource("DataFileDefault")]
-public string DataFile { get; set; } = "tasks.json";
+public string DataFile { get; init; } = "tasks.json";
 ```
 
 - `[DefaultValueDisplay]` supplies literal fallback text.

@@ -12,7 +12,7 @@ Use a collection-typed property to accept an option multiple times.
 public sealed partial record AddParameters
 {
     [Option("--tag", "-t")]
-    public string[] Tags { get; set; } = [];
+    public string[] Tags { get; init; } = [];
 }
 ```
 
@@ -29,10 +29,10 @@ Common collection targets are supported, including arrays, lists, sets, and immu
 
 ```csharp
 [Option("--include")]
-public List<string> Include { get; set; } = [];
+public List<string> Include { get; init; } = [];
 
 [Option("--label")]
-public HashSet<string> Labels { get; set; } = [];
+public HashSet<string> Labels { get; init; } = [];
 ```
 
 Set-shaped targets remove duplicate values. Other collection targets preserve all values.
@@ -43,7 +43,7 @@ A scalar option cannot be repeated:
 
 ```csharp
 [Option("--name")]
-public string Name { get; set; } = "";
+public string Name { get; init; } = "";
 ```
 
 Supplying `--name` more than once produces a structured command-line error.

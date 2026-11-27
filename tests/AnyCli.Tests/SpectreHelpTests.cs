@@ -68,7 +68,7 @@ public class SpectreHelpTests
         await Assert.That(spectre.Error).IsEmpty();
         await Assert.That(spectre.Output).Contains("[default: tasks.json]");
         await Assert.That(spectre.Output).Contains("[default: 7]");
-        await Assert.That(spectre.Output).Contains("[default: fast]");
+        await Assert.That(spectre.Output).Contains("[default: text]");
         await Assert.That(Normalize(spectre.Output)).IsEqualTo(Normalize(plain.Output));
     }
 
@@ -166,13 +166,13 @@ public sealed partial class SpectreDefaultParameters
     public int Count { get; set; } = 7;
 
     [Option("--mode")]
-    public SpectreDefaultMode Mode { get; set; } = SpectreDefaultMode.Fast;
+    public SpectreOutputMode Mode { get; set; } = SpectreOutputMode.Text;
 
     private static string CreateComputedDefault() => "computed";
 }
 
-public enum SpectreDefaultMode
+public enum SpectreOutputMode
 {
-    Fast,
-    Slow,
+    Text,
+    Json,
 }

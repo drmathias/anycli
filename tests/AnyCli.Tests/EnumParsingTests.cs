@@ -13,21 +13,21 @@ public class EnumParsingTests
     [Test]
     public async Task DefaultEnumParameterParser_MatchesKebabCase()
     {
-        var success = DefaultEnumParameterParser.TryParse<KebabMode>(
-            "very-slow",
+        var success = DefaultEnumParameterParser.TryParse<FileAccessMode>(
+            "read-only",
             provider: null,
             out var result);
 
         await Assert.That(success).IsTrue();
-        await Assert.That(result).IsEqualTo(KebabMode.VerySlow);
+        await Assert.That(result).IsEqualTo(FileAccessMode.ReadOnly);
     }
 
     [Test]
     public async Task DefaultEnumParameterParser_RejectsMalformedKebabCase()
     {
-        foreach (var value in new[] { "v-e-r-y-s-l-o-w", "very--slow", "-very-slow", "very-slow-" })
+        foreach (var value in new[] { "r-e-a-d-o-n-l-y", "read--only", "-read-only", "read-only-" })
         {
-            var success = DefaultEnumParameterParser.TryParse<KebabMode>(
+            var success = DefaultEnumParameterParser.TryParse<FileAccessMode>(
                 value,
                 provider: null,
                 out _);
@@ -53,7 +53,7 @@ public class EnumParsingTests
     {
         foreach (var value in new[] { "0", "1", "-1", "+1", "0x1", "999", "1,2" })
         {
-            var success = DefaultEnumParameterParser.TryParse<KebabMode>(
+            var success = DefaultEnumParameterParser.TryParse<FileAccessMode>(
                 value,
                 provider: null,
                 out _);
@@ -69,7 +69,7 @@ public class EnumParsingTests
 
         try
         {
-            _ = ParameterValueParsing.ParseEnum<KebabMode>("1", "mode");
+            _ = ParameterValueParsing.ParseEnum<FileAccessMode>("1", "mode");
         }
         catch (CommandErrorException ex)
         {
@@ -102,33 +102,33 @@ public class EnumParsingTests
     [Test]
     public async Task ParseEnum_MatchesExactCase()
     {
-        var result = ParameterValueParsing.ParseEnum<KebabMode>("VerySlow", "mode");
+        var result = ParameterValueParsing.ParseEnum<FileAccessMode>("ReadOnly", "mode");
 
-        await Assert.That(result).IsEqualTo(KebabMode.VerySlow);
+        await Assert.That(result).IsEqualTo(FileAccessMode.ReadOnly);
     }
 
     [Test]
     public async Task ParseEnum_MatchesLowercaseNames()
     {
-        var result = ParameterValueParsing.ParseEnum<KebabMode>("veryslow", "mode");
+        var result = ParameterValueParsing.ParseEnum<FileAccessMode>("readonly", "mode");
 
-        await Assert.That(result).IsEqualTo(KebabMode.VerySlow);
+        await Assert.That(result).IsEqualTo(FileAccessMode.ReadOnly);
     }
 
     [Test]
     public async Task ParseEnum_MatchesKebabCase()
     {
-        var result = ParameterValueParsing.ParseEnum<KebabMode>("very-slow", "mode");
+        var result = ParameterValueParsing.ParseEnum<FileAccessMode>("read-only", "mode");
 
-        await Assert.That(result).IsEqualTo(KebabMode.VerySlow);
+        await Assert.That(result).IsEqualTo(FileAccessMode.ReadOnly);
     }
 
     [Test]
     public async Task ParseEnum_MatchesMixedCaseKebabValues()
     {
-        var result = ParameterValueParsing.ParseEnum<KebabMode>("Very-Slow", "mode");
+        var result = ParameterValueParsing.ParseEnum<FileAccessMode>("Read-Only", "mode");
 
-        await Assert.That(result).IsEqualTo(KebabMode.VerySlow);
+        await Assert.That(result).IsEqualTo(FileAccessMode.ReadOnly);
     }
 
     [Test]
@@ -139,9 +139,9 @@ public class EnumParsingTests
             .ConfigureCommands(commands => commands.AddCommand<GlobalEnumCommand, GlobalEnumParameters>("mode"))
             .Build();
 
-        var result = await TestAppHarness.RunAsync(app, ["mode", "very-slow"]);
+        var result = await TestAppHarness.RunAsync(app, ["mode", "read-only"]);
 
-        await Assert.That(result.Output).IsEqualTo("VerySlow");
+        await Assert.That(result.Output).IsEqualTo("ReadOnly");
     }
 
     [Test]
@@ -154,7 +154,7 @@ public class EnumParsingTests
 
         var result = await TestAppHarness.RunAsync(app, ["mode", "custom"]);
 
-        await Assert.That(result.Output).IsEqualTo("VerySlow");
+        await Assert.That(result.Output).IsEqualTo("ReadOnly");
     }
 
     private sealed class GlobalEnumCommand : ICommand<GlobalEnumParameters>
@@ -170,7 +170,7 @@ public class EnumParsingTests
 public sealed partial class GlobalEnumParameters
 {
     [Argument(0)]
-    public KebabMode Mode { get; set; }
+    public FileAccessMode Mode { get; set; }
 }
 
 public sealed class TestEnumParameterParser : IEnumParameterParser
@@ -181,9 +181,9 @@ public sealed class TestEnumParameterParser : IEnumParameterParser
         out TEnum result)
         where TEnum : struct, Enum
     {
-        if (typeof(TEnum) == typeof(KebabMode) && value == "custom")
+        if (typeof(TEnum) == typeof(FileAccessMode) && value == "custom")
         {
-            result = (TEnum)(object)KebabMode.VerySlow;
+            result = (TEnum)(object)FileAccessMode.ReadOnly;
             return true;
         }
 
@@ -191,10 +191,10 @@ public sealed class TestEnumParameterParser : IEnumParameterParser
     }
 }
 
-public enum KebabMode
+public enum FileAccessMode
 {
-    Fast,
-    VerySlow,
+    ReadOnly,
+    ReadWrite,
 }
 
 public enum AcronymMode

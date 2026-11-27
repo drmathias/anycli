@@ -19,7 +19,7 @@ This page lists the attributes used to declare command parameters and the rules 
 | `[RequiredOption(name, aliases...)]` | Named option that must be supplied | One |
 | `[GlobalOptions]` | Marks a type as global options | Not applicable |
 
-Parameter types must be declared `partial`. They can be classes or records, and properties can use `get; set;` or `get; init;`. The `required` modifier is supported.
+Parameter types must be declared `partial` and be either a `class` or class-based `record`.
 
 ## Argument positions
 
@@ -66,14 +66,14 @@ Options can use explicit names and aliases:
 
 ```csharp
 [Option("--output", "-o")]
-public string Output { get; set; } = "";
+public string Output { get; init; } = "";
 ```
 
 When no name is supplied, AnyCLI generates a kebab-case long name from the property name:
 
 ```csharp
 [Option]
-public bool DryRun { get; set; }
+public bool DryRun { get; init; }
 ```
 
 ```bash
@@ -86,7 +86,7 @@ run --dry-run
 
 ```csharp
 [RequiredOption("--config", "-c")]
-public string Config { get; set; } = "";
+public string Config { get; init; } = "";
 ```
 
 Required options do not support supplying default values; the option must be present on the command line.
@@ -126,7 +126,7 @@ Use `[DefaultValueDisplay]` for literal help text and `[DefaultValueDisplayResou
 [Option("--data")]
 [DefaultValueDisplay("tasks.json")]
 [DefaultValueDisplayResource("DataFileDefault")]
-public string DataFile { get; set; } = "tasks.json";
+public string DataFile { get; init; } = "tasks.json";
 ```
 
 Display metadata affects help output only. It overrides captured initializer values and does not change binding behavior. It is ignored for required parameters.
@@ -147,7 +147,7 @@ Collection-typed arguments and options accept multiple values. Supported targets
 
 ```csharp
 [Option("--tag", "-t")]
-public string[] Tags { get; set; } = [];
+public string[] Tags { get; init; } = [];
 ```
 
 ```bash

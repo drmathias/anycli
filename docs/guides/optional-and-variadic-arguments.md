@@ -55,7 +55,7 @@ A variadic argument accepts zero values by default:
 
 ```csharp
 [VariadicArgument(0)]
-public string[] Values { get; set; } = [];
+public string[] Values { get; init; } = [];
 ```
 
 ## Errors

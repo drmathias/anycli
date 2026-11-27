@@ -18,10 +18,10 @@ public class TypedParameterValueParsingTests
         var app = CreateApp<ScalarCommand, ScalarParameters>("parse");
         var id = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
 
-        var result = await TestAppHarness.RunAsync(app, ["parse", "42", "true", id.ToString(), "2026-11-07", "very-slow", "3"]);
+        var result = await TestAppHarness.RunAsync(app, ["parse", "42", "true", id.ToString(), "2026-11-07", "read-only", "3"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).IsEqualTo($"42|True|{id}|2026-11-07|VerySlow|3");
+        await Assert.That(result.Output).IsEqualTo($"42|True|{id}|2026-11-07|ReadOnly|3");
     }
 
     [Test]
@@ -30,9 +30,9 @@ public class TypedParameterValueParsingTests
         var app = CreateApp<ScalarCommand, ScalarParameters>("parse");
         var id = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
 
-        var result = await TestAppHarness.RunAsync(app, ["parse", "1", "false", id.ToString(), "2026-11-07", "fast"]);
+        var result = await TestAppHarness.RunAsync(app, ["parse", "1", "false", id.ToString(), "2026-11-07", "guest"]);
 
-        await Assert.That(result.Output).IsEqualTo($"1|False|{id}|2026-11-07|Fast|null");
+        await Assert.That(result.Output).IsEqualTo($"1|False|{id}|2026-11-07|Guest|null");
     }
 
     [Test]
@@ -54,7 +54,7 @@ public class TypedParameterValueParsingTests
 
         var result = await TestAppHarness.RunAsync(
             app,
-            ["parse", "nope", "true", Guid.Empty.ToString(), "2026-11-07", "fast"]);
+            ["parse", "nope", "true", Guid.Empty.ToString(), "2026-11-07", "guest"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(2);
         await Assert.That(result.Output).IsEmpty();
@@ -264,7 +264,7 @@ public sealed partial class ScalarParameters
     public DateTime Date { get; set; }
 
     [Argument(4)]
-    public ParseMode Mode { get; set; }
+    public ParseAccessMode Mode { get; set; }
 
     [OptionalArgument(5)]
     public int? Retries { get; set; }
@@ -340,11 +340,11 @@ public sealed class RegisteredWidgetParser : IParameterParser<RegisteredWidget>
     }
 }
 
-public enum ParseMode
+public enum ParseAccessMode
 {
-    Fast,
-    Slow,
-    VerySlow,
+    Guest,
+    ReadOnly,
+    ReadWrite,
 }
 
 public sealed record Widget(string Name);

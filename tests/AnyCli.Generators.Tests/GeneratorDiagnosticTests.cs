@@ -214,8 +214,8 @@ public class GeneratorDiagnosticTests
 
             public enum Mode
             {
-                Fast,
-                Slow,
+                Alpha,
+                Beta,
             }
 
             public sealed class ModeParser : IEnumParameterParser
@@ -517,14 +517,14 @@ public class GeneratorDiagnosticTests
 
             public enum Mode
             {
-                Fast,
-                Slow,
+                Alpha,
+                Beta,
             }
 
             public sealed partial class GoodParameters
             {
                 [Option("--mode")]
-                public Mode Mode { get; set; } = Mode.Fast;
+                public Mode Mode { get; set; } = Mode.Alpha;
 
                 [Option("--verbose")]
                 public bool Verbose { get; set; } = true;
@@ -689,8 +689,8 @@ public class GeneratorDiagnosticTests
 
             public enum Mode
             {
-                Fast,
-                Slow,
+                Alpha,
+                Beta,
             }
 
             public sealed class Widget
