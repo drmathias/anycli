@@ -87,7 +87,7 @@ Providers are supported on:
 
 Providers are not supported on `[Argument]` or `[RequiredOption]`.
 
-When a service provider is configured, the provider type is resolved from it. Register the concrete provider type:
+When the provider type is registered in the configured service provider, that instance is used. Register the concrete provider type when it has constructor dependencies:
 
 ```csharp
 var services = new ServiceCollection();
@@ -99,7 +99,7 @@ var app = ConsoleAppBuilder.Create()
     .Build();
 ```
 
-When no service provider is configured, the provider needs a public parameterless constructor.
+When the provider is not registered, it needs a public parameterless constructor.
 
 The provider is invoked only when the option or argument is omitted. It is not invoked when a command-line value is supplied.
 
@@ -126,10 +126,6 @@ public sealed class DataFileDefaultProvider : IAsyncDefaultValueProvider<string>
 ```
 
 The generator detects whether the provider implements the sync or async interface and awaits async defaults during parameter binding. If a provider implements both interfaces, the async provider is used and `ANYCLI025` is reported as a warning.
-
-### Provider context
-
-Async providers receive only a `CancellationToken`; sync providers receive no invocation arguments. Resolve dependencies through constructor injection; the provider type is resolved from the configured service provider when one is available.
 
 ## Help output
 

@@ -158,6 +158,61 @@ public class DefaultValueTests
     }
 
     [Test]
+    public async Task DefaultValueProvider_UsesRegisteredProviderWhenParameterlessConstructorExists()
+    {
+        var serviceProvider = new StubServiceProvider();
+        serviceProvider.Add(() => new ConfigurableProvider(new ProviderPrefix("di:")));
+        serviceProvider.Add(() => new ConfigurableProviderCommand());
+
+        var app = ConsoleAppBuilder.Create()
+            .UseServiceProvider(serviceProvider)
+            .ConfigureCommands(commands =>
+                commands.AddCommand<ConfigurableProviderCommand, ConfigurableProviderParameters>("value"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["value"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("di:default");
+    }
+
+    [Test]
+    public async Task DefaultValueProvider_FallsBackToParameterlessConstructor()
+    {
+        var serviceProvider = new StubServiceProvider();
+        serviceProvider.Add(() => new ConfigurableProviderCommand());
+
+        var app = ConsoleAppBuilder.Create()
+            .UseServiceProvider(serviceProvider)
+            .ConfigureCommands(commands =>
+                commands.AddCommand<ConfigurableProviderCommand, ConfigurableProviderParameters>("value"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["value"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("parameterless:default");
+    }
+
+    [Test]
+    public async Task AsyncDefaultValueProvider_FallsBackToParameterlessConstructor()
+    {
+        var serviceProvider = new StubServiceProvider();
+        serviceProvider.Add(() => new AsyncProviderCommand());
+
+        var app = ConsoleAppBuilder.Create()
+            .UseServiceProvider(serviceProvider)
+            .ConfigureCommands(commands =>
+                commands.AddCommand<AsyncProviderCommand, AsyncProviderParameters>("value"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["value"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("async|async|async-tag");
+    }
+
+    [Test]
     public async Task VariadicProviderDefault_IgnoresMinimumAndMaximum()
     {
         var app = ConsoleAppBuilder.Create()
@@ -382,6 +437,15 @@ public class DefaultValueTests
         }
     }
 
+    private sealed class ConfigurableProviderCommand : ICommand<ConfigurableProviderParameters>
+    {
+        public int Execute(CommandContext context, ConfigurableProviderParameters parameters)
+        {
+            context.Console.Output.Write(parameters.Name);
+            return 0;
+        }
+    }
+
     private sealed class AsyncProviderCommand : ICommand<AsyncProviderParameters>
     {
         public int Execute(CommandContext context, AsyncProviderParameters parameters)
@@ -584,6 +648,33 @@ public sealed partial class ProviderParameters
     [VariadicArgument(1, DefaultValueProvider = typeof(ProviderTagsDefault))]
     [DefaultValueDisplay("a,b")]
     public string[] Tags { get; set; } = [];
+}
+
+public sealed partial class ConfigurableProviderParameters
+{
+    [Option("--name", DefaultValueProvider = typeof(ConfigurableProvider))]
+    public string Name { get; set; } = "";
+}
+
+public sealed class ProviderPrefix(string value)
+{
+    public string Value { get; } = value;
+}
+
+public sealed class ConfigurableProvider : IDefaultValueProvider<string>
+{
+    private readonly ProviderPrefix? _prefix;
+
+    public ConfigurableProvider()
+    {
+    }
+
+    public ConfigurableProvider(ProviderPrefix prefix)
+    {
+        _prefix = prefix;
+    }
+
+    public string CreateDefault() => (_prefix?.Value ?? "parameterless:") + "default";
 }
 
 public sealed partial class SuppliedValueParameters

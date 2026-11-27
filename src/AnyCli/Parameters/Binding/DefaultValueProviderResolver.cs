@@ -7,8 +7,12 @@ using System.Diagnostics.CodeAnalysis;
 namespace AnyCli.Parameters.Binding;
 
 /// <summary>
-/// Resolves default value providers from the configured service provider.
+/// Resolves default value provider instances.
 /// </summary>
+/// <remarks>
+/// A registered provider is resolved from the configured service provider. Otherwise, a provider
+/// with a public parameterless constructor is created directly.
+/// </remarks>
 public static class DefaultValueProviderResolver
 {
     /// <summary>
@@ -25,12 +29,20 @@ public static class DefaultValueProviderResolver
         IServiceProvider? services)
         where TProvider : class
     {
-        return services is null
-            ? Activator.CreateInstance<TProvider>()
+        if (services is not null &&
+            services.GetService(typeof(TProvider)) is TProvider registeredProvider)
+        {
+            return registeredProvider;
+        }
+
+        if (typeof(TProvider).GetConstructor(Type.EmptyTypes) is not null)
+        {
+            return Activator.CreateInstance<TProvider>()
                 ?? throw new InvalidOperationException(
-                    $"Could not create default value provider '{typeof(TProvider).FullName}'.")
-            : services.GetService(typeof(TProvider)) as TProvider
-                ?? throw new InvalidOperationException(
-                    $"Service '{typeof(TProvider).FullName}' is not registered.");
+                    $"Could not create default value provider '{typeof(TProvider).FullName}'.");
+        }
+
+        throw new InvalidOperationException(
+            $"Default value provider '{typeof(TProvider).FullName}' is not registered in the service provider and has no public parameterless constructor.");
     }
 }
