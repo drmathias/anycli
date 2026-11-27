@@ -7,7 +7,7 @@ namespace AnyCli.Parameters.Parsing;
 /// <summary>
 /// Represents the result of an asynchronous parameter parse attempt.
 /// </summary>
-/// <typeparam name="T">The parsed value type.</typeparam>
+/// <typeparam name="T">The parsed type.</typeparam>
 public readonly struct ParameterParseResult<T>
 {
     private ParameterParseResult(bool success, T? value)

@@ -192,12 +192,23 @@ public class GeneratorDiagnosticTests
                     return true;
                 }
             }
+
+            public sealed partial class Parameters
+            {
+                [Argument(0)]
+                public Widget Widget { get; set; } = new();
+            }
             """);
 
         var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI004");
+        var generated = result.GeneratedSourceTexts.Single();
 
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Warning);
         await Assert.That(diagnostic.GetMessage()).Contains("Widget");
+        await Assert.That(diagnostic.GetMessage()).Contains("last registration");
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(generated).Contains("WidgetParser2");
+        await Assert.That(generated).DoesNotContain("WidgetParser1");
     }
 
     [Test]
@@ -933,10 +944,12 @@ public class GeneratorDiagnosticTests
             """);
 
         var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI022");
+        var generated = result.GeneratedSourceTexts.Single();
 
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Warning);
         await Assert.That(diagnostic.GetMessage()).Contains("Name");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(generated).DoesNotContain("SetDefaultValueDisplay");
     }
 
     [Test]
@@ -956,10 +969,12 @@ public class GeneratorDiagnosticTests
             """);
 
         var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI023");
+        var generated = result.GeneratedSourceTexts.Single();
 
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Warning);
         await Assert.That(diagnostic.GetMessage()).Contains("Name");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(generated).DoesNotContain("SetDefaultValueDisplay");
     }
 
     [Test]
@@ -1165,10 +1180,12 @@ public class GeneratorDiagnosticTests
             """);
 
         var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI026");
+        var generated = result.GeneratedSourceTexts.Single();
 
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Warning);
         await Assert.That(diagnostic.GetMessage()).Contains("Widget");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(generated).Contains("ParseCustomAsync");
     }
 
     [Test]
@@ -1199,10 +1216,12 @@ public class GeneratorDiagnosticTests
             """);
 
         var diagnostic = result.GeneratorDiagnostics.Single(diagnostic => diagnostic.Id == "ANYCLI025");
+        var generated = result.GeneratedSourceTexts.Single();
 
-        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
+        await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Warning);
         await Assert.That(diagnostic.GetMessage()).Contains("Name");
-        await Assert.That(result.GeneratedSourceCount).IsEqualTo(0);
+        await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
+        await Assert.That(generated).Contains("CreateDefaultAsync(cancellationToken)");
     }
 
     [Test]

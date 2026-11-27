@@ -8,7 +8,7 @@ Rule ID | Category | Severity | Notes
 ANYCLI001 | AnyCli | Error | Unsupported parameter type
 ANYCLI002 | AnyCli | Error | Invalid parameter parser
 ANYCLI003 | AnyCli | Error | Invalid variadic parameter
-ANYCLI004 | AnyCli | Error | Duplicate parameter parser registration
+ANYCLI004 | AnyCli | Warning | Duplicate parameter parser registration
 ANYCLI005 | AnyCli | Error | Invalid variadic minimum count
 ANYCLI007 | AnyCli | Error | Invalid argument position
 ANYCLI009 | AnyCli | Error | Invalid option name
@@ -20,7 +20,7 @@ ANYCLI017 | AnyCli | Error | Invalid variadic maximum count
 ANYCLI018 | AnyCli | Error | Interceptor global options mismatch
 ANYCLI019 | AnyCli | Error | Interceptor exit code mismatch
 ANYCLI020 | AnyCli | Error | Invalid default value provider
-ANYCLI022 | AnyCli | Error | Default value display on required parameter
-ANYCLI023 | AnyCli | Error | Default value display without default value
-ANYCLI025 | AnyCli | Error | Ambiguous default value provider
-ANYCLI026 | AnyCli | Error | Ambiguous parameter parser
+ANYCLI022 | AnyCli | Warning | Default value display on required parameter
+ANYCLI023 | AnyCli | Warning | Default value display without default value
+ANYCLI025 | AnyCli | Warning | Ambiguous default value provider
+ANYCLI026 | AnyCli | Warning | Ambiguous parameter parser

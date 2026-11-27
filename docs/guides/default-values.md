@@ -125,7 +125,7 @@ public sealed class DataFileDefaultProvider : IAsyncDefaultValueProvider<string>
 }
 ```
 
-The generator detects whether the provider implements the sync or async interface and awaits async defaults during parameter binding. Implementing both interfaces for the same value type is an error.
+The generator detects whether the provider implements the sync or async interface and awaits async defaults during parameter binding. If a provider implements both interfaces, the async provider is used and `ANYCLI025` is reported as a warning.
 
 ### Provider context
 
@@ -195,9 +195,9 @@ When a parameter is omitted, the order is:
 The generator reports incorrect default configurations:
 
 - `ANYCLI020` — the provider type is invalid.
-- `ANYCLI022` — default display metadata is used on a required parameter.
-- `ANYCLI023` — default display metadata is used without a provider or property initializer.
-- `ANYCLI025` — a provider implements both sync and async interfaces.
+- `ANYCLI022` — default display metadata on a required parameter is ignored.
+- `ANYCLI023` — default display metadata without a default source is ignored.
+- `ANYCLI025` — a provider implements both sync and async interfaces; the async provider is used.
 
 ## Related
 

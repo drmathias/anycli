@@ -72,9 +72,10 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor DuplicateParameterParserDiagnostic = new(
         id: "ANYCLI004",
         title: "Duplicate parameter parser registration",
-        messageFormat: "Multiple parameter parsers are registered for type '{0}'",
+        messageFormat:
+            "Parser for type '{0}' is registered more than once; the last registration overrides the previous one",
         category: "AnyCli",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidOptionNameDiagnostic = new(
@@ -126,36 +127,36 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         id: "ANYCLI025",
         title: "Ambiguous default value provider",
         messageFormat:
-            "DefaultValueProvider type '{1}' for parameter property '{0}' implements both IDefaultValueProvider<{2}> and IAsyncDefaultValueProvider<{2}>",
+            "DefaultValueProvider type '{1}' for parameter property '{0}' implements both IDefaultValueProvider<{2}> and IAsyncDefaultValueProvider<{2}>; the async provider will be used",
         category: "AnyCli",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor AmbiguousParameterParserDiagnostic = new(
         id: "ANYCLI026",
         title: "Ambiguous parameter parser",
         messageFormat:
-            "Parser '{1}' for parameter property '{0}' implements both sync and async parser interfaces for '{2}'",
+            "Parser '{1}' for parameter property '{0}' implements both sync and async parser interfaces for '{2}'; async parsing is preferred",
         category: "AnyCli",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor DefaultValueDisplayOnRequiredParameterDiagnostic = new(
         id: "ANYCLI022",
         title: "Default value display on required parameter",
         messageFormat:
-            "Required parameter property '{0}' cannot have default value display metadata",
+            "Default value display metadata on required parameter property '{0}' is ignored",
         category: "AnyCli",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor DefaultValueDisplayWithoutDefaultDiagnostic = new(
         id: "ANYCLI023",
         title: "Default value display without default value",
         messageFormat:
-            "Parameter property '{0}' has default value display metadata but no configured default value",
+            "Default value display metadata on parameter property '{0}' is ignored because no default value source is configured",
         category: "AnyCli",
-        defaultSeverity: DiagnosticSeverity.Error,
+        defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidVariadicMinimumCountDiagnostic = new(
@@ -540,13 +541,13 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 var isRequiredArgument = !isOptionalArgument &&
                     (!isVariadic || (minimumCount > 0 && !hasDefaultSource));
                 var defaultDisplay = GetDefaultValueDisplay(property);
-                if (!ValidateDefaultValueDisplay(
+                if (!ShouldUseDefaultValueDisplay(
                         property,
                         isRequiredArgument,
                         hasDefaultSource,
                         diagnostics))
                 {
-                    continue;
+                    defaultDisplay = new HelpTextModel(null, null);
                 }
 
                 if (!TryCreateParsePlan(
@@ -566,6 +567,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                         failingParserType,
                         parsePlanFailure));
                     continue;
+                }
+
+                if (parsePlan.IsAmbiguous)
+                {
+                    diagnostics.Add(CreateAmbiguousParserDiagnostic(property, parsePlan));
                 }
 
                 arguments.Add(new ArgumentModel(
@@ -711,7 +717,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         return new HelpTextModel(text, resourceKey);
     }
 
-    private static bool ValidateDefaultValueDisplay(
+    private static bool ShouldUseDefaultValueDisplay(
         IPropertySymbol property,
         bool required,
         bool hasDefaultValue,
@@ -984,7 +990,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
         var hasInitializer = HasPropertyInitializer(property);
         var defaultDisplay = GetDefaultValueDisplay(property);
-        if (!ValidateDefaultValueDisplay(
+        if (!ShouldUseDefaultValueDisplay(
                 property,
                 required,
                 defaultFallbackExpression is not null ||
@@ -992,7 +998,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 hasInitializer,
                 diagnostics))
         {
-            return null;
+            defaultDisplay = new HelpTextModel(null, null);
         }
 
         if (!TryCreateParsePlan(
@@ -1012,6 +1018,11 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 failingParserType,
                 parsePlanFailure));
             return null;
+        }
+
+        if (parsePlan.IsAmbiguous)
+        {
+            diagnostics.Add(CreateAmbiguousParserDiagnostic(property, parsePlan));
         }
 
         return new OptionModel(
@@ -1069,7 +1080,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 property.Name,
                 providerType.ToDisplayString(),
                 targetType.ToDisplayString()));
-            return false;
+            providerTypeName = providerType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            providerKind = DefaultValueProviderKind.Async;
+            return true;
         }
 
         if (validation == DefaultValueProviderValidation.Invalid)
@@ -1507,19 +1520,19 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 return false;
             }
 
-            if (enumParserKind == ParserKind.Ambiguous)
-            {
-                failingParserType = enumParser;
-                failure = ParsePlanFailure.AmbiguousParser;
-                return false;
-            }
-
+            var useAsyncEnumParser = enumParserKind == ParserKind.Async ||
+                (enumParserKind == ParserKind.Ambiguous &&
+                 enumParser is INamedTypeSymbol enumParserType &&
+                 IsInstantiableClass(enumParserType));
             parsePlan = new ParsePlan(
-                enumParserKind == ParserKind.Async
+                useAsyncEnumParser
                     ? ParseKind.EnumCustomAsync
                     : ParseKind.EnumCustom,
                 valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                enumParser.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                enumParser.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+            {
+                IsAmbiguous = enumParserKind == ParserKind.Ambiguous,
+            };
             return true;
         }
 
@@ -1564,19 +1577,19 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             return false;
         }
 
-        if (parserKind == ParserKind.Ambiguous)
-        {
-            failingParserType = parserType;
-            failure = ParsePlanFailure.AmbiguousParser;
-            return false;
-        }
-
+        var useAsyncParser = parserKind == ParserKind.Async ||
+            (parserKind == ParserKind.Ambiguous &&
+             parserType is INamedTypeSymbol parser &&
+             IsInstantiableClass(parser));
         parsePlan = new ParsePlan(
-            parserKind == ParserKind.Async
+            useAsyncParser
                 ? ParseKind.CustomAsync
                 : ParseKind.Custom,
             valueType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            parserType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            parserType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+        {
+            IsAmbiguous = parserKind == ParserKind.Ambiguous,
+        };
         return true;
     }
 
@@ -1696,7 +1709,6 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                     DuplicateParameterParserDiagnostic,
                     GetLocation(attribute, cancellationToken),
                     valueType.ToDisplayString()));
-                continue;
             }
 
             parsers[valueType] = parserType;
@@ -1721,12 +1733,6 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 GetLocation(property),
                 property.Name,
                 argumentType.ToDisplayString()),
-            ParsePlanFailure.AmbiguousParser => new DiagnosticModel(
-                AmbiguousParameterParserDiagnostic,
-                GetLocation(property),
-                property.Name,
-                parserType?.ToDisplayString() ?? "<null>",
-                valueType.ToDisplayString()),
             _ => new DiagnosticModel(
                 InvalidParameterParserDiagnostic,
                 GetLocation(property),
@@ -1734,6 +1740,16 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 parserType?.ToDisplayString() ?? "<null>",
                 valueType.ToDisplayString()),
         };
+
+    private static DiagnosticModel CreateAmbiguousParserDiagnostic(
+        IPropertySymbol property,
+        ParsePlan parsePlan) =>
+        new(
+            AmbiguousParameterParserDiagnostic,
+            GetLocation(property),
+            property.Name,
+            parsePlan.ParserTypeFullName ?? "<null>",
+            parsePlan.ValueTypeFullName);
 
     private static void ReportRegistrationDiagnostics(
         SourceProductionContext context,
@@ -1846,16 +1862,22 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
     private static void Emit(SourceProductionContext context, ParametersModel model)
     {
-        if (model.Diagnostics.Count > 0)
+        var hasErrors = false;
+        foreach (var diagnostic in model.Diagnostics)
         {
-            foreach (var diagnostic in model.Diagnostics)
+            if (diagnostic.Descriptor.DefaultSeverity == DiagnosticSeverity.Error)
             {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    diagnostic.Descriptor,
-                    diagnostic.Location,
-                    diagnostic.MessageArgs));
+                hasErrors = true;
             }
 
+            context.ReportDiagnostic(Diagnostic.Create(
+                diagnostic.Descriptor,
+                diagnostic.Location,
+                diagnostic.MessageArgs));
+        }
+
+        if (hasErrors)
+        {
             return;
         }
 
@@ -3081,6 +3103,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         public string? ParserTypeFullName { get; } = parserTypeFullName;
 
         public bool IsAsync => Kind is ParseKind.CustomAsync or ParseKind.EnumCustomAsync;
+
+        public bool IsAmbiguous { get; set; }
     }
 
     private sealed class DiagnosticModel(
@@ -3153,7 +3177,6 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     {
         None,
         InvalidParser,
-        AmbiguousParser,
         Unsupported,
     }
 }

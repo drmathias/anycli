@@ -6,48 +6,28 @@ SPDX-License-Identifier: MIT
 
 # Interceptors reference
 
-Interceptors wrap command execution after command-line parsing and required-value validation succeed, before the command result is returned.
+Interceptors wrap command execution after command-line parsing and required-value validation succeed, before the command result is returned. For exact interfaces and members, use the API Reference in the top navigation.
 
-## Interfaces
+## Interceptor kinds
 
-| Interface | Delegate |
-| --- | --- |
-| `ICommandInterceptor` | `Func<CancellationToken, Task<int>>` |
-| `ICommandInterceptor<TGlobalOptions>` | `Func<CancellationToken, Task<int>>` |
-| `ICommandInterceptorWithExitCode<TExitCode>` | `Func<CancellationToken, Task<TExitCode>>` |
-| `ICommandInterceptorWithExitCode<TGlobalOptions, TExitCode>` | `Func<CancellationToken, Task<TExitCode>>` |
+`ICommandInterceptor` is the non-generic base. `ICommandInterceptor<TGlobalOptions>` receives typed global options. `ICommandInterceptorWithExitCode<TExitCode>` works with a typed exit-code result, and `ICommandInterceptorWithExitCode<TGlobalOptions, TExitCode>` combines typed global options and a typed exit code.
 
-`ICommandInterceptor<TGlobalOptions>` receives `CommandInterceptorContext<TGlobalOptions>` and requires the application to configure global options. `ICommandInterceptorWithExitCode<TExitCode>` converts the enum result to the integer process exit code through the framework bridge. `ICommandInterceptorWithExitCode<TGlobalOptions, TExitCode>` combines both: it receives typed global options and a typed exit-code delegate.
+The generic global-options variants require the application to configure global options. The exit-code variants convert the enum result to the integer process exit code through the framework bridge.
 
 ## Interceptor context
 
-`CommandInterceptorContext` inherits from `CommandContext` and adds:
+`CommandInterceptorContext` inherits from `CommandContext` and adds the raw command display string plus raw parsed arguments and options. `CommandInterceptorContext<TGlobalOptions>` also exposes typed global options.
 
-| Property | Type | Meaning |
-| --- | --- | --- |
-| `RawCommand` | `string` | Display string for the command line, including the application name. |
-| `ParsedArguments` | `IReadOnlyDictionary<string, ParsedValue>` | Raw positional values keyed by argument name. |
-| `ParsedOptions` | `IReadOnlyDictionary<string, ParsedValue>` | Raw option values keyed by primary option name. |
-| `Name` | `string` | The command name. |
-| `CommandPath` | `IReadOnlyList<string>` | Full command path. |
-| `Console` | `IConsole` | Standard input, output, and error. |
-
-`CommandInterceptorContext<TGlobalOptions>` adds:
-
-| Property | Type |
-| --- | --- |
-| `GlobalOptions` | `TGlobalOptions` |
+The parsed dictionaries are intended for cross-cutting interceptor concerns. Use the command's typed parameters for normal command logic.
 
 ### Parsed value shapes
 
 - `ParsedValue.Flag` represents a flag supplied without a value.
 - `ParsedValue.Scalar` represents a single supplied value. `Value` is a string, or `null` when an optional argument was not supplied and has no default.
-- `ParsedValue.Multiple` represents a variadic argument or option with multiple supplied values. `Values` is a read-only string list. A repeated option with one value appears as a scalar.
+- `ParsedValue.Multiple` represents a variadic argument or option with multiple supplied values. A repeated option with one value appears as a scalar.
 - Values remain strings even when the command parameter is an `int`, enum, or other parsed type.
 - Option keys use the primary option name, such as `--priority`; aliases are not separate entries.
 - `ParsedOptions` contains options supplied to the command. Options that were not supplied are absent, and typed global options are not included.
-
-Use the command's typed parameters for normal command logic. The dictionaries are intended for cross-cutting interceptor concerns.
 
 ## Registration
 
@@ -91,6 +71,16 @@ An interceptor can short-circuit by returning without calling `next`. Exceptions
 ## Cancellation
 
 The cancellation token passed to `InterceptAsync` is forwarded to `next`. An interceptor may pass a linked token to add a timeout or other cancellation condition. See [Handle Cancellation](../guides/handle-cancellation.md).
+
+## API reference
+
+- [`ICommandInterceptor`](xref:AnyCli.Interceptors.ICommandInterceptor)
+- [`ICommandInterceptor<TGlobalOptions>`](xref:AnyCli.Interceptors.ICommandInterceptor%601)
+- [`ICommandInterceptorWithExitCode<TExitCode>`](xref:AnyCli.Interceptors.ICommandInterceptorWithExitCode%601)
+- [`ICommandInterceptorWithExitCode<TGlobalOptions, TExitCode>`](xref:AnyCli.Interceptors.ICommandInterceptorWithExitCode%602)
+- [`CommandInterceptorContext`](xref:AnyCli.Interceptors.CommandInterceptorContext)
+- [`CommandInterceptorContext<TGlobalOptions>`](xref:AnyCli.Interceptors.CommandInterceptorContext%601)
+- [`ParsedValue`](xref:AnyCli.Interceptors.ParsedValue)
 
 ## Related
 

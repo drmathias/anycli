@@ -12,80 +12,57 @@ The `AnyCli.SpectreConsole` package connects AnyCLI contexts to Spectre.Console.
 dotnet add package AnyCli.SpectreConsole
 ```
 
-Use the `AnyCli.SpectreConsole` namespace for the adapter, providers, writers, and options.
+Use the `AnyCli.SpectreConsole` namespace for the adapter, providers, writers, and options. For exact members and signatures, use the API Reference in the top navigation.
 
-## Adapter types
+## What the adapter adds
 
-| Type | Purpose |
-| --- | --- |
-| `SpectreConsoleAdapter` | Creates ANSI consoles and exposes cached consoles for AnyCLI contexts. |
-| `IAnsiConsoleWriter` | Provides `Output` and `Error` consoles. |
-| `IAnsiConsoleOutputWriter` | Provides the standard output console. |
-| `IAnsiConsoleErrorWriter` | Provides the standard error console. |
-| `SpectreHelpProvider` | Renders help with Spectre.Console. |
-| `SpectreCommandErrorWriter` | Renders command-line errors with Spectre.Console. |
-| `SpectreConsoleOptions` | Controls ANSI, color, and interaction detection. |
-| `SpectreHelpOptions` | Controls Spectre.Console help styles. |
-| `SpectreErrorOptions` | Controls error styles and console options. |
+The adapter connects AnyCLI's console abstractions to Spectre.Console:
 
-## Adapter methods
+- `context.AnsiConsole.Output` and `context.AnsiConsole.Error` on command contexts
+- `context.AnsiConsole.Output` on help contexts
+- `context.AnsiConsole.Error` on command error contexts
+- `UseSpectreHelp` for styled help through `SpectreHelpProvider`
+- `UseSpectreErrors` for styled errors through `SpectreCommandErrorWriter`
 
-| Method | Returns |
-| --- | --- |
-| `SpectreConsoleAdapter.Create(IOutputWriter, SpectreConsoleOptions?)` | `IAnsiConsole` for an output writer. |
-| `SpectreConsoleAdapter.Create(IConsole, SpectreConsoleOptions?)` | `IAnsiConsole` for a console's standard output. |
-| `SpectreConsoleAdapter.CreateError(IConsole, SpectreConsoleOptions?)` | `IAnsiConsole` for a console's standard error. |
+The ANSI consoles are created from the existing output writers and cached per context. Raw writes through `context.Console.Output` remain available and can be mixed with Spectre output.
 
-## Context extensions
+## What it does not replace
 
-| Context | Intended property path | Type |
-| --- | --- | --- |
-| `CommandContext` | `AnsiConsole.Output`, `AnsiConsole.Error` | `IAnsiConsoleWriter` |
-| `HelpContext` | `AnsiConsole.Output` | `IAnsiConsoleWriter` |
-| `CommandErrorContext` | `AnsiConsole.Error` | `IAnsiConsoleErrorWriter` |
+The adapter is a presentation layer. It does not replace:
 
-Help rendering only uses `Output`. The underlying `HelpContext.AnsiConsole` type also exposes `Error` because it shares the console-writer abstraction, but that stream is not part of the help pipeline.
-
-`CommandContext.AnsiConsole.Output` and `.Error` are cached for the lifetime of the context. Raw writes through `CommandContext.Console` remain available and can be mixed with ANSI output.
-
-## Configuration extensions
-
-| Method | Effect |
-| --- | --- |
-| `UseSpectreHelp(Action<SpectreHelpOptions>?)` | Replaces the help renderer with `SpectreHelpProvider`. |
-| `UseSpectreErrors(SpectreErrorOptions?)` | Replaces the error writer with `SpectreCommandErrorWriter`. |
+- the help text provider that supplies headings, descriptions, and localization
+- the help value formatter that displays fallback defaults
+- the error message provider that turns structured errors into text
+- the error exit-code configuration
+- command registration or parameter binding
 
 `UseSpectreHelp` uses the shared `IHelpTextProvider` and `IHelpValueFormatter` configured on `ConfigureHelp`, so headings, descriptions, and default values work the same way as the default provider. `UseSpectreErrors` replaces only the writer; the message provider and exit code remain unchanged.
 
-## SpectreConsoleOptions
+## Help behavior
 
-| Property | Default | Purpose |
-| --- | --- | --- |
-| `Ansi` | `AnsiSupport.Detect` | Whether ANSI output is enabled. |
-| `ColorSystem` | `ColorSystemSupport.Detect` | Color system detection. |
-| `Interactive` | `InteractionSupport.No` | Interactive terminal behavior. |
+`SpectreHelpOptions` controls only Spectre-specific styles. Unless overridden, help uses aqua headings, grey option placeholders, white command placeholders, and medium-purple argument syntax. Usage lines, commands, options, and descriptions use plain styles by default.
 
-`SpectreConsoleOptions.ForTesting` uses `AnsiSupport.Yes`, `ColorSystemSupport.Standard`, and `InteractionSupport.No`.
+Help rendering only uses the output stream. The underlying help context also exposes an error console because it shares the console-writer abstraction, but that stream is not part of the help pipeline.
 
-## SpectreHelpOptions
+## Error behavior
 
-| Property | Default |
-| --- | --- |
-| `HeadingStyle` | `Color.Aqua` |
-| `UsageStyle` | `Style.Plain` |
-| `OptionsPlaceholderStyle` | `Color.Grey` |
-| `CommandPlaceholderStyle` | `Color.White` |
-| `CommandStyle` | `Style.Plain` |
-| `OptionStyle` | `Style.Plain` |
-| `ArgumentStyle` | `Color.MediumPurple1` |
-| `DescriptionStyle` | `Style.Plain` |
+`SpectreCommandErrorWriter` renders the plain error message with Spectre styling. `SpectreErrorOptions` controls the error style and optional console options. The default error style is red, and a `null` console options value uses the error context console.
 
-## SpectreErrorOptions
+## Console options
 
-| Property | Default | Purpose |
-| --- | --- | --- |
-| `ErrorStyle` | `Color.Red` | Style applied to the error message. |
-| `ConsoleOptions` | `null` | Console options; `null` uses the error context console. |
+`SpectreConsoleOptions` controls ANSI output, color-system detection, and interaction detection. By default, ANSI and color support are detected and interaction is disabled. `SpectreConsoleOptions.ForTesting` forces deterministic ANSI output with the standard color system.
+
+## Testing
+
+Use `SpectreConsoleOptions.ForTesting` when asserting rendered output. The adapter also supports direct console creation through `SpectreConsoleAdapter.Create` for services that do not receive a command context.
+
+## API reference
+
+- [`SpectreConsoleAdapter`](xref:AnyCli.SpectreConsole.SpectreConsoleAdapter)
+- [`SpectreHelpProvider`](xref:AnyCli.SpectreConsole.SpectreHelpProvider), [`SpectreHelpOptions`](xref:AnyCli.SpectreConsole.SpectreHelpOptions)
+- [`SpectreCommandErrorWriter`](xref:AnyCli.SpectreConsole.SpectreCommandErrorWriter), [`SpectreErrorOptions`](xref:AnyCli.SpectreConsole.SpectreErrorOptions)
+- [`SpectreConsoleOptions`](xref:AnyCli.SpectreConsole.SpectreConsoleOptions)
+- [`IAnsiConsoleWriter`](xref:AnyCli.SpectreConsole.IAnsiConsoleWriter), [`IAnsiConsoleOutputWriter`](xref:AnyCli.SpectreConsole.IAnsiConsoleOutputWriter), [`IAnsiConsoleErrorWriter`](xref:AnyCli.SpectreConsole.IAnsiConsoleErrorWriter)
 
 ## Related
 

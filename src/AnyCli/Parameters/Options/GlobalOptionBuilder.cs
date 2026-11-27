@@ -14,7 +14,7 @@ public sealed class GlobalOptionBuilder
     /// <summary>
     /// Adds a global option that consumes a value.
     /// </summary>
-    /// <typeparam name="T">The option value type.</typeparam>
+    /// <typeparam name="T">The option type.</typeparam>
     /// <param name="name">The primary option name.</param>
     /// <returns>The option builder.</returns>
     /// <exception cref="ArgumentException">

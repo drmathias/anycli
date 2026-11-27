@@ -7,7 +7,7 @@ namespace AnyCli.Parameters.Parsing;
 /// <summary>
 /// Asynchronously parses a command-line parameter value into a custom type.
 /// </summary>
-/// <typeparam name="T">The parsed value type.</typeparam>
+/// <typeparam name="T">The parsed type.</typeparam>
 /// <remarks>
 /// Specify an implementation with <see cref="ArgumentAttributeBase.Parser"/> or
 /// <see cref="OptionAttributeBase.Parser"/>, or register it with

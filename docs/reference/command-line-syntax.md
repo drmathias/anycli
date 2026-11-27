@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Command-line syntax
 
-This page summarizes the command-line forms AnyCLI accepts.
+This page summarizes the command-line forms AnyCLI accepts. For exact attribute and parser APIs, use the API Reference in the top navigation.
 
 ## Arguments
 
@@ -70,6 +70,11 @@ todo list --log-level debug
 ## Errors
 
 Command-line parsing failures are structured errors. By default they are written to standard error and return exit code `2`. Error output and exit codes can be customized through `ConfigureErrorHandling`.
+
+## API reference
+
+- [`ArgumentAttribute`](xref:AnyCli.Parameters.Arguments.ArgumentAttribute), [`OptionalArgumentAttribute`](xref:AnyCli.Parameters.Arguments.OptionalArgumentAttribute), [`VariadicArgumentAttribute`](xref:AnyCli.Parameters.Arguments.VariadicArgumentAttribute)
+- [`OptionAttribute`](xref:AnyCli.Parameters.Options.OptionAttribute), [`RequiredOptionAttribute`](xref:AnyCli.Parameters.Options.RequiredOptionAttribute), [`GlobalOptionsAttribute`](xref:AnyCli.Parameters.Options.GlobalOptionsAttribute)
 
 ## Related
 

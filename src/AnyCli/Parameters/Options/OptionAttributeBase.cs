@@ -42,7 +42,7 @@ public abstract class OptionAttributeBase : Attribute
 
     /// <summary>
     /// Gets or sets a custom parser type implementing
-    /// <see cref="IParameterParser{T}"/> for the option value type.
+    /// <see cref="IParameterParser{T}"/> for the option type.
     /// </summary>
     public Type? Parser { get; set; }
 }

@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 SPDX-License-Identifier: MIT
 -->
 
-# Parse custom value types
+# Parse custom types
 
 Use this guide when a command parameter type is not already parsed by AnyCLI.
 
@@ -129,7 +129,7 @@ Use the same `Parser` property and registration attributes for sync and async pa
 [assembly: ParameterValueParser<TicketId, TicketIdParser>]
 ```
 
-A parser type must implement either the sync or async parser interface, not both.
+If a parser type implements both the sync and async parser interfaces, async parsing is preferred and `ANYCLI026` is reported as a warning.
 
 ## Apply the parser
 
@@ -153,13 +153,13 @@ Invalid values produce a structured command-line error and return exit code `2` 
 
 ## Register a parser once
 
-Register the parser for the value type when it should apply everywhere:
+Register the parser for the type when it should apply everywhere:
 
 ```csharp
 [assembly: ParameterValueParser<TicketId, TicketIdParser>]
 ```
 
-Parameters of `TicketId` then use the parser without setting `Parser` on each attribute. A type can have only one registered parser.
+Parameters of `TicketId` then use the parser without setting `Parser` on each attribute. If a type has multiple registrations, the last registration overrides the previous ones and `ANYCLI004` is reported as a warning.
 
 ## Related
 

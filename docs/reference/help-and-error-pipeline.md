@@ -6,140 +6,59 @@ SPDX-License-Identifier: MIT
 
 # Help and error pipeline reference
 
-This page lists the console, help, and command-line error types used by AnyCLI.
+This page describes how AnyCLI selects and invokes console, help, and command-line error components. For exact types, members, and signatures, use the API Reference in the top navigation.
 
 ## Console abstractions
 
-| Type | Purpose |
-| --- | --- |
-| `IConsole` | Standard input, output, and error for a command. |
-| `IConsoleWriter` | Standard output and error without input. |
-| `IConsoleOutputWriter` | Exposes `Output` as an `IOutputWriter`. |
-| `IConsoleErrorWriter` | Exposes `Error` as an `IOutputWriter`. |
-| `IOutputWriter` | Write-only output: `Write`, `WriteLine()`, and `WriteLine(string?)`. |
-| `IInputReader` | Reads a line from standard input with a cancellation token. |
+Commands receive an `IConsole`, which exposes standard input, output, and error. Help and command-line errors receive narrower writer interfaces: help writes through an `IConsoleWriter`, and errors write through an `IConsoleErrorWriter`. Both expose an `IOutputWriter` for the relevant stream.
 
-`CommandContext.Console` is an `IConsole`. `HelpContext.Console` and `CommandErrorContext.Console` expose the narrower writer interfaces they need.
+The narrow interfaces keep help rendering and error formatting from owning process-level streams.
 
 ## Help pipeline
 
-### Types
+Help is built from command metadata and rendered by a help provider:
 
-| Type | Purpose |
-| --- | --- |
-| `IHelpProvider` | Renders root help and command help. |
-| `DefaultHelpProvider` | The built-in plain-text help renderer. |
-| `IHelpTextProvider` | Supplies headings, labels, usage placeholders, descriptions, default value display text, and the formatting culture. |
-| `LocalizedHelpTextProvider` | The built-in resource-based text provider. |
-| `IHelpValueFormatter` | Formats fallback default values such as enums and collections. |
-| `DefaultHelpValueFormatter` | The built-in formatter; uses lower kebab-case for enum members. |
-| `HelpContext` | Shared help data: app name, console, and global options. |
-| `RootHelpContext` | Root help data, including top-level commands. |
-| `CommandHelpContext` | Command help data, including the selected command or group. |
-| `HelpProviderContext` | Inputs for creating a help provider: service provider, configured text provider, value formatter, and localization. |
-| `HelpDescriptionContext` | Inputs for resolving a command, option, or argument description. |
-| `HelpText` | Literal text, a resource key, or both. |
-| `ResourceDescriptionAttribute` | Associates a parameter property with a resource key. |
-| `DefaultValueDisplayAttribute` | Supplies literal default value display text for help output. |
-| `DefaultValueDisplayResourceAttribute` | Supplies a localizable default value display resource key. |
-| `DefaultValueInfo` | Pattern-matchable default source: initializer value or provider type, with optional display text. |
+```text
+command, option, and argument metadata
+    -> help provider
+    -> HelpContext.Console.Output
+```
 
-### Help configuration
+The provider decides the layout and writes the result. `DefaultHelpProvider` is the built-in plain-text provider. Text is a separate concern: `IHelpTextProvider` supplies headings, labels, placeholders, and descriptions, while `IHelpValueFormatter` formats fallback default values such as enums and collections. The defaults are `LocalizedHelpTextProvider` and `DefaultHelpValueFormatter`.
 
-`ConfigureHelp` configures shared help services and selects the help provider:
+`ConfigureHelp` configures shared help services and selects the provider. Shared text and value formatting apply to any provider factory through `HelpProviderContext`. When no provider is selected, `DefaultHelpProvider` is used. Help providers are resolved from the configured service provider when available; otherwise they need a public parameterless constructor.
 
-| Method | Effect |
-| --- | --- |
-| `UseTextProvider<TProvider>()` | Replaces the help text provider. |
-| `UseLocalizedTextProvider(params ResourceManager[])` | Uses `LocalizedHelpTextProvider` with description resources. |
-| `UseLocalizedTextProvider(Func<IServiceProvider?, IEnumerable<ResourceManager>>)` | Creates description resources through a factory. |
-| `UseLocalizedTextProvider(string baseName, Assembly assembly)` | Creates a `ResourceManager` from a base name and assembly. |
-| `UseValueFormatter<TFormatter>()` | Replaces the default value formatter. |
-| `UseValueFormatter(IHelpValueFormatter)` | Uses the specified value formatter instance. |
-| `UseValueFormatter(Func<IServiceProvider?, IHelpValueFormatter>)` | Creates the value formatter through a factory. |
-| `UseProvider<TProvider>()` | Replaces the help renderer. |
-| `UseProvider(Func<HelpProviderContext, IHelpProvider>)` | Creates the renderer with access to services and configured help services. |
+Root and command help use different contexts. `RootHelpContext` contains top-level commands and global options. `CommandHelpContext` contains the selected command or command group. Both inherit the shared app name, console, and global options.
 
-The configured text provider and value formatter apply to every provider factory through `HelpProviderContext`. This includes custom providers.
-
-When no help provider is configured, `DefaultHelpProvider` is used. When no help text provider is configured, `LocalizedHelpTextProvider` is used. When no value formatter is configured, `DefaultHelpValueFormatter` is used.
-
-A help provider resolved with `UseProvider<TProvider>()` may be resolved from DI when a service provider is configured. Otherwise it needs a public parameterless constructor. Use `UseProvider(Func<HelpProviderContext, IHelpProvider>)` when a custom provider needs the configured help services.
-
-### Resource keys
-
-`HelpTextResourceKeys` defines the keys used for built-in headings, labels, and placeholders:
-
-- `Usage`
-- `Description`
-- `Commands`
-- `Arguments`
-- `Options`
-- `DefaultValue`
-- `OptionsPlaceholder`
-- `CommandPlaceholder`
-- `HelpOptionDescription`
-- `VersionOptionDescription`
+Default value display metadata affects help output only. It does not change binding or invoke a default value provider. Built-in resource keys for help text are exposed by `HelpTextResourceKeys`.
 
 ## Error pipeline
 
-Invalid command-line input is represented by `CommandError` and thrown as `CommandErrorException`. `ConsoleApp.RunAsync` catches that exception and delegates it to an `ICommandErrorHandler`.
+Command-line parsing failures are represented by a structured `CommandError` and thrown as a `CommandErrorException`. `ConsoleApp.RunAsync` catches that exception and delegates it to an `ICommandErrorHandler`.
 
-### Structured errors
+The default handler divides the work into two parts:
 
-| Error | Data |
-| --- | --- |
-| `NoCommandSpecifiedError` | No additional data. |
-| `UnknownCommandError` | `AttemptedCommandPath`, `AvailableCommands` |
-| `MissingSubcommandError` | `CommandPath`, `AvailableCommands` |
-| `UnknownOptionError` | `OptionName` |
-| `MalformedOptionError` | `Token` |
-| `OptionRequiresSeparateValueError` | `OptionName` |
-| `MissingOptionValueError` | `OptionName` |
-| `RepeatedOptionError` | `OptionName` |
-| `MissingRequiredOptionError` | `OptionName`, `IsGlobal` |
-| `MissingRequiredArgumentError` | `ArgumentName` |
-| `UnexpectedArgumentError` | `Value` |
-| `TooFewVariadicValuesError` | `ArgumentName`, `Minimum`, `Actual` |
-| `TooManyVariadicValuesError` | `ArgumentName`, `Maximum`, `Actual` |
-| `InvalidParameterValueError` | `ParameterName`, `Value`, `TargetType`, `Source` |
+```text
+CommandError
+    -> ICommandErrorMessageProvider -> plain message
+    -> ICommandErrorWriter          -> standard error
+```
 
-`ParameterSource` identifies whether an invalid value came from an argument, option, or global option.
+The message provider turns the structured error into user-facing text. The default provider is localized. The writer renders that plain message. The default writer writes unstyled text.
 
-### Error types
+Structured errors cover command selection, option and argument syntax, required values, and invalid values. `ParameterSource` identifies whether an invalid value came from an argument, option, or global option.
 
-| Type | Purpose |
-| --- | --- |
-| `CommandError` | Base type for structured command-line errors. |
-| `CommandErrorException` | Carries a `CommandError` and command path. |
-| `CommandErrorContext` | App name, command path, structured error, and error console. |
-| `ICommandErrorHandler` | Handles the command-line error response. |
-| `DefaultCommandErrorHandler` | Combines a message provider and writer. |
-| `ICommandErrorMessageProvider` | Produces the plain-text message. |
-| `LocalizedCommandErrorMessageProvider` | Built-in resource-based message provider. |
-| `ICommandErrorWriter` | Writes the message to standard error. |
-| `PlainCommandErrorWriter` | Built-in unstyled writer. |
-
-### Error configuration
-
-| Method | Effect |
-| --- | --- |
-| `UseHandler<THandler>()` | Replaces the error handler. |
-| `UseMessageProvider<TProvider>()` | Replaces the message provider. |
-| `UseLocalizedMessageProvider(...)` | Uses `LocalizedCommandErrorMessageProvider` with resources. |
-| `UseWriter<TWriter>()` | Replaces the error writer. |
-| `UseWriter(Func<IServiceProvider?, ICommandErrorWriter>)` | Creates the writer with access to services. |
-| `UseExitCode(int)` | Sets a fixed command-line error exit code. |
-| `UseExitCode<TExitCode>(TExitCode)` | Sets a fixed exit code from an enum. |
-| `UseExitCode(Func<CommandErrorContext, int>)` | Derives the exit code from the error context. |
-
-The default exit code for command-line errors is `2`.
-
-`CommandErrorResourceKeys` defines the keys used by the built-in localized error messages.
+`ConfigureErrorHandling` configures the handler, message provider, writer, and exit code. The default command-line error exit code is `2`. Built-in resource keys for error messages are exposed by `CommandErrorResourceKeys`.
 
 ## Scope
 
-The error pipeline handles command-line input errors. Exceptions thrown by command bodies are not converted into `CommandError` values. Cancellation is also separate and propagates from `RunAsync`.
+The error pipeline handles command-line input errors. Exceptions thrown by command bodies are not converted into `CommandError` values. Cancellation is separate and propagates from `RunAsync`.
+
+## API reference
+
+- Console: [`IConsole`](xref:AnyCli.Console.IConsole), [`IConsoleWriter`](xref:AnyCli.Console.IConsoleWriter), [`IConsoleErrorWriter`](xref:AnyCli.Console.IConsoleErrorWriter), [`IOutputWriter`](xref:AnyCli.Console.IOutputWriter)
+- Help: [`IHelpProvider`](xref:AnyCli.Help.IHelpProvider), [`DefaultHelpProvider`](xref:AnyCli.Help.DefaultHelpProvider), [`IHelpTextProvider`](xref:AnyCli.Help.IHelpTextProvider), [`IHelpValueFormatter`](xref:AnyCli.Help.IHelpValueFormatter), [`HelpProviderContext`](xref:AnyCli.Help.HelpProviderContext), [`RootHelpContext`](xref:AnyCli.Help.RootHelpContext), [`CommandHelpContext`](xref:AnyCli.Help.CommandHelpContext), [`HelpTextResourceKeys`](xref:AnyCli.Help.HelpTextResourceKeys), [`HelpConfigurationBuilder`](xref:AnyCli.Commands.Registration.HelpConfigurationBuilder)
+- Errors: [`CommandError`](xref:AnyCli.Errors.CommandError), [`CommandErrorException`](xref:AnyCli.Errors.CommandErrorException), [`ICommandErrorHandler`](xref:AnyCli.Errors.ICommandErrorHandler), [`ICommandErrorMessageProvider`](xref:AnyCli.Errors.ICommandErrorMessageProvider), [`ICommandErrorWriter`](xref:AnyCli.Errors.ICommandErrorWriter), [`CommandErrorResourceKeys`](xref:AnyCli.Errors.CommandErrorResourceKeys), [`ParameterSource`](xref:AnyCli.Errors.ParameterSource), [`CommandErrorHandlingBuilder`](xref:AnyCli.Commands.Registration.CommandErrorHandlingBuilder)
 
 ## Related
 

@@ -31,7 +31,7 @@ public abstract class ArgumentAttributeBase : Attribute
 
     /// <summary>
     /// Gets or sets a custom parser type implementing
-    /// <see cref="IParameterParser{T}"/> for the argument value type.
+    /// <see cref="IParameterParser{T}"/> for the argument type.
     /// </summary>
     public Type? Parser { get; set; }
 }

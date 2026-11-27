@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 # Parameter attributes
 
-This page lists the attributes used to declare command parameters and the rules that apply to them.
+This page describes how parameter attributes are declared and how their values affect parsing and help. For exact members and signatures, use the API Reference in the top navigation.
 
 ## Attributes
 
@@ -86,24 +86,10 @@ run --dry-run
 
 ```csharp
 [RequiredOption("--config", "-c")]
-public string Config { get; init; } = "";
+public required string Config { get; init; }
 ```
 
 Required options do not support supplying default values; the option must be present on the command line.
-
-## Attribute properties
-
-| Property | Applies to | Meaning |
-| --- | --- | --- |
-| `Position` | Argument attributes | Zero-based positional index |
-| `Name` | Argument and option attributes | Explicit argument or primary option name |
-| `Aliases` | Option attributes | Additional option names |
-| `DefaultValueProvider` | Optional/variadic arguments and options | Provider type implementing `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>` |
-| `MinimumCount` | `[VariadicArgument]` | Minimum number of values |
-| `MaximumCount` | `[VariadicArgument]` | Maximum number of values |
-| `Parser` | Argument and option attributes | Custom `IParameterParser<T>` or `IAsyncParameterParser<T>` implementation |
-
-Provider types may implement `IDefaultValueProvider<T>` or `IAsyncDefaultValueProvider<T>`.
 
 ## Defaults
 
@@ -129,9 +115,9 @@ Use `[DefaultValueDisplay]` for literal help text and `[DefaultValueDisplayResou
 public string DataFile { get; init; } = "tasks.json";
 ```
 
-Display metadata affects help output only. It overrides captured initializer values and does not change binding behavior. It is ignored for required parameters.
+Display metadata affects help output only. It overrides captured initializer values and does not change binding behavior. It is ignored for required parameters and when no default source is configured.
 
-## Supported value types
+## Supported types
 
 AnyCLI supports:
 
@@ -139,11 +125,18 @@ AnyCLI supports:
 - Enums, matched case-insensitively and with canonical kebab-case names
 - Types implementing `IParsable<T>` or `ISpanParsable<T>`
 - Collections of supported scalar types
-- Custom types with an `IParameterParser<T>` implementation
+- Custom types with an `IParameterParser<T>` or `IAsyncParameterParser<T>` implementation
 
 ## Collections
 
-Collection-typed arguments and options accept multiple values. Supported targets include common arrays, lists, sets, and immutable collections. A scalar option supplied more than once produces a structured error.
+Collection-typed arguments and options accept multiple values. Supported target types are:
+
+- Single-dimensional arrays: `T[]`
+- Read-only interfaces: `IReadOnlyList<T>`, `IReadOnlyCollection<T>`, `IReadOnlySet<T>`
+- Mutable interfaces: `IList<T>`, `ICollection<T>`, `IEnumerable<T>`, `ISet<T>`
+- Mutable collections: `List<T>`, `HashSet<T>`, `LinkedList<T>`, `Collection<T>`
+- Read-only collection: `ReadOnlyCollection<T>`
+- Frozen and immutable collections: `FrozenSet<T>`, `ImmutableArray<T>`, `ImmutableList<T>`, `ImmutableHashSet<T>`
 
 ```csharp
 [Option("--tag", "-t")]
@@ -158,6 +151,13 @@ add "Write docs" --tag docs --tag release
 
 Use `[Description]` for literal help text or `[ResourceDescription]` for a resource key. The description is shown in help output and can be localized through the configured text provider.
 
+## API reference
+
+- [`ArgumentAttribute`](xref:AnyCli.Parameters.Arguments.ArgumentAttribute), [`OptionalArgumentAttribute`](xref:AnyCli.Parameters.Arguments.OptionalArgumentAttribute), [`VariadicArgumentAttribute`](xref:AnyCli.Parameters.Arguments.VariadicArgumentAttribute)
+- [`OptionAttribute`](xref:AnyCli.Parameters.Options.OptionAttribute), [`RequiredOptionAttribute`](xref:AnyCli.Parameters.Options.RequiredOptionAttribute), [`GlobalOptionsAttribute`](xref:AnyCli.Parameters.Options.GlobalOptionsAttribute)
+- [`ArgumentAttributeBase`](xref:AnyCli.Parameters.Arguments.ArgumentAttributeBase), [`OptionAttributeBase`](xref:AnyCli.Parameters.Options.OptionAttributeBase)
+- [`DefaultValueDisplayAttribute`](xref:AnyCli.Help.DefaultValueDisplayAttribute), [`DefaultValueDisplayResourceAttribute`](xref:AnyCli.Help.DefaultValueDisplayResourceAttribute)
+
 ## Related
 
 - [Command-line syntax](command-line-syntax.md)
@@ -165,4 +165,4 @@ Use `[Description]` for literal help text or `[ResourceDescription]` for a resou
 - [Require an option](../guides/required-options.md)
 - [Accept repeated options](../guides/repeated-options.md)
 - [Set default values](../guides/default-values.md)
-- [Parse custom value types](../guides/custom-value-parsers.md)
+- [Parse custom types](../guides/custom-value-parsers.md)

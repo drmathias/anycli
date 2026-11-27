@@ -23,9 +23,9 @@ public sealed class CommandArgumentBuilder
         Add(name, ArgumentArity.ExactlyOne, typeof(string), static () => null);
 
     /// <summary>
-    /// Adds a required argument with the specified value type.
+    /// Adds a required argument with the specified type.
     /// </summary>
-    /// <typeparam name="T">The argument value type.</typeparam>
+    /// <typeparam name="T">The argument type.</typeparam>
     /// <param name="name">The argument name.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentException">
@@ -46,10 +46,10 @@ public sealed class CommandArgumentBuilder
         Add(name, ArgumentArity.ZeroOrOne, typeof(string), static () => null);
 
     /// <summary>
-    /// Adds an optional argument with the specified value type that defaults to
+    /// Adds an optional argument with the specified type that defaults to
     /// <see langword="null"/>.
     /// </summary>
-    /// <typeparam name="T">The argument value type.</typeparam>
+    /// <typeparam name="T">The argument type.</typeparam>
     /// <param name="name">The argument name.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentException">
@@ -208,7 +208,7 @@ public sealed class CommandArgumentBuilder
     /// <summary>
     /// Sets the default value of the most recently added optional argument.
     /// </summary>
-    /// <typeparam name="T">The argument value type.</typeparam>
+    /// <typeparam name="T">The argument type.</typeparam>
     /// <param name="value">The default value.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="InvalidOperationException">

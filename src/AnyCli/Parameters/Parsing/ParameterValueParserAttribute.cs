@@ -5,9 +5,9 @@
 namespace AnyCli.Parameters.Parsing;
 
 /// <summary>
-/// Registers a compile-time parameter parser for a value type.
+/// Registers a compile-time parameter parser for a type.
 /// </summary>
-/// <typeparam name="TValue">The value type parsed by <typeparamref name="TParser"/>.</typeparam>
+/// <typeparam name="TValue">The type parsed by <typeparamref name="TParser"/>.</typeparam>
 /// <typeparam name="TParser">The parser type.</typeparam>
 /// <remarks>
 /// Apply this attribute at the assembly level. The source generator uses the registration to

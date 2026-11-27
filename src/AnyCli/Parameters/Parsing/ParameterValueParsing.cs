@@ -18,7 +18,7 @@ public static class ParameterValueParsing
     /// <summary>
     /// Parses a value using <see cref="IParsable{TSelf}"/>.
     /// </summary>
-    /// <typeparam name="T">The value type.</typeparam>
+    /// <typeparam name="T">The parsed type.</typeparam>
     /// <param name="value">The raw parameter value.</param>
     /// <param name="provider">The culture used to parse the value.</param>
     /// <param name="parameterName">The parameter name used in error messages.</param>
@@ -40,7 +40,7 @@ public static class ParameterValueParsing
     /// <summary>
     /// Parses a value using <see cref="ISpanParsable{TSelf}"/>.
     /// </summary>
-    /// <typeparam name="T">The value type.</typeparam>
+    /// <typeparam name="T">The parsed type.</typeparam>
     /// <param name="value">The raw parameter value.</param>
     /// <param name="provider">The culture used to parse the value.</param>
     /// <param name="parameterName">The parameter name used in error messages.</param>
@@ -107,7 +107,7 @@ public static class ParameterValueParsing
     /// <summary>
     /// Parses a value using a custom <see cref="IParameterParser{T}"/>.
     /// </summary>
-    /// <typeparam name="T">The value type.</typeparam>
+    /// <typeparam name="T">The parsed type.</typeparam>
     /// <typeparam name="TParser">The parser type.</typeparam>
     /// <param name="value">The raw parameter value.</param>
     /// <param name="provider">The culture used to parse the value.</param>
@@ -133,7 +133,7 @@ public static class ParameterValueParsing
     /// <summary>
     /// Parses a value using an asynchronous custom <see cref="IAsyncParameterParser{T}"/>.
     /// </summary>
-    /// <typeparam name="T">The value type.</typeparam>
+    /// <typeparam name="T">The parsed type.</typeparam>
     /// <typeparam name="TParser">The parser type.</typeparam>
     /// <param name="value">The raw parameter value.</param>
     /// <param name="provider">The culture used to parse the value.</param>
