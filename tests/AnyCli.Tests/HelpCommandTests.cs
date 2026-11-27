@@ -256,7 +256,7 @@ public class HelpCommandTests
                 command.Arguments.Select(argument => argument.Arity.IsVariadic
                     ? $"<{argument.Name}>..."
                     : $"<{argument.Name}>"));
-            output.WriteLine($"    {context.AppName} {command.Name} {arguments} [OPTIONS]");
+            output.WriteLine($"    {context.Application.AppName} {command.Name} {arguments} [OPTIONS]");
             output.WriteLine();
             output.WriteLine("Arguments:");
 
@@ -268,7 +268,7 @@ public class HelpCommandTests
             output.WriteLine();
             output.WriteLine("Options:");
 
-            foreach (var option in context.GlobalOptions)
+            foreach (var option in context.Application.GlobalOptions)
             {
                 var names = string.Join(", ", option.Names);
                 output.WriteLine($"    {names,-36}{option.Description}");
@@ -285,10 +285,10 @@ public class HelpCommandTests
             CancellationToken cancellationToken)
         {
             context.Console.Output.WriteLine("Usage:");
-            context.Console.Output.WriteLine($"    {context.AppName} [OPTIONS] <COMMAND>");
+            context.Console.Output.WriteLine($"    {context.Application.AppName} [OPTIONS] <COMMAND>");
             context.Console.Output.WriteLine();
             context.Console.Output.WriteLine("Options:");
-            foreach (var option in context.GlobalOptions)
+            foreach (var option in context.Application.GlobalOptions)
             {
                 var names = string.Join(", ", option.Names);
                 context.Console.Output.WriteLine($"    {names,-15}{option.Description}");
@@ -297,8 +297,8 @@ public class HelpCommandTests
             context.Console.Output.WriteLine();
             context.Console.Output.WriteLine("Commands:");
 
-            var nameWidth = context.Commands.Max(command => command.Name.Length);
-            foreach (var command in context.Commands)
+            var nameWidth = context.Application.Commands.Max(command => command.Name.Length);
+            foreach (var command in context.Application.Commands)
             {
                 context.Console.Output.WriteLine($"    {command.Name.PadRight(nameWidth)}  {command.Description}");
             }

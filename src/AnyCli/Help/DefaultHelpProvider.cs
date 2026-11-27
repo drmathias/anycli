@@ -38,25 +38,25 @@ public sealed class DefaultHelpProvider : IHelpProvider
         cancellationToken.ThrowIfCancellationRequested();
 
         var output = context.Console.Output;
-        var hasCommands = context.Commands.Count > 0;
+        var hasCommands = context.Application.Commands.Count > 0;
         var options = GetOptionsUsage();
         var usage = hasCommands
-            ? $"{context.AppName} {options} {GetCommandUsage()}"
-            : $"{context.AppName} {options}";
+            ? $"{context.Application.AppName} {options} {GetCommandUsage()}"
+            : $"{context.Application.AppName} {options}";
 
         WriteUsage(output, _textProvider.GetUsageHeading(), usage);
 
         WriteEntries(
             output,
             _textProvider.GetOptionsHeading(),
-            [.. context.GlobalOptions.Select(option => CreateOptionEntry(command: null, option))]);
+            [.. context.Application.GlobalOptions.Select(option => CreateOptionEntry(command: null, option))]);
 
         if (hasCommands)
         {
             WriteEntries(
                 output,
                 _textProvider.GetCommandsHeading(),
-                [.. context.Commands.Select(command =>
+                [.. context.Application.Commands.Select(command =>
                     new HelpEntry(command.Name, ResolveDescription(command, command.Description)))]);
         }
 
@@ -81,7 +81,7 @@ public sealed class DefaultHelpProvider : IHelpProvider
             output.WriteLine();
         }
 
-        WriteUsage(output, _textProvider.GetUsageHeading(), CreateCommandUsage(context.AppName, command));
+        WriteUsage(output, _textProvider.GetUsageHeading(), CreateCommandUsage(context.Application.AppName, command));
 
         if (command.Arguments.Count > 0)
         {
@@ -91,14 +91,14 @@ public sealed class DefaultHelpProvider : IHelpProvider
                 [.. command.Arguments.Select(argument => CreateArgumentEntry(command, argument))]);
         }
 
-        if (command.Options.Count > 0 || context.GlobalOptions.Count > 0)
+        if (command.Options.Count > 0 || context.Application.GlobalOptions.Count > 0)
         {
             WriteEntries(
                 output,
                 _textProvider.GetOptionsHeading(),
                 [
                     .. command.Options.Select(option => CreateOptionEntry(command, option)),
-                    .. context.GlobalOptions.Select(option => CreateOptionEntry(command, option)),
+                    .. context.Application.GlobalOptions.Select(option => CreateOptionEntry(command, option)),
                 ]);
         }
 

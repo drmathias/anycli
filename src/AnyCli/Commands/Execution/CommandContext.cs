@@ -11,11 +11,13 @@ public class CommandContext
 {
     internal CommandContext(
         IReadOnlyList<string> commandPath,
-        IConsole console)
+        IConsole console,
+        ApplicationInfo application)
     {
         CommandPath = commandPath;
         Name = commandPath[^1];
         Console = console;
+        Application = application;
     }
 
     /// <summary>
@@ -32,4 +34,9 @@ public class CommandContext
     /// Gets the console used by the command.
     /// </summary>
     public IConsole Console { get; }
+
+    /// <summary>
+    /// Gets the application metadata.
+    /// </summary>
+    public ApplicationInfo Application { get; }
 }

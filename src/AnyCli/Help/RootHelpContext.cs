@@ -12,22 +12,12 @@ public sealed class RootHelpContext : HelpContext
     /// <summary>
     /// Initializes a new instance of the <see cref="RootHelpContext"/> class.
     /// </summary>
-    /// <param name="appName">The application name.</param>
     /// <param name="console">The console writer.</param>
-    /// <param name="globalOptions">The application-wide options.</param>
-    /// <param name="commands">The registered top-level commands and command groups.</param>
+    /// <param name="application">The application metadata.</param>
     public RootHelpContext(
-        string appName,
         IConsoleWriter console,
-        IReadOnlyList<OptionInfo> globalOptions,
-        IReadOnlyList<CommandInfo> commands)
-        : base(appName, console, globalOptions)
+        ApplicationInfo application)
+        : base(console, application)
     {
-        Commands = commands;
     }
-
-    /// <summary>
-    /// Gets the registered top-level commands and command groups.
-    /// </summary>
-    public IReadOnlyList<CommandInfo> Commands { get; }
 }

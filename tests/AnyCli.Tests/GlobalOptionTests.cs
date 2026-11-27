@@ -556,7 +556,7 @@ public class GlobalOptionTests
             RootHelpContext context,
             CancellationToken cancellationToken)
         {
-            WriteOptions(context.GlobalOptions, context.Console);
+            WriteOptions(context.Application.GlobalOptions, context.Console);
             return ValueTask.CompletedTask;
         }
 
@@ -564,7 +564,7 @@ public class GlobalOptionTests
             CommandHelpContext context,
             CancellationToken cancellationToken)
         {
-            WriteOptions(context.GlobalOptions, context.Console);
+            WriteOptions(context.Application.GlobalOptions, context.Console);
             return ValueTask.CompletedTask;
         }
 

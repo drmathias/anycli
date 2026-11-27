@@ -28,7 +28,7 @@ The provider decides the layout and writes the result. `DefaultHelpProvider` is 
 
 `ConfigureHelp` configures shared help services and selects the provider. Shared text and value formatting apply to any provider factory through `HelpProviderContext`. When no provider is selected, `DefaultHelpProvider` is used. A help provider registered in the configured service provider is resolved from it; otherwise, a public parameterless constructor is used.
 
-Root and command help use different contexts. `RootHelpContext` contains top-level commands and global options. `CommandHelpContext` contains the selected command or command group. Both inherit the shared app name, console, and global options.
+Root and command help use different contexts. Both expose shared `Application` metadata and a `Console`. `CommandHelpContext` adds the selected command or command group. `Application` contains the application name, global options, and root command tree.
 
 Default value display metadata affects help output only. It does not change binding or invoke a default value provider. Built-in resource keys for help text are exposed by `HelpTextResourceKeys`.
 
@@ -57,7 +57,7 @@ The error pipeline handles command-line input errors. Exceptions thrown by comma
 ## API reference
 
 - Console: [`IConsole`](xref:AnyCli.Console.IConsole), [`IConsoleWriter`](xref:AnyCli.Console.IConsoleWriter), [`IConsoleErrorWriter`](xref:AnyCli.Console.IConsoleErrorWriter), [`IOutputWriter`](xref:AnyCli.Console.IOutputWriter)
-- Help: [`IHelpProvider`](xref:AnyCli.Help.IHelpProvider), [`DefaultHelpProvider`](xref:AnyCli.Help.DefaultHelpProvider), [`IHelpTextProvider`](xref:AnyCli.Help.IHelpTextProvider), [`IHelpValueFormatter`](xref:AnyCli.Help.IHelpValueFormatter), [`HelpProviderContext`](xref:AnyCli.Help.HelpProviderContext), [`RootHelpContext`](xref:AnyCli.Help.RootHelpContext), [`CommandHelpContext`](xref:AnyCli.Help.CommandHelpContext), [`HelpTextResourceKeys`](xref:AnyCli.Help.HelpTextResourceKeys), [`HelpConfigurationBuilder`](xref:AnyCli.Commands.Registration.HelpConfigurationBuilder)
+- Help: [`IHelpProvider`](xref:AnyCli.Help.IHelpProvider), [`DefaultHelpProvider`](xref:AnyCli.Help.DefaultHelpProvider), [`IHelpTextProvider`](xref:AnyCli.Help.IHelpTextProvider), [`IHelpValueFormatter`](xref:AnyCli.Help.IHelpValueFormatter), [`HelpProviderContext`](xref:AnyCli.Help.HelpProviderContext), [`ApplicationInfo`](xref:AnyCli.Commands.Metadata.ApplicationInfo), [`RootHelpContext`](xref:AnyCli.Help.RootHelpContext), [`CommandHelpContext`](xref:AnyCli.Help.CommandHelpContext), [`HelpTextResourceKeys`](xref:AnyCli.Help.HelpTextResourceKeys), [`HelpConfigurationBuilder`](xref:AnyCli.Commands.Registration.HelpConfigurationBuilder)
 - Errors: [`CommandError`](xref:AnyCli.Errors.CommandError), [`CommandErrorException`](xref:AnyCli.Errors.CommandErrorException), [`ICommandErrorHandler`](xref:AnyCli.Errors.ICommandErrorHandler), [`ICommandErrorMessageProvider`](xref:AnyCli.Errors.ICommandErrorMessageProvider), [`ICommandErrorWriter`](xref:AnyCli.Errors.ICommandErrorWriter), [`CommandErrorResourceKeys`](xref:AnyCli.Errors.CommandErrorResourceKeys), [`ParameterSource`](xref:AnyCli.Errors.ParameterSource), [`CommandErrorHandlingBuilder`](xref:AnyCli.Commands.Registration.CommandErrorHandlingBuilder)
 
 ## Related

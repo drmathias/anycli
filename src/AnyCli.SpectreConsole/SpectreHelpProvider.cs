@@ -47,22 +47,22 @@ public sealed class SpectreHelpProvider : IHelpProvider
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
         var output = context.AnsiConsole.Output;
-        var hasCommands = context.Commands.Count > 0;
-        var usage = CreateRootUsage(context.AppName, hasCommands);
+        var hasCommands = context.Application.Commands.Count > 0;
+        var usage = CreateRootUsage(context.Application.AppName, hasCommands);
 
         WriteUsage(output, _textProvider.GetUsageHeading(), usage);
 
         WriteEntries(
             output,
             _textProvider.GetOptionsHeading(),
-            [.. context.GlobalOptions.Select(CreateOptionEntry)]);
+            [.. context.Application.GlobalOptions.Select(CreateOptionEntry)]);
 
         if (hasCommands)
         {
             WriteEntries(
                 output,
                 _textProvider.GetCommandsHeading(),
-                [.. context.Commands.Select(CreateCommandEntry)]);
+                [.. context.Application.Commands.Select(CreateCommandEntry)]);
         }
 
         return ValueTask.CompletedTask;
@@ -92,7 +92,7 @@ public sealed class SpectreHelpProvider : IHelpProvider
         WriteUsage(
             output,
             _textProvider.GetUsageHeading(),
-            CreateCommandUsage(context.AppName, command));
+            CreateCommandUsage(context.Application.AppName, command));
 
         if (command.Arguments.Count > 0)
         {
@@ -102,14 +102,14 @@ public sealed class SpectreHelpProvider : IHelpProvider
                 [.. command.Arguments.Select(argument => CreateArgumentEntry(command, argument))]);
         }
 
-        if (command.Options.Count > 0 || context.GlobalOptions.Count > 0)
+        if (command.Options.Count > 0 || context.Application.GlobalOptions.Count > 0)
         {
             WriteEntries(
                 output,
                 _textProvider.GetOptionsHeading(),
                 [
                     .. command.Options.Select(CreateOptionEntry),
-                    .. context.GlobalOptions.Select(CreateOptionEntry),
+                    .. context.Application.GlobalOptions.Select(CreateOptionEntry),
                 ]);
         }
 

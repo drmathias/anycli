@@ -10,6 +10,7 @@ internal interface IGlobalOptionsDefinition
         IReadOnlyList<string> commandPath,
         IConsole console,
         CommandOptionValues values,
+        ApplicationInfo application,
         CancellationToken cancellationToken,
         IServiceProvider? services);
 
@@ -27,6 +28,7 @@ internal sealed class GlobalOptionsDefinition<TGlobalOptions> : IGlobalOptionsDe
         IReadOnlyList<string> commandPath,
         IConsole console,
         CommandOptionValues values,
+        ApplicationInfo application,
         CancellationToken cancellationToken,
         IServiceProvider? services)
     {
@@ -36,7 +38,7 @@ internal sealed class GlobalOptionsDefinition<TGlobalOptions> : IGlobalOptionsDe
                 services)
             .ConfigureAwait(false);
         values.BoundGlobalOptions = globalOptions;
-        return new CommandContext<TGlobalOptions>(commandPath, console, globalOptions);
+        return new CommandContext<TGlobalOptions>(commandPath, console, globalOptions, application);
     }
 
     public CommandInterceptorContext CreateInterceptorContext(

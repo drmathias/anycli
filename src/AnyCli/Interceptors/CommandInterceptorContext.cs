@@ -14,7 +14,7 @@ public class CommandInterceptorContext : CommandContext
         string rawCommand,
         IReadOnlyDictionary<string, ParsedValue> parsedArguments,
         IReadOnlyDictionary<string, ParsedValue> parsedOptions)
-        : base(context.CommandPath, context.Console)
+        : base(context.CommandPath, context.Console, context.Application)
     {
         RawCommand = rawCommand;
         ParsedArguments = parsedArguments;

@@ -12,6 +12,7 @@ namespace AnyCli.Commands.Execution;
 /// </remarks>
 public sealed class ConsoleApp
 {
+    private readonly ApplicationInfo _application;
     private readonly IGlobalOptionsDefinition? _globalOptionsDefinition;
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly OptionLookup _globalOptionLookup;
@@ -47,6 +48,10 @@ public sealed class ConsoleApp
         _errorHandlerFactory = errorHandlerFactory;
         _errorExitCodeProvider = errorExitCodeProvider;
         _interceptorFactories = interceptorFactories;
+        _application = new ApplicationInfo(
+            name ?? string.Empty,
+            GetOptions(),
+            [.. root.Children.Select(child => CreateCommandInfo(child, []))]);
     }
 
     /// <summary>
@@ -376,11 +381,12 @@ public sealed class ConsoleApp
 
         var suppliedGlobalOptionValues = new CommandOptionValues(globalOptionValues);
         var context = _globalOptionsDefinition is null
-            ? new CommandContext(path, console)
+            ? new CommandContext(path, console, _application)
             : await _globalOptionsDefinition.CreateContextAsync(
                     path,
                     console,
                     suppliedGlobalOptionValues,
+                    _application,
                     cancellationToken,
                     _serviceProvider)
                 .ConfigureAwait(false);
@@ -555,11 +561,7 @@ public sealed class ConsoleApp
     private Task WriteRootHelpAsync(IConsole console, CancellationToken cancellationToken)
     {
         return _helpProviderFactory(_serviceProvider).WriteRootHelpAsync(
-            new RootHelpContext(
-                _name ?? string.Empty,
-                console,
-                GetOptions(),
-                [.. _root.Children.Select(child => CreateCommandInfo(child, []))]),
+            new RootHelpContext(console, _application),
             cancellationToken).AsTask();
     }
 
@@ -571,11 +573,37 @@ public sealed class ConsoleApp
     {
         return _helpProviderFactory(_serviceProvider).WriteCommandHelpAsync(
             new CommandHelpContext(
-                _name ?? string.Empty,
                 console,
-                GetOptions(),
-                CreateCommandInfo(command, [.. commandPath.Take(commandPath.Count - 1)])),
+                _application,
+                FindCommandInfo(commandPath, command)),
             cancellationToken).AsTask();
+    }
+
+    private CommandInfo FindCommandInfo(
+        IReadOnlyList<string> commandPath,
+        CommandNode command)
+    {
+        var current = _application.Commands;
+        CommandInfo? currentInfo = null;
+
+        foreach (var segment in commandPath)
+        {
+            currentInfo = null;
+            foreach (var child in current)
+            {
+                if (child.Name != segment) continue;
+
+                currentInfo = child;
+                break;
+            }
+
+            if (currentInfo is null) break;
+            current = currentInfo.Children;
+        }
+
+        return currentInfo is not null
+            ? currentInfo
+            : CreateCommandInfo(command, [.. commandPath.Take(commandPath.Count - 1)]);
     }
 
     private void ValidateRequiredGlobalOptions(

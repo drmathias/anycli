@@ -12,17 +12,19 @@ public sealed class CommandHelpContext : HelpContext
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandHelpContext"/> class.
     /// </summary>
-    /// <param name="appName">The application name.</param>
     /// <param name="console">The console writer.</param>
-    /// <param name="globalOptions">The application-wide options.</param>
+    /// <param name="application">The application metadata.</param>
     /// <param name="command">The command or command group being described.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="command"/> is <see langword="null"/>.
+    /// </exception>
     public CommandHelpContext(
-        string appName,
         IConsoleWriter console,
-        IReadOnlyList<OptionInfo> globalOptions,
+        ApplicationInfo application,
         CommandInfo command)
-        : base(appName, console, globalOptions)
+        : base(console, application)
     {
+        ArgumentNullException.ThrowIfNull(command);
         Command = command;
     }
 

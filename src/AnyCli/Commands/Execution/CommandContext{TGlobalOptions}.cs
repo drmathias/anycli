@@ -14,8 +14,9 @@ public sealed class CommandContext<TGlobalOptions> : CommandContext
     internal CommandContext(
         IReadOnlyList<string> commandPath,
         IConsole console,
-        TGlobalOptions globalOptions)
-        : base(commandPath, console)
+        TGlobalOptions globalOptions,
+        ApplicationInfo application)
+        : base(commandPath, console, application)
     {
         GlobalOptions = globalOptions;
     }

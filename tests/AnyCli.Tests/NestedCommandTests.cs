@@ -404,7 +404,7 @@ public class NestedCommandTests
             RootHelpContext context,
             CancellationToken cancellationToken)
         {
-            Write(context.Commands, context.Console);
+            Write(context.Application.Commands, context.Console);
             return ValueTask.CompletedTask;
         }
 
