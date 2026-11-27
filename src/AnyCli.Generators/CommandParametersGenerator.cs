@@ -49,6 +49,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Parameter property '{0}' has unsupported type '{1}'; use a type that implements IParsable<T>, an enum, specify Parser = typeof(...), or register a ParameterValueParserAttribute<{1}, TParser>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI001"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidParameterParserDiagnostic = new(
@@ -58,6 +59,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Parser '{1}' for parameter property '{0}' must implement IParameterParser<{2}> or IAsyncParameterParser<{2}>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI002"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidVariadicArgumentDiagnostic = new(
@@ -67,6 +69,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Variadic parameter property '{0}' must be a supported collection type; actual type '{1}'",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI003"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor DuplicateParameterParserDiagnostic = new(
@@ -76,6 +79,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Parser for type '{0}' is registered more than once; the last registration overrides the previous one",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Warning,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI004"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidOptionNameDiagnostic = new(
@@ -85,6 +89,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Option property '{0}' has invalid option name '{1}'; use a short name such as '-o' or a long name such as '--output'",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI009"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidArgumentPositionDiagnostic = new(
@@ -94,6 +99,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Argument property '{0}' has invalid position {1}; argument positions must be unique, non-negative, and contiguous starting at 0",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI007"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidOptionAliasDiagnostic = new(
@@ -103,6 +109,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Option property '{0}' has invalid alias '{1}'; use a short name such as '-o' or a long name such as '--output'",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI013"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor DuplicateOptionNameDiagnostic = new(
@@ -112,6 +119,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Option property '{0}' uses option name or alias '{1}' more than once",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI014"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidDefaultValueProviderDiagnostic = new(
@@ -121,6 +129,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "DefaultValueProvider type '{1}' for parameter property '{0}' must be a non-abstract class implementing IDefaultValueProvider<{2}> or IAsyncDefaultValueProvider<{2}>",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI020"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor AmbiguousDefaultValueProviderDiagnostic = new(
@@ -130,6 +139,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "DefaultValueProvider type '{1}' for parameter property '{0}' implements both IDefaultValueProvider<{2}> and IAsyncDefaultValueProvider<{2}>; the async provider will be used",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Warning,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI025"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor AmbiguousParameterParserDiagnostic = new(
@@ -139,6 +149,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Parser '{1}' for parameter property '{0}' implements both sync and async parser interfaces for '{2}'; async parsing is preferred",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Warning,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI026"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor DefaultValueDisplayOnRequiredParameterDiagnostic = new(
@@ -148,6 +159,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Default value display metadata on required parameter property '{0}' is ignored",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Warning,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI022"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor DefaultValueDisplayWithoutDefaultDiagnostic = new(
@@ -157,6 +169,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Default value display metadata on parameter property '{0}' is ignored because no default value source is configured",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Warning,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI023"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidVariadicMinimumCountDiagnostic = new(
@@ -166,6 +179,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Variadic parameter property '{0}' has MinimumCount {1}; it must be non-negative",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI005"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor InvalidVariadicMaximumCountDiagnostic = new(
@@ -175,6 +189,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Variadic parameter property '{0}' has MaximumCount {1}; it must be greater than 1 and at least MinimumCount {2}",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI017"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor GlobalOptionCannotBeArgumentDiagnostic = new(
@@ -184,6 +199,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Global option property '{0}' cannot be declared as a positional argument",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI015"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor ConflictingParametersKindDiagnostic = new(
@@ -193,6 +209,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             "Type '{0}' cannot be both global options and command parameters",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI016"),
         isEnabledByDefault: true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)

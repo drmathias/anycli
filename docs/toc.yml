@@ -62,10 +62,49 @@
       href: reference/parameter-attributes.md
     - name: Parameter Parsing
       href: reference/parameter-parsing.md
-    - name: Diagnostics
-      href: reference/diagnostics.md
     - name: Interceptors
       href: reference/interceptors.md
+    - name: Diagnostics
+      href: reference/diagnostics.md
+      items:
+        - name: ANYCLI001 - Unsupported parameter type
+          href: reference/diagnostics/anycli001.md
+        - name: ANYCLI002 - Invalid parameter parser
+          href: reference/diagnostics/anycli002.md
+        - name: ANYCLI003 - Invalid variadic parameter
+          href: reference/diagnostics/anycli003.md
+        - name: ANYCLI004 - Duplicate parameter parser registration
+          href: reference/diagnostics/anycli004.md
+        - name: ANYCLI005 - Invalid variadic minimum count
+          href: reference/diagnostics/anycli005.md
+        - name: ANYCLI007 - Invalid argument position
+          href: reference/diagnostics/anycli007.md
+        - name: ANYCLI009 - Invalid option name
+          href: reference/diagnostics/anycli009.md
+        - name: ANYCLI013 - Invalid option alias
+          href: reference/diagnostics/anycli013.md
+        - name: ANYCLI014 - Duplicate option name
+          href: reference/diagnostics/anycli014.md
+        - name: ANYCLI015 - Global option declared as argument
+          href: reference/diagnostics/anycli015.md
+        - name: ANYCLI016 - Conflicting parameters kind
+          href: reference/diagnostics/anycli016.md
+        - name: ANYCLI017 - Invalid variadic maximum count
+          href: reference/diagnostics/anycli017.md
+        - name: ANYCLI018 - Interceptor global options mismatch
+          href: reference/diagnostics/anycli018.md
+        - name: ANYCLI019 - Interceptor exit code mismatch
+          href: reference/diagnostics/anycli019.md
+        - name: ANYCLI020 - Invalid default value provider
+          href: reference/diagnostics/anycli020.md
+        - name: ANYCLI022 - Default value display on required parameter
+          href: reference/diagnostics/anycli022.md
+        - name: ANYCLI023 - Default value display without default value
+          href: reference/diagnostics/anycli023.md
+        - name: ANYCLI025 - Ambiguous default value provider
+          href: reference/diagnostics/anycli025.md
+        - name: ANYCLI026 - Ambiguous parameter parser
+          href: reference/diagnostics/anycli026.md
     - name: Help and Error Pipeline
       href: reference/help-and-error-pipeline.md
     - name: Spectre.Console Adapter

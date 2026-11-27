@@ -20,7 +20,9 @@ permissions:
   id-token: write
 
 jobs:
+  # Publish packages only after the docs are live so diagnostic help links resolve.
   publish:
+    needs: docs-deploy
     runs-on: ubuntu-latest
     environment: release
 
@@ -83,7 +85,6 @@ jobs:
           done
 
   docs-build:
-    needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: read

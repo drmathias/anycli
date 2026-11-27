@@ -28,6 +28,7 @@ public sealed class InterceptorUsageAnalyzer : DiagnosticAnalyzer
             "Interceptor '{0}' requires global options of type '{1}', but the application configures '{2}'; call AddGlobalOptions<{1}>() on the application builder",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI018"),
         isEnabledByDefault: true);
 
     private static readonly DiagnosticDescriptor MissingExitCodeDiagnostic = new(
@@ -37,6 +38,7 @@ public sealed class InterceptorUsageAnalyzer : DiagnosticAnalyzer
             "Interceptor '{0}' requires exit code type '{1}', but the application configures '{2}'; call ConfigureCommands<{1}>(...) on the application builder",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Error,
+        helpLinkUri: DiagnosticHelpLinks.For("ANYCLI019"),
         isEnabledByDefault: true);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -137,6 +139,7 @@ public sealed class InterceptorUsageAnalyzer : DiagnosticAnalyzer
         while (chainRoot.Parent is IInvocationOperation parentInvocation) chainRoot = parentInvocation;
 
         CollectConfiguration(chainRoot, configuration);
+        CollectConfigurationFromSyntax(invocation, configuration);
 
         if (receiver is ILocalReferenceOperation localReference)
         {
@@ -168,6 +171,24 @@ public sealed class InterceptorUsageAnalyzer : DiagnosticAnalyzer
         else if (receiver is not IInvocationOperation) configuration.IsKnown = false;
 
         return configuration;
+    }
+
+    private static void CollectConfigurationFromSyntax(
+        IInvocationOperation invocation,
+        BuilderConfiguration configuration)
+    {
+        var semanticModel = invocation.SemanticModel;
+        if (semanticModel is null) return;
+
+        foreach (var invocationSyntax in invocation.Syntax
+                     .DescendantNodesAndSelf()
+                     .OfType<InvocationExpressionSyntax>())
+        {
+            if (semanticModel.GetOperation(invocationSyntax) is IInvocationOperation candidate)
+            {
+                AddConfiguration(candidate, configuration);
+            }
+        }
     }
 
     private static void CollectConfiguration(
