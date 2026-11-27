@@ -88,6 +88,91 @@ public class DependencyInjectionTests
     }
 
 
+    [Test]
+    public async Task Command_FallsBackToParameterlessConstructor()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .UseServiceProvider(new StubServiceProvider())
+            .ConfigureCommands(commands => commands.AddCommand<PlainCommand>("plain"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["plain"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("plain");
+    }
+
+    [Test]
+    public async Task Interceptor_FallsBackToParameterlessConstructor()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .UseServiceProvider(new StubServiceProvider())
+            .AddInterceptor<PlainInterceptor>()
+            .ConfigureCommands(commands => commands.AddCommand<PlainCommand>("plain"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["plain"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("interceptor>plain");
+    }
+
+    [Test]
+    public async Task HelpProvider_FallsBackToParameterlessConstructor()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .UseServiceProvider(new StubServiceProvider())
+            .ConfigureCommands(_ => { })
+            .ConfigureHelp(help => help.UseProvider<PlainHelpProvider>())
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["--help"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).IsEqualTo("plain-help");
+    }
+
+    private sealed class PlainCommand : NoParametersCommand
+    {
+        public override int Execute(CommandContext context)
+        {
+            context.Console.Output.Write("plain");
+            return 0;
+        }
+    }
+
+    private sealed class PlainInterceptor : ICommandInterceptor
+    {
+        public Task<int> InterceptAsync(
+            CommandInterceptorContext context,
+            Func<CancellationToken, Task<int>> next,
+            CancellationToken cancellationToken)
+        {
+            context.Console.Output.Write("interceptor>");
+            return next.Invoke(cancellationToken);
+        }
+    }
+
+    private sealed class PlainHelpProvider : IHelpProvider
+    {
+        public ValueTask WriteRootHelpAsync(
+            RootHelpContext context,
+            CancellationToken cancellationToken)
+        {
+            context.Console.Output.Write("plain-help");
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask WriteCommandHelpAsync(
+            CommandHelpContext context,
+            CancellationToken cancellationToken)
+        {
+            context.Console.Output.Write("plain-help");
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class GreetingService(string greeting)
     {
         public string Greeting { get; } = greeting;

@@ -113,8 +113,8 @@ public sealed class HelpConfigurationBuilder
     /// <typeparam name="TProvider">The help provider type.</typeparam>
     /// <returns>The current builder.</returns>
     /// <remarks>
-    /// If a service provider was configured, the provider is resolved from it; otherwise, it is
-    /// created with its public parameterless constructor.
+    /// When the provider is registered in the configured service provider, that instance is used;
+    /// otherwise, a public parameterless constructor is used.
     /// </remarks>
     public HelpConfigurationBuilder UseProvider<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()

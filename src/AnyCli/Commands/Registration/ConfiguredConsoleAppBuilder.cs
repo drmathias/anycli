@@ -69,8 +69,8 @@ public class ConfiguredConsoleAppBuilder
     /// <returns>The current builder.</returns>
     /// <remarks>
     /// Interceptors run in registration order before the command and in reverse order after it.
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the interceptor is
-    /// resolved from it; otherwise, it is created with its public parameterless constructor.
+    /// When the interceptor is registered in the configured service provider, that instance is used;
+    /// otherwise, a public parameterless constructor is used.
     /// </remarks>
     public virtual ConfiguredConsoleAppBuilder AddInterceptor<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor>()

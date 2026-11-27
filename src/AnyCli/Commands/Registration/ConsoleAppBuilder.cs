@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Resources;
 
+
 namespace AnyCli.Commands.Registration;
 
 /// <summary>
@@ -97,8 +98,8 @@ public sealed class ConsoleAppBuilder
     /// <param name="serviceProvider">The service provider.</param>
     /// <returns>The current builder.</returns>
     /// <remarks>
-    /// When set, commands are resolved with <see cref="IServiceProvider.GetService(Type)"/>
-    /// instead of being constructed directly.
+    /// When set, registered commands and framework services are resolved from it. Types that are
+    /// not registered fall back to their public parameterless constructors.
     /// </remarks>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="serviceProvider"/> is <see langword="null"/>.
@@ -119,8 +120,8 @@ public sealed class ConsoleAppBuilder
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
     /// <remarks>
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the command is resolved
-    /// from it; otherwise, the command is created with its public parameterless constructor.
+    /// When the command is registered in the configured service provider, that instance is used;
+    /// otherwise, a public parameterless constructor is used.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
@@ -152,8 +153,8 @@ public sealed class ConsoleAppBuilder
     /// <param name="description">A short description shown in help output.</param>
     /// <returns>The current builder.</returns>
     /// <remarks>
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the command is resolved
-    /// from it; otherwise, the command is created with its public parameterless constructor.
+    /// When the command is registered in the configured service provider, that instance is used;
+    /// otherwise, a public parameterless constructor is used.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> is <see langword="null"/>, empty, or whitespace.
@@ -457,8 +458,8 @@ public sealed class ConsoleAppBuilder
     /// <returns>The current builder.</returns>
     /// <remarks>
     /// Interceptors run in registration order before the command and in reverse order after it.
-    /// If a service provider was set with <see cref="UseServiceProvider"/>, the interceptor is
-    /// resolved from it; otherwise, it is created with its public parameterless constructor.
+    /// When the interceptor is registered in the configured service provider, that instance is used;
+    /// otherwise, a public parameterless constructor is used.
     /// </remarks>
     public ConsoleAppBuilder AddInterceptor<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor>()
@@ -764,16 +765,8 @@ public sealed class ConsoleAppBuilder
     private static THelpProvider ResolveHelpProvider<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>(
         IServiceProvider? serviceProvider)
-        where THelpProvider : class
-    {
-        return serviceProvider is null
-            ? Activator.CreateInstance<THelpProvider>()
-                ?? throw new InvalidOperationException(
-                    $"Could not create help provider '{typeof(THelpProvider).FullName}'.")
-            : serviceProvider.GetService(typeof(THelpProvider)) as THelpProvider
-                ?? throw new InvalidOperationException(
-                    $"Service '{typeof(THelpProvider).FullName}' is not registered.");
-    }
+        where THelpProvider : class =>
+        ServiceResolver.Resolve<THelpProvider>(serviceProvider, "help provider");
 
     private static THandler ResolveErrorHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(
@@ -797,40 +790,18 @@ public sealed class ConsoleAppBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TService>(
         IServiceProvider? serviceProvider,
         string serviceDescription)
-        where TService : class
-    {
-        return serviceProvider is null
-            ? Activator.CreateInstance<TService>()
-                ?? throw new InvalidOperationException(
-                    $"Could not create {serviceDescription} '{typeof(TService).FullName}'.")
-            : serviceProvider.GetService(typeof(TService)) as TService
-                ?? throw new InvalidOperationException(
-                    $"Service '{typeof(TService).FullName}' is not registered.");
-    }
+        where TService : class =>
+        ServiceResolver.Resolve<TService>(serviceProvider, serviceDescription);
 
     private static TInterceptor ResolveInterceptor<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TInterceptor>(
         IServiceProvider? serviceProvider)
-        where TInterceptor : class
-    {
-        return serviceProvider is null
-            ? Activator.CreateInstance<TInterceptor>()
-                ?? throw new InvalidOperationException(
-                    $"Could not create command interceptor '{typeof(TInterceptor).FullName}'.")
-            : serviceProvider.GetService(typeof(TInterceptor)) as TInterceptor
-                ?? throw new InvalidOperationException(
-                    $"Service '{typeof(TInterceptor).FullName}' is not registered.");
-    }
+        where TInterceptor : class =>
+        ServiceResolver.Resolve<TInterceptor>(serviceProvider, "command interceptor");
 
     private static TCommand ResolveCommand<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TCommand>(
         IServiceProvider? serviceProvider)
-        where TCommand : class
-    {
-        return serviceProvider is null
-            ? Activator.CreateInstance<TCommand>()
-                ?? throw new InvalidOperationException($"Could not create command '{typeof(TCommand).FullName}'.")
-            : serviceProvider.GetService(typeof(TCommand)) as TCommand
-                ?? throw new InvalidOperationException($"Service '{typeof(TCommand).FullName}' is not registered.");
-    }
+        where TCommand : class =>
+        ServiceResolver.Resolve<TCommand>(serviceProvider, "command");
 }

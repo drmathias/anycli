@@ -37,7 +37,7 @@ Register an interceptor with `AddInterceptor<TInterceptor>()`:
 .AddInterceptor<TimingInterceptor>()
 ```
 
-When a service provider is configured, interceptors are resolved from it. Otherwise they are created with a public parameterless constructor.
+When an interceptor is registered in the configured service provider, that instance is used. Otherwise, it is created with a public parameterless constructor.
 
 The AnyCli analyzer reports [`ANYCLI018`](diagnostics.md) when a global-options interceptor does not match the configured global options type, and [`ANYCLI019`](diagnostics.md) when an exit-code interceptor does not match the configured command exit code type.
 

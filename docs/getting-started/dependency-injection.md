@@ -107,6 +107,8 @@ var app = ConsoleAppBuilder.Create()
 
 The store is a singleton because it holds no per-run state. Commands are transient because AnyCLI resolves a fresh command instance for each run.
 
+Registration is only required for commands, interceptors, providers, handlers, and writers that need constructor dependencies. Types with a public parameterless constructor can be created without registration.
+
 ## Run the app
 
 Behaviour is unchanged:

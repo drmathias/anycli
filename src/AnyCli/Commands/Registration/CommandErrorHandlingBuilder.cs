@@ -27,8 +27,8 @@ public sealed class CommandErrorHandlingBuilder
     /// <typeparam name="THandler">The error handler type.</typeparam>
     /// <returns>The current builder.</returns>
     /// <remarks>
-    /// If a service provider was configured, the handler is resolved from it; otherwise, it is
-    /// created with its public parameterless constructor.
+    /// When the handler is registered in the configured service provider, that instance is used;
+    /// otherwise, a public parameterless constructor is used.
     /// </remarks>
     public CommandErrorHandlingBuilder UseHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>()
@@ -44,8 +44,8 @@ public sealed class CommandErrorHandlingBuilder
     /// <typeparam name="TProvider">The message provider type.</typeparam>
     /// <returns>The current builder.</returns>
     /// <remarks>
-    /// If a service provider was configured, the provider is resolved from it; otherwise, it is
-    /// created with its public parameterless constructor.
+    /// When the provider is registered in the configured service provider, that instance is used;
+    /// otherwise, a public parameterless constructor is used.
     /// </remarks>
     public CommandErrorHandlingBuilder UseMessageProvider<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
@@ -120,8 +120,8 @@ public sealed class CommandErrorHandlingBuilder
     /// <typeparam name="TWriter">The error writer type.</typeparam>
     /// <returns>The current builder.</returns>
     /// <remarks>
-    /// If a service provider was configured, the writer is resolved from it; otherwise, it is
-    /// created with its public parameterless constructor.
+    /// When the writer is registered in the configured service provider, that instance is used;
+    /// otherwise, a public parameterless constructor is used.
     /// </remarks>
     public CommandErrorHandlingBuilder UseWriter<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>()

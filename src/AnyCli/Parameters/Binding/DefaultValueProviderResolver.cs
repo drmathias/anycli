@@ -27,22 +27,6 @@ public static class DefaultValueProviderResolver
     public static TProvider Resolve<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>(
         IServiceProvider? services)
-        where TProvider : class
-    {
-        if (services is not null &&
-            services.GetService(typeof(TProvider)) is TProvider registeredProvider)
-        {
-            return registeredProvider;
-        }
-
-        if (typeof(TProvider).GetConstructor(Type.EmptyTypes) is not null)
-        {
-            return Activator.CreateInstance<TProvider>()
-                ?? throw new InvalidOperationException(
-                    $"Could not create default value provider '{typeof(TProvider).FullName}'.");
-        }
-
-        throw new InvalidOperationException(
-            $"Default value provider '{typeof(TProvider).FullName}' is not registered in the service provider and has no public parameterless constructor.");
-    }
+        where TProvider : class =>
+        ServiceResolver.Resolve<TProvider>(services, "Default value provider");
 }

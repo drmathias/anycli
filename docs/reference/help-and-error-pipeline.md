@@ -26,7 +26,7 @@ command, option, and argument metadata
 
 The provider decides the layout and writes the result. `DefaultHelpProvider` is the built-in plain-text provider. Text is a separate concern: `IHelpTextProvider` supplies headings, labels, placeholders, and descriptions, while `IHelpValueFormatter` formats fallback default values such as enums and collections. The defaults are `LocalizedHelpTextProvider` and `DefaultHelpValueFormatter`.
 
-`ConfigureHelp` configures shared help services and selects the provider. Shared text and value formatting apply to any provider factory through `HelpProviderContext`. When no provider is selected, `DefaultHelpProvider` is used. Help providers are resolved from the configured service provider when available; otherwise they need a public parameterless constructor.
+`ConfigureHelp` configures shared help services and selects the provider. Shared text and value formatting apply to any provider factory through `HelpProviderContext`. When no provider is selected, `DefaultHelpProvider` is used. A help provider registered in the configured service provider is resolved from it; otherwise, a public parameterless constructor is used.
 
 Root and command help use different contexts. `RootHelpContext` contains top-level commands and global options. `CommandHelpContext` contains the selected command or command group. Both inherit the shared app name, console, and global options.
 

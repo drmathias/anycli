@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Resources;
 
+
 namespace AnyCli.Help;
 
 /// <summary>
@@ -139,28 +140,12 @@ internal sealed class HelpFormattingOptions
     private static TProvider ResolveTextProvider<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>(
         IServiceProvider? serviceProvider)
-        where TProvider : class, IHelpTextProvider
-    {
-        return serviceProvider is null
-            ? Activator.CreateInstance<TProvider>()
-                ?? throw new InvalidOperationException(
-                    $"Could not create help text provider '{typeof(TProvider).FullName}'.")
-            : serviceProvider.GetService(typeof(TProvider)) as TProvider
-                ?? throw new InvalidOperationException(
-                    $"Service '{typeof(TProvider).FullName}' is not registered.");
-    }
+        where TProvider : class, IHelpTextProvider =>
+        ServiceResolver.Resolve<TProvider>(serviceProvider, "help text provider");
 
     private static TFormatter ResolveValueFormatter<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TFormatter>(
         IServiceProvider? serviceProvider)
-        where TFormatter : class, IHelpValueFormatter
-    {
-        return serviceProvider is null
-            ? Activator.CreateInstance<TFormatter>()
-                ?? throw new InvalidOperationException(
-                    $"Could not create help value formatter '{typeof(TFormatter).FullName}'.")
-            : serviceProvider.GetService(typeof(TFormatter)) as TFormatter
-                ?? throw new InvalidOperationException(
-                    $"Service '{typeof(TFormatter).FullName}' is not registered.");
-    }
+        where TFormatter : class, IHelpValueFormatter =>
+        ServiceResolver.Resolve<TFormatter>(serviceProvider, "help value formatter");
 }

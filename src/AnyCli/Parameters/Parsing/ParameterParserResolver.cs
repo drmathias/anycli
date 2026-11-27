@@ -27,13 +27,6 @@ internal static class ParameterParserResolver
     public static TParser Resolve<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TParser>(
         IServiceProvider? services)
-        where TParser : class
-    {
-        return services is not null && services.GetService(typeof(TParser)) is TParser registeredParser
-            ? registeredParser
-            : typeof(TParser).GetConstructor(Type.EmptyTypes) is not null
-                ? Activator.CreateInstance<TParser>() ?? throw new InvalidOperationException($"Could not create parameter parser '{typeof(TParser).FullName}'.")
-                : throw new InvalidOperationException(
-                    $"Parameter parser '{typeof(TParser).FullName}' is not registered in the service provider and has no public parameterless constructor.");
-    }
+        where TParser : class =>
+        ServiceResolver.Resolve<TParser>(services, "Parameter parser");
 }
