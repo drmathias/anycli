@@ -66,33 +66,33 @@ _Environment: macOS Tahoe 26.2, Intel Core i7-9750H, 12 logical cores, .NET SDK 
 
 | Rank | Framework | Mean | Median | Ratio | Allocated |
 | ---: | --- | ---: | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 8.220 ns | 8.220 ns | 0.008 | 0 B |
-| **2** | **AnyCli** | **1,018.933 ns** | **1,016.140 ns** | **1.000** | **1336 B** |
-| 3 | XenoAtom.CommandLine | 2,196.460 ns | 2,195.055 ns | 2.156 | 2992 B |
-| 4 | System.CommandLine | 3,760.196 ns | 3,745.889 ns | 3.691 | 4848 B |
-| 5 | CliFx | 4,107.734 ns | 4,103.297 ns | 4.033 | 4392 B |
-| 6 | Spectre.Console.Cli | 106,910.011 ns | 106,759.530 ns | 104.952 | 45646 B |
+| 1 | ConsoleAppFramework | 8.818 ns | 8.813 ns | 0.009 | 0 B |
+| **2** | **AnyCli** | **977.333 ns** | **970.310 ns** | **1.000** | **1336 B** |
+| 3 | XenoAtom.CommandLine | 2,036.816 ns | 2,027.130 ns | 2.084 | 2992 B |
+| 4 | CliFx | 3,890.292 ns | 3,816.805 ns | 3.981 | 4392 B |
+| 4 | System.CommandLine | 4,088.372 ns | 4,154.365 ns | 4.184 | 4848 B |
+| 5 | Spectre.Console.Cli | 105,364.596 ns | 105,171.187 ns | 107.831 | 45646 B |
 
 ### Cold start (JIT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | ConsoleAppFramework | 69.23 ms | 68.74 ms | 0.38 |
-| 2 | System.CommandLine | 99.19 ms | 98.49 ms | 0.55 |
-| 2 | XenoAtom.CommandLine | 102.86 ms | 102.43 ms | 0.57 |
-| 3 | CliFx | 114.97 ms | 115.68 ms | 0.64 |
-| **4** | **AnyCli** | **181.55 ms** | **176.30 ms** | **1.00** |
-| 5 | Spectre.Console.Cli | 212.98 ms | 208.74 ms | 1.18 |
+| 1 | ConsoleAppFramework | 68.95 ms | 68.98 ms | 0.55 |
+| 2 | CliFx | 120.92 ms | 121.34 ms | 0.97 |
+| 2 | XenoAtom.CommandLine | 123.50 ms | 124.34 ms | 0.99 |
+| **2** | **AnyCli** | **125.50 ms** | **126.49 ms** | **1.00** |
+| 2 | System.CommandLine | 131.73 ms | 130.31 ms | 1.05 |
+| 3 | Spectre.Console.Cli | 231.63 ms | 230.72 ms | 1.85 |
 
 ### Cold start (NativeAOT)
 
 | Rank | Framework | Mean | Median | Ratio |
 | ---: | --- | ---: | ---: | ---: |
-| 1 | XenoAtom.CommandLine | 10.31 ms | 10.32 ms | 0.60 |
-| 2 | CliFx | 12.62 ms | 12.38 ms | 0.74 |
-| 2 | System.CommandLine | 13.74 ms | 13.77 ms | 0.80 |
-| 2 | ConsoleAppFramework | 13.90 ms | 13.85 ms | 0.81 |
-| **3** | **AnyCli** | **18.25 ms** | **16.65 ms** | **1.00** |
+| 1 | ConsoleAppFramework | 11.32 ms | 10.79 ms | 0.98 |
+| **1** | **AnyCli** | **11.57 ms** | **11.33 ms** | **1.00** |
+| 1 | XenoAtom.CommandLine | 12.04 ms | 11.93 ms | 1.04 |
+| 1 | System.CommandLine | 13.04 ms | 12.88 ms | 1.13 |
+| 1 | CliFx | 13.12 ms | 13.07 ms | 1.14 |
 
 _Ranks are BenchmarkDotNet statistical ranks; ties indicate statistically similar results._
 <!-- benchmarks:end -->
