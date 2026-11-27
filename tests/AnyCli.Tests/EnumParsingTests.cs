@@ -15,7 +15,6 @@ public class EnumParsingTests
     {
         var success = DefaultEnumParameterParser.TryParse<FileAccessMode>(
             "read-only",
-            provider: null,
             out var result);
 
         await Assert.That(success).IsTrue();
@@ -29,7 +28,6 @@ public class EnumParsingTests
         {
             var success = DefaultEnumParameterParser.TryParse<FileAccessMode>(
                 value,
-                provider: null,
                 out _);
 
             await Assert.That(success).IsFalse();
@@ -41,7 +39,6 @@ public class EnumParsingTests
     {
         var success = DefaultEnumParameterParser.TryParse<AcronymMode>(
             "xml-http-request",
-            provider: null,
             out var result);
 
         await Assert.That(success).IsTrue();
@@ -55,7 +52,6 @@ public class EnumParsingTests
         {
             var success = DefaultEnumParameterParser.TryParse<FileAccessMode>(
                 value,
-                provider: null,
                 out _);
 
             await Assert.That(success).IsFalse();
@@ -187,7 +183,7 @@ public sealed class TestEnumParameterParser : IAsyncEnumParameterParser
             ? ValueTask.FromResult(ParameterParseResult<TEnum>.Succeeded(
                 (TEnum)(object)FileAccessMode.ReadOnly))
             : ValueTask.FromResult(
-                DefaultEnumParameterParser.TryParse<TEnum>(value, provider, out var result)
+                DefaultEnumParameterParser.TryParse<TEnum>(value, out var result)
                     ? ParameterParseResult<TEnum>.Succeeded(result)
                     : ParameterParseResult<TEnum>.Failed);
     }

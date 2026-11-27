@@ -11,6 +11,8 @@ namespace AnyCli.Parameters.Parsing;
 /// Register an implementation with <see cref="EnumParameterParserAttribute{TParser}"/> to override
 /// the default enum parsing behavior for the application. Implement
 /// <see cref="IAsyncEnumParameterParser"/> instead when parsing requires asynchronous work.
+/// Implementations are resolved from the configured service provider when registered, or created
+/// with a public parameterless constructor.
 /// </remarks>
 public interface IEnumParameterParser
 {
@@ -22,7 +24,7 @@ public interface IEnumParameterParser
     /// <param name="provider">The culture used to parse the value.</param>
     /// <param name="result">The parsed enum value when parsing succeeds.</param>
     /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
-    static abstract bool TryParse<TEnum>(
+    bool TryParse<TEnum>(
         string value,
         IFormatProvider? provider,
         out TEnum result)

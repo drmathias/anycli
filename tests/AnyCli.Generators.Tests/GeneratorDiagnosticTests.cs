@@ -131,7 +131,7 @@ public class GeneratorDiagnosticTests
 
             public sealed class WidgetParser : IParameterParser<Widget>
             {
-                public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
+                public bool TryParse(string value, IFormatProvider? provider, out Widget result)
                 {
                     result = new Widget();
                     return true;
@@ -177,7 +177,7 @@ public class GeneratorDiagnosticTests
 
             public sealed class WidgetParser1 : IParameterParser<Widget>
             {
-                public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
+                public bool TryParse(string value, IFormatProvider? provider, out Widget result)
                 {
                     result = new Widget();
                     return true;
@@ -186,7 +186,7 @@ public class GeneratorDiagnosticTests
 
             public sealed class WidgetParser2 : IParameterParser<Widget>
             {
-                public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
+                public bool TryParse(string value, IFormatProvider? provider, out Widget result)
                 {
                     result = new Widget();
                     return true;
@@ -231,7 +231,7 @@ public class GeneratorDiagnosticTests
 
             public sealed class ModeParser : IEnumParameterParser
             {
-                public static bool TryParse<TEnum>(
+                public bool TryParse<TEnum>(
                     string value,
                     IFormatProvider? provider,
                     out TEnum result)
@@ -710,7 +710,7 @@ public class GeneratorDiagnosticTests
 
             public sealed class WidgetParser : IParameterParser<Widget>
             {
-                public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
+                public bool TryParse(string value, IFormatProvider? provider, out Widget result)
                 {
                     result = new Widget();
                     return true;
@@ -1155,7 +1155,7 @@ public class GeneratorDiagnosticTests
                 IParameterParser<Widget>,
                 IAsyncParameterParser<Widget>
             {
-                public static bool TryParse(
+                public bool TryParse(
                     string value,
                     IFormatProvider? provider,
                     out Widget result)

@@ -2849,7 +2849,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 $"{rawExpression}, {literalName}, {parameterSource})",
             ParseKind.EnumCustom =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseEnumCustom<{parsePlan.ValueTypeFullName}, " +
-                $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName}, {parameterSource})",
+                $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName}, {parameterSource}, services)",
             ParseKind.EnumCustomAsync =>
                 $"await global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseEnumCustomAsync<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, {literalName}, {parameterSource}, cancellationToken, services).ConfigureAwait(false)",
@@ -2862,7 +2862,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             ParseKind.Custom =>
                 $"global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseCustom<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, " +
-                $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName}, {parameterSource})",
+                $"global::System.Globalization.CultureInfo.InvariantCulture, {literalName}, {parameterSource}, services)",
             ParseKind.CustomAsync =>
                 $"await global::AnyCli.Parameters.Parsing.ParameterValueParsing.ParseCustomAsync<{parsePlan.ValueTypeFullName}, " +
                 $"{parsePlan.ParserTypeFullName}>({rawExpression}, " +

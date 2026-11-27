@@ -9,9 +9,9 @@ namespace AnyCli.Parameters.Parsing;
 /// </summary>
 /// <typeparam name="T">The parsed type.</typeparam>
 /// <remarks>
-/// Specify an implementation with <see cref="ArgumentAttributeBase.Parser"/> or
-/// <see cref="OptionAttributeBase.Parser"/>. Implement <see cref="IAsyncParameterParser{T}"/>
-/// instead when parsing requires asynchronous work.
+/// Implement <see cref="IAsyncParameterParser{T}"/>
+/// instead when parsing requires asynchronous work. Implementations are resolved from the
+/// configured service provider when registered, or created with a public parameterless constructor.
 /// </remarks>
 public interface IParameterParser<T>
 {
@@ -22,5 +22,5 @@ public interface IParameterParser<T>
     /// <param name="provider">The culture used to parse the value.</param>
     /// <param name="result">The parsed value when parsing succeeds.</param>
     /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
-    static abstract bool TryParse(string value, IFormatProvider? provider, out T result);
+    bool TryParse(string value, IFormatProvider? provider, out T result);
 }

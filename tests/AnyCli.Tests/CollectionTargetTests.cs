@@ -573,7 +573,7 @@ public sealed partial class OptionalParsedCollectionParameters
 
 public sealed class CommaSeparatedListParser : IParameterParser<List<string>>
 {
-    public static bool TryParse(
+    public bool TryParse(
         string value,
         IFormatProvider? provider,
         out List<string> result)

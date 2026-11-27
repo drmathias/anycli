@@ -66,7 +66,7 @@ public readonly record struct TicketId(int Value);
 
 public sealed class TicketIdParser : IParameterParser<TicketId>
 {
-    public static bool TryParse(
+    public bool TryParse(
         string value,
         IFormatProvider? provider,
         out TicketId result)
@@ -121,7 +121,7 @@ public sealed class TicketIdParser : IAsyncParameterParser<TicketId>
 }
 ```
 
-Async parsers are resolved from the configured service provider when one is available, so dependencies can be injected through the constructor. Otherwise, the parser needs a public parameterless constructor. They also receive the command's cancellation token.
+When a service provider is configured and the parser type is registered, that instance is used. Otherwise, a public parameterless constructor is used. Async parsers also receive the command's cancellation token.
 
 Use the same `Parser` property and registration attributes for sync and async parsers:
 

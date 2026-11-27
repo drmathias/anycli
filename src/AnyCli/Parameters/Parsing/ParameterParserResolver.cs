@@ -7,8 +7,12 @@ using System.Diagnostics.CodeAnalysis;
 namespace AnyCli.Parameters.Parsing;
 
 /// <summary>
-/// Resolves asynchronous parameter parsers from the configured service provider.
+/// Resolves parameter parser instances.
 /// </summary>
+/// <remarks>
+/// A registered parser is resolved from the configured service provider. Otherwise, a parser with
+/// a public parameterless constructor is created directly.
+/// </remarks>
 internal static class ParameterParserResolver
 {
     /// <summary>
@@ -25,12 +29,11 @@ internal static class ParameterParserResolver
         IServiceProvider? services)
         where TParser : class
     {
-        return services is null
-            ? Activator.CreateInstance<TParser>()
-                ?? throw new InvalidOperationException(
-                    $"Could not create parameter parser '{typeof(TParser).FullName}'.")
-            : services.GetService(typeof(TParser)) as TParser
-                ?? throw new InvalidOperationException(
-                    $"Service '{typeof(TParser).FullName}' is not registered.");
+        return services is not null && services.GetService(typeof(TParser)) is TParser registeredParser
+            ? registeredParser
+            : typeof(TParser).GetConstructor(Type.EmptyTypes) is not null
+                ? Activator.CreateInstance<TParser>() ?? throw new InvalidOperationException($"Could not create parameter parser '{typeof(TParser).FullName}'.")
+                : throw new InvalidOperationException(
+                    $"Parameter parser '{typeof(TParser).FullName}' is not registered in the service provider and has no public parameterless constructor.");
     }
 }

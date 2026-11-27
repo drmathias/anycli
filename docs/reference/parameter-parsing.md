@@ -26,7 +26,7 @@ The default enum parser matches member names case-insensitively. Kebab-case valu
 
 ## Parser behavior
 
-Custom parsers may implement the sync or async parser interface for the target type. If a parser implements both, async parsing is preferred and `ANYCLI026` is reported. Async parsers are resolved from the configured service provider, or created with a public parameterless constructor when no service provider is configured. They receive the command's cancellation token and return a `ParameterParseResult<T>`.
+Custom parsers may implement the sync or async parser interface for the target type. If a parser implements both, async parsing is preferred and `ANYCLI026` is reported. A registered parser is resolved from the configured service provider; otherwise, a public parameterless constructor is used. Async parsers also receive the command's cancellation token and return a `ParameterParseResult<T>`.
 
 `ISpanParsable<T>` extends `IParsable<T>`. A type implementing it must provide both string and span members. AnyCLI checks `ISpanParsable<T>` before `IParsable<T>`.
 

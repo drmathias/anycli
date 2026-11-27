@@ -323,7 +323,7 @@ public sealed record RegisteredWidget(string Name);
 
 public sealed class RegisteredWidgetParser : IParameterParser<RegisteredWidget>
 {
-    public static bool TryParse(
+    public bool TryParse(
         string value,
         IFormatProvider? provider,
         out RegisteredWidget result)
@@ -351,7 +351,7 @@ public sealed record Widget(string Name);
 
 public sealed class WidgetParser : IParameterParser<Widget>
 {
-    public static bool TryParse(string value, IFormatProvider? provider, out Widget result)
+    public bool TryParse(string value, IFormatProvider? provider, out Widget result)
     {
         const string prefix = "widget:";
         if (value.StartsWith(prefix, StringComparison.Ordinal))

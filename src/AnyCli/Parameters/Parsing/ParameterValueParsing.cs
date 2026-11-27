@@ -78,7 +78,7 @@ public static class ParameterValueParsing
         string parameterName,
         ParameterSource source = ParameterSource.Unknown)
         where TEnum : struct, Enum =>
-        DefaultEnumParameterParser.TryParse<TEnum>(value, provider: null, out var result)
+        DefaultEnumParameterParser.TryParse<TEnum>(value, out var result)
             ? result
             : throw CreateInvalidValue(value, parameterName, typeof(TEnum), source);
 
@@ -90,16 +90,21 @@ public static class ParameterValueParsing
     /// <param name="value">The raw parameter value.</param>
     /// <param name="parameterName">The parameter name used in error messages.</param>
     /// <param name="source">The source of the parameter value.</param>
+    /// <param name="services">The configured service provider, or <see langword="null"/>.</param>
     /// <returns>The parsed enum value.</returns>
     /// <exception cref="CommandErrorException">The value could not be parsed.</exception>
-    public static TEnum ParseEnumCustom<TEnum, TParser>(
+    public static TEnum ParseEnumCustom<
+        TEnum,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TParser>(
         string value,
         string parameterName,
-        ParameterSource source = ParameterSource.Unknown)
+        ParameterSource source,
+        IServiceProvider? services)
         where TEnum : struct, Enum
-        where TParser : IEnumParameterParser
+        where TParser : class, IEnumParameterParser
     {
-        return TParser.TryParse<TEnum>(value, CultureInfo.InvariantCulture, out var result)
+        var parser = ParameterParserResolver.Resolve<TParser>(services);
+        return parser.TryParse<TEnum>(value, CultureInfo.InvariantCulture, out var result)
             ? result
             : throw CreateInvalidValue(value, parameterName, typeof(TEnum), source);
     }
@@ -113,16 +118,21 @@ public static class ParameterValueParsing
     /// <param name="provider">The culture used to parse the value.</param>
     /// <param name="parameterName">The parameter name used in error messages.</param>
     /// <param name="source">The source of the parameter value.</param>
+    /// <param name="services">The configured service provider, or <see langword="null"/>.</param>
     /// <returns>The parsed value.</returns>
     /// <exception cref="CommandErrorException">The value could not be parsed.</exception>
-    public static T ParseCustom<T, TParser>(
+    public static T ParseCustom<
+        T,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TParser>(
         string value,
         IFormatProvider? provider,
         string parameterName,
-        ParameterSource source = ParameterSource.Unknown)
-        where TParser : IParameterParser<T>
+        ParameterSource source,
+        IServiceProvider? services)
+        where TParser : class, IParameterParser<T>
     {
-        if (TParser.TryParse(value, provider, out var result))
+        var parser = ParameterParserResolver.Resolve<TParser>(services);
+        if (parser.TryParse(value, provider, out var result))
         {
             return result;
         }

@@ -16,19 +16,16 @@ namespace AnyCli.Parameters.Parsing;
 /// </remarks>
 public sealed class DefaultEnumParameterParser : IEnumParameterParser
 {
+    bool IEnumParameterParser.TryParse<TEnum>(string value, IFormatProvider? provider, out TEnum result) => TryParse(value, out result);
+
     /// <summary>
     /// Attempts to parse an enum parameter value.
     /// </summary>
     /// <typeparam name="TEnum">The enum type.</typeparam>
     /// <param name="value">The raw parameter value.</param>
-    /// <param name="provider">The culture used to parse the value.</param>
     /// <param name="result">The parsed enum value when parsing succeeds.</param>
     /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
-    public static bool TryParse<TEnum>(
-        string value,
-        IFormatProvider? provider,
-        out TEnum result)
-        where TEnum : struct, Enum
+    public static bool TryParse<TEnum>(string value, out TEnum result) where TEnum : struct, Enum
     {
         if (ContainsNumericValue(value))
         {

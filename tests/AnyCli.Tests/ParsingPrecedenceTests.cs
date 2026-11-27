@@ -187,7 +187,7 @@ public sealed record SpanPrecedenceValue(string Source) : ISpanParsable<SpanPrec
 
 public sealed class AssemblySpanPrecedenceParser : IParameterParser<SpanPrecedenceValue>
 {
-    public static bool TryParse(
+    public bool TryParse(
         string value,
         IFormatProvider? provider,
         out SpanPrecedenceValue result)
@@ -199,7 +199,7 @@ public sealed class AssemblySpanPrecedenceParser : IParameterParser<SpanPreceden
 
 public sealed class AssemblyPrecedenceParser : IParameterParser<PrecedenceValue>
 {
-    public static bool TryParse(
+    public bool TryParse(
         string value,
         IFormatProvider? provider,
         out PrecedenceValue result)
@@ -211,7 +211,7 @@ public sealed class AssemblyPrecedenceParser : IParameterParser<PrecedenceValue>
 
 public sealed class PropertyPrecedenceParser : IParameterParser<PrecedenceValue>
 {
-    public static bool TryParse(
+    public bool TryParse(
         string value,
         IFormatProvider? provider,
         out PrecedenceValue result)
@@ -230,7 +230,7 @@ public enum PrecedenceMode
 
 public sealed class AssemblyEnumPrecedenceParser : IParameterParser<PrecedenceMode>
 {
-    public static bool TryParse(
+    public bool TryParse(
         string value,
         IFormatProvider? provider,
         out PrecedenceMode result)
@@ -242,7 +242,7 @@ public sealed class AssemblyEnumPrecedenceParser : IParameterParser<PrecedenceMo
 
 public sealed class PropertyEnumPrecedenceParser : IParameterParser<PrecedenceMode>
 {
-    public static bool TryParse(
+    public bool TryParse(
         string value,
         IFormatProvider? provider,
         out PrecedenceMode result)
