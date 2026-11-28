@@ -392,7 +392,7 @@ public class NestedCommandTests
         {
             var command = context.Command;
             context.Console.Output.Write(
-                $"{string.Join(".", command.Path)}|{command.IsExecutable}|{command.HasSubcommands}|" +
+                $"{string.Join(".", command.Path)}|{command.IsExecutable}|{command.Children.Count > 0}|" +
                 $"{command.Options.Count}|{string.Join(",", command.Children.Select(child => child.Name))}");
             return ValueTask.CompletedTask;
         }

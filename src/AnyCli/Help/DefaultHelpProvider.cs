@@ -49,7 +49,11 @@ public sealed class DefaultHelpProvider : IHelpProvider
         WriteEntries(
             output,
             _textProvider.GetOptionsHeading(),
-            [.. context.Application.GlobalOptions.Select(option => CreateOptionEntry(command: null, option))]);
+            [
+                .. context.Application.GlobalOptions.Select(option => CreateOptionEntry(command: null, option)),
+                .. context.Application.FrameworkOptions.Select(option =>
+                    CreateFrameworkOptionEntry(command: null, option)),
+            ]);
 
         if (hasCommands)
         {
@@ -91,7 +95,9 @@ public sealed class DefaultHelpProvider : IHelpProvider
                 [.. command.Arguments.Select(argument => CreateArgumentEntry(command, argument))]);
         }
 
-        if (command.Options.Count > 0 || context.Application.GlobalOptions.Count > 0)
+        if (command.Options.Count > 0 ||
+            context.Application.GlobalOptions.Count > 0 ||
+            context.Application.FrameworkOptions.Count > 0)
         {
             WriteEntries(
                 output,
@@ -99,6 +105,8 @@ public sealed class DefaultHelpProvider : IHelpProvider
                 [
                     .. command.Options.Select(option => CreateOptionEntry(command, option)),
                     .. context.Application.GlobalOptions.Select(option => CreateOptionEntry(command, option)),
+                    .. context.Application.FrameworkOptions.Select(option =>
+                        CreateFrameworkOptionEntry(command, option)),
                 ]);
         }
 
@@ -148,6 +156,10 @@ public sealed class DefaultHelpProvider : IHelpProvider
     private HelpEntry CreateOptionEntry(CommandInfo? command, OptionInfo option) =>
         new(string.Join(", ", option.Names),
             ResolveDescription(command, option.Description, option: option));
+
+    private HelpEntry CreateFrameworkOptionEntry(CommandInfo? command, FrameworkOptionInfo option) =>
+        new(string.Join(", ", option.Names),
+            ResolveDescription(command, option.Description));
 
     private string ResolveDescription(
         CommandInfo? command,

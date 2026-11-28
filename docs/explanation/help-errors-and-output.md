@@ -41,7 +41,7 @@ A custom help provider factory receives a `HelpProviderContext` containing:
 - the configured `IHelpValueFormatter`
 - the configured localization options
 
-Root help and command help receive different contexts. Both expose shared `Application` metadata and a `Console`. `CommandHelpContext` adds the command or command group being described. `Application` contains the application name, global options, and root command tree.
+Root help and command help receive different contexts. Both expose shared `Application` metadata and a `Console`. `CommandHelpContext` adds the command or command group being described. `Application` contains the application name, application-declared global options, framework-provided options, and the root command tree.
 
 ## Error pipeline
 

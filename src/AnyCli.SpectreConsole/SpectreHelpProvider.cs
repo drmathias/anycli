@@ -55,7 +55,11 @@ public sealed class SpectreHelpProvider : IHelpProvider
         WriteEntries(
             output,
             _textProvider.GetOptionsHeading(),
-            [.. context.Application.GlobalOptions.Select(CreateOptionEntry)]);
+            [
+                .. context.Application.GlobalOptions.Select(CreateOptionEntry),
+                .. context.Application.FrameworkOptions.Select(option =>
+                    CreateFrameworkOptionEntry(command: null, option)),
+            ]);
 
         if (hasCommands)
         {
@@ -102,7 +106,9 @@ public sealed class SpectreHelpProvider : IHelpProvider
                 [.. command.Arguments.Select(argument => CreateArgumentEntry(command, argument))]);
         }
 
-        if (command.Options.Count > 0 || context.Application.GlobalOptions.Count > 0)
+        if (command.Options.Count > 0 ||
+            context.Application.GlobalOptions.Count > 0 ||
+            context.Application.FrameworkOptions.Count > 0)
         {
             WriteEntries(
                 output,
@@ -110,6 +116,8 @@ public sealed class SpectreHelpProvider : IHelpProvider
                 [
                     .. command.Options.Select(CreateOptionEntry),
                     .. context.Application.GlobalOptions.Select(CreateOptionEntry),
+                    .. context.Application.FrameworkOptions.Select(option =>
+                        CreateFrameworkOptionEntry(command, option)),
                 ]);
         }
 
@@ -194,6 +202,11 @@ public sealed class SpectreHelpProvider : IHelpProvider
     private HelpEntry CreateOptionEntry(OptionInfo option) =>
         new(string.Join(", ", option.Names),
             ResolveDescription(command: null, option.Description, option: option),
+            _options.OptionStyle);
+
+    private HelpEntry CreateFrameworkOptionEntry(CommandInfo? command, FrameworkOptionInfo option) =>
+        new(string.Join(", ", option.Names),
+            ResolveDescription(command, option.Description),
             _options.OptionStyle);
 
     private HelpEntry CreateCommandEntry(CommandInfo command) =>

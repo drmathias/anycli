@@ -7,7 +7,7 @@ namespace AnyCli.Parameters.Options;
 /// <summary>
 /// Describes a command-line option.
 /// </summary>
-/// <param name="Names">The option names, such as <c>-h</c> and <c>--help</c>.</param>
+/// <param name="Names">The option names, such as <c>-f</c> and <c>--force</c>.</param>
 /// <param name="Description">A short description of the option.</param>
 /// <param name="IsRequired">Whether the option must be supplied.</param>
 /// <param name="ValueKind">How the option consumes command-line values.</param>
@@ -17,7 +17,7 @@ public sealed record OptionInfo(
     HelpText Description,
     bool IsRequired,
     OptionValueKind ValueKind,
-    Type? DeclaredType = null)
+    Type DeclaredType)
 {
     /// <summary>
     /// Gets the configured default value source, when one is defined.

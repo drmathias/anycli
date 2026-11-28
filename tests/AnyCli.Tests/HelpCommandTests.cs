@@ -274,6 +274,12 @@ public class HelpCommandTests
                 output.WriteLine($"    {names,-36}{option.Description}");
             }
 
+            foreach (var option in context.Application.FrameworkOptions)
+            {
+                var names = string.Join(", ", option.Names);
+                output.WriteLine($"    {names,-36}{option.Description}");
+            }
+
             return default;
         }
     }
@@ -289,6 +295,12 @@ public class HelpCommandTests
             context.Console.Output.WriteLine();
             context.Console.Output.WriteLine("Options:");
             foreach (var option in context.Application.GlobalOptions)
+            {
+                var names = string.Join(", ", option.Names);
+                context.Console.Output.WriteLine($"    {names,-15}{option.Description}");
+            }
+
+            foreach (var option in context.Application.FrameworkOptions)
             {
                 var names = string.Join(", ", option.Names);
                 context.Console.Output.WriteLine($"    {names,-15}{option.Description}");

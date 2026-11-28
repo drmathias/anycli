@@ -22,11 +22,6 @@ public sealed record CommandInfo(string Name, HelpText Description)
     public bool IsExecutable { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether the command or group has subcommands.
-    /// </summary>
-    public bool HasSubcommands { get; init; }
-
-    /// <summary>
     /// Gets the command's positional arguments.
     /// </summary>
     public IReadOnlyList<ArgumentInfo> Arguments { get; init; } = [];

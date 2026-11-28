@@ -15,7 +15,7 @@ public class ApplicationInfoTests
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
         await Assert.That(result.Output).IsEqualTo(
-            "command|anycli|ping:True:0,remote:False:1|-h,--help,-v,--version");
+            "command|anycli|ping:True:0,remote:False:1||-h,--help,-v,--version");
         await Assert.That(result.Error).IsEmpty();
     }
 
@@ -32,10 +32,8 @@ public class ApplicationInfoTests
         var result = await TestAppHarness.RunAsync(app, ["run"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(0);
-        await Assert.That(result.Output).StartsWith("command|anycli|run:True:0|");
-        await Assert.That(result.Output).Contains("-l");
-        await Assert.That(result.Output).Contains("--log-level");
-        await Assert.That(result.Output).Contains("--version");
+        await Assert.That(result.Output).IsEqualTo(
+            "command|anycli|run:True:0|--log-level,-l,--tag,--quiet|-h,--help,-v,--version");
         await Assert.That(result.Error).IsEmpty();
     }
 
@@ -79,6 +77,10 @@ public class ApplicationInfoTests
         string.Join(",", commands.Select(command =>
             $"{command.Name}:{command.IsExecutable}:{command.Children.Count}"));
 
+    private static string DescribeOptions(ApplicationInfo application) =>
+        $"{string.Join(",", application.GlobalOptions.SelectMany(option => option.Names))}|" +
+        $"{string.Join(",", application.FrameworkOptions.SelectMany(option => option.Names))}";
+
     private sealed class ApplicationCommand : NoParametersCommand
     {
         public override int Execute(CommandContext context)
@@ -86,7 +88,7 @@ public class ApplicationInfoTests
             context.Console.Output.Write(
                 $"command|{context.Application.AppName}|" +
                 $"{DescribeCommands(context.Application.Commands)}|" +
-                $"{string.Join(",", context.Application.GlobalOptions.SelectMany(option => option.Names))}");
+                $"{DescribeOptions(context.Application)}");
             return 0;
         }
     }
@@ -98,7 +100,7 @@ public class ApplicationInfoTests
             context.Console.Output.Write(
                 $"command|{context.Application.AppName}|" +
                 $"{DescribeCommands(context.Application.Commands)}|" +
-                $"{string.Join(",", context.Application.GlobalOptions.SelectMany(option => option.Names))}");
+                $"{DescribeOptions(context.Application)}");
             return 0;
         }
     }

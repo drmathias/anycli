@@ -88,7 +88,7 @@ public class ErrorHandlingTests
         using var error = new StringWriter();
         var console = new TextConsole(new StringReader(string.Empty), new StringWriter(), error);
         var context = new CommandErrorContext(
-            "anycli",
+            new ApplicationInfo("anycli", [], [], []),
             [],
             new UnknownOptionError("--nope"),
             console);
@@ -143,7 +143,7 @@ public class ErrorHandlingTests
         using var error = new StringWriter();
         var console = new TextConsole(new StringReader(string.Empty), new StringWriter(), error);
         var context = new CommandErrorContext(
-            "anycli",
+            new ApplicationInfo("anycli", [], [], []),
             [],
             new CustomError(),
             console);
@@ -204,6 +204,7 @@ public class ErrorHandlingTests
 
         await Assert.That(result.ExitCode).IsEqualTo(5);
         await Assert.That(result.Output).IsEmpty();
+        await Assert.That(handler.Application!.AppName).IsEqualTo("anycli");
         await Assert.That(handler.Error is TooFewVariadicValuesError).IsTrue();
 
         var error = (TooFewVariadicValuesError)handler.Error!;
@@ -276,7 +277,7 @@ public class ErrorHandlingTests
         using var error = new StringWriter();
         var console = new TextConsole(new StringReader(string.Empty), new StringWriter(), error);
         var context = new CommandErrorContext(
-            "anycli",
+            new ApplicationInfo("anycli", [], [], []),
             [],
             new UnknownCommandError("nope", []),
             console);
@@ -339,12 +340,15 @@ public class ErrorHandlingTests
 
     private sealed class CapturingErrorHandler : ICommandErrorHandler
     {
+        public ApplicationInfo? Application { get; private set; }
+
         public CommandError? Error { get; private set; }
 
         public ValueTask HandleAsync(
             CommandErrorContext context,
             CancellationToken cancellationToken)
         {
+            Application = context.Application;
             Error = context.Error;
             return ValueTask.CompletedTask;
         }

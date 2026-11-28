@@ -556,7 +556,7 @@ public class GlobalOptionTests
             RootHelpContext context,
             CancellationToken cancellationToken)
         {
-            WriteOptions(context.Application.GlobalOptions, context.Console);
+            WriteOptions(context.Application, context.Console);
             return ValueTask.CompletedTask;
         }
 
@@ -564,14 +564,19 @@ public class GlobalOptionTests
             CommandHelpContext context,
             CancellationToken cancellationToken)
         {
-            WriteOptions(context.Application.GlobalOptions, context.Console);
+            WriteOptions(context.Application, context.Console);
             return ValueTask.CompletedTask;
         }
 
         private static void WriteOptions(
-            IReadOnlyList<OptionInfo> options,
+            ApplicationInfo application,
             IConsoleWriter console) =>
-            console.Output.Write(string.Join(",", options.SelectMany(option => option.Names)));
+            console.Output.Write(
+                string.Join(
+                    ",",
+                    application.GlobalOptions
+                        .SelectMany(option => option.Names)
+                        .Concat(application.FrameworkOptions.SelectMany(option => option.Names))));
     }
 
     private enum GlobalExitCode

@@ -50,7 +50,8 @@ public sealed class ConsoleApp
         _interceptorFactories = interceptorFactories;
         _application = new ApplicationInfo(
             name ?? string.Empty,
-            GetOptions(),
+            GetGlobalOptions(),
+            GetFrameworkOptions(),
             [.. root.Children.Select(child => CreateCommandInfo(child, []))]);
     }
 
@@ -506,7 +507,6 @@ public sealed class ConsoleApp
         {
             Path = path,
             IsExecutable = command is not null,
-            HasSubcommands = node.Children.Count > 0,
             Arguments = command is null
                 ? []
                 : [.. command.Arguments
@@ -546,7 +546,7 @@ public sealed class ConsoleApp
         CancellationToken cancellationToken)
     {
         var context = new CommandErrorContext(
-            _name,
+            _application,
             commandPath,
             error,
             console);
@@ -619,9 +619,9 @@ public sealed class ConsoleApp
         }
     }
 
-    private List<OptionInfo> GetOptions()
+    private List<OptionInfo> GetGlobalOptions()
     {
-        var options = new List<OptionInfo>(_globalOptions.Count + 2);
+        var options = new List<OptionInfo>(_globalOptions.Count);
 
         foreach (var option in _globalOptions)
         {
@@ -636,23 +636,29 @@ public sealed class ConsoleApp
             });
         }
 
-        options.Add(new OptionInfo(
-            ["-h", "--help"],
-            new HelpText(
-                "Prints help information",
-                HelpTextResourceKeys.HelpOptionDescription),
-            IsRequired: false,
-            ValueKind: OptionValueKind.Flag));
+        return options;
+    }
+
+    private List<FrameworkOptionInfo> GetFrameworkOptions()
+    {
+        var options = new List<FrameworkOptionInfo>(2)
+        {
+            new(
+                FrameworkOptionKind.Help,
+                ["-h", "--help"],
+                new HelpText(
+                    "Prints help information",
+                    HelpTextResourceKeys.HelpOptionDescription)),
+        };
 
         if (_version is not null)
         {
-            options.Add(new OptionInfo(
+            options.Add(new FrameworkOptionInfo(
+                FrameworkOptionKind.Version,
                 ["-v", "--version"],
                 new HelpText(
                     "Prints version information",
-                    HelpTextResourceKeys.VersionOptionDescription),
-                IsRequired: false,
-                ValueKind: OptionValueKind.Flag));
+                    HelpTextResourceKeys.VersionOptionDescription)));
         }
 
         return options;
