@@ -152,9 +152,9 @@ Update the app registration to use `ConfigureCommands<TodoExitCode>` and set the
 var app = ConsoleAppBuilder.Create()
     .WithName("todo")
     .ConfigureHelp(help => help
-        .UseSpectreHelp())
+        .UseSpectreHelpRenderer())
     .ConfigureErrorHandling(errors => errors
-        .UseSpectreErrors()
+        .UseSpectreErrorWriter()
         .UseExitCode(TodoExitCode.CommandLineError))
     .ConfigureCommands<TodoExitCode>(commands => commands
         .AddAsyncCommand<ListCommand>("list", "List all tasks")

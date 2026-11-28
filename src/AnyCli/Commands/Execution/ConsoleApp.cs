@@ -16,8 +16,8 @@ public sealed class ConsoleApp
     private readonly IGlobalOptionsDefinition? _globalOptionsDefinition;
     private readonly IReadOnlyList<OptionDefinition> _globalOptions;
     private readonly OptionLookup _globalOptionLookup;
-    private readonly Func<IServiceProvider?, IHelpProvider> _helpProviderFactory;
-    private readonly Func<CommandErrorContext, int> _errorExitCodeProvider;
+    private readonly Func<IServiceProvider?, IHelpRenderer> _helpRendererFactory;
+    private readonly Func<CommandError, int> _errorExitCodeProvider;
     private readonly Func<IServiceProvider?, ICommandErrorHandler> _errorHandlerFactory;
     private readonly IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories;
     private readonly string? _name;
@@ -32,9 +32,9 @@ public sealed class ConsoleApp
         IReadOnlyList<OptionDefinition> globalOptions,
         IGlobalOptionsDefinition? globalOptionsDefinition,
         IServiceProvider? serviceProvider,
-        Func<IServiceProvider?, IHelpProvider> helpProviderFactory,
+        Func<IServiceProvider?, IHelpRenderer> helpRendererFactory,
         Func<IServiceProvider?, ICommandErrorHandler> errorHandlerFactory,
-        Func<CommandErrorContext, int> errorExitCodeProvider,
+        Func<CommandError, int> errorExitCodeProvider,
         IReadOnlyList<Func<IServiceProvider?, ICommandInterceptor>> interceptorFactories)
     {
         _name = name;
@@ -44,7 +44,7 @@ public sealed class ConsoleApp
         _globalOptionLookup = OptionLookup.Create([], globalOptions);
         _globalOptionsDefinition = globalOptionsDefinition;
         _serviceProvider = serviceProvider;
-        _helpProviderFactory = helpProviderFactory;
+        _helpRendererFactory = helpRendererFactory;
         _errorHandlerFactory = errorHandlerFactory;
         _errorExitCodeProvider = errorExitCodeProvider;
         _interceptorFactories = interceptorFactories;
@@ -555,12 +555,12 @@ public sealed class ConsoleApp
             .HandleAsync(context, cancellationToken)
             .ConfigureAwait(false);
 
-        return _errorExitCodeProvider(context);
+        return _errorExitCodeProvider(error);
     }
 
     private Task WriteRootHelpAsync(IConsole console, CancellationToken cancellationToken)
     {
-        return _helpProviderFactory(_serviceProvider).WriteRootHelpAsync(
+        return _helpRendererFactory(_serviceProvider).WriteRootHelpAsync(
             new RootHelpContext(console, _application),
             cancellationToken).AsTask();
     }
@@ -571,7 +571,7 @@ public sealed class ConsoleApp
         IReadOnlyList<string> commandPath,
         CancellationToken cancellationToken)
     {
-        return _helpProviderFactory(_serviceProvider).WriteCommandHelpAsync(
+        return _helpRendererFactory(_serviceProvider).WriteCommandHelpAsync(
             new CommandHelpContext(
                 console,
                 _application,

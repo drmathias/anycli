@@ -86,9 +86,9 @@ var app = ConsoleAppBuilder.Create()
     .UseServiceProvider(provider)
     .WithName("todo")
     .ConfigureHelp(help => help
-        .UseSpectreHelp())
+        .UseSpectreHelpRenderer())
     .ConfigureErrorHandling(errors => errors
-        .UseSpectreErrors()
+        .UseSpectreErrorWriter()
         .UseExitCode(TodoExitCode.CommandLineError))
     .ConfigureCommands<TodoExitCode>(commands => commands
         .AddAsyncCommand<ListCommand>("list", "List all tasks")

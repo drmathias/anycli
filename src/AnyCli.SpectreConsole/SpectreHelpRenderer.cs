@@ -13,14 +13,14 @@ namespace AnyCli.SpectreConsole;
 /// <summary>
 /// Writes styled help output with Spectre.Console.
 /// </summary>
-public sealed class SpectreHelpProvider : IHelpProvider
+public sealed class SpectreHelpRenderer : IHelpRenderer
 {
     private readonly SpectreHelpOptions _options;
     private readonly IHelpTextProvider _textProvider;
     private readonly IHelpValueFormatter _valueFormatter;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SpectreHelpProvider"/> class.
+    /// Initializes a new instance of the <see cref="SpectreHelpRenderer"/> class.
     /// </summary>
     /// <param name="textProvider">The provider for localized help text.</param>
     /// <param name="valueFormatter">The formatter for default values.</param>
@@ -28,7 +28,7 @@ public sealed class SpectreHelpProvider : IHelpProvider
     /// <exception cref="ArgumentNullException">
     /// <paramref name="textProvider"/> is <see langword="null"/>.
     /// </exception>
-    public SpectreHelpProvider(
+    public SpectreHelpRenderer(
         IHelpTextProvider textProvider,
         IHelpValueFormatter? valueFormatter = null,
         SpectreHelpOptions? options = null)

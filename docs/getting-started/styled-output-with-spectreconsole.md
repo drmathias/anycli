@@ -111,15 +111,15 @@ Successful changes are fully green, task IDs are bold, and only secondary hints 
 
 ## Use Spectre help and errors
 
-Configure the default Spectre help provider and the Spectre error writer together:
+Configure the default Spectre help renderer and the Spectre error writer together:
 
 ```csharp
 var app = ConsoleAppBuilder.Create()
     .WithName("todo")
     .ConfigureHelp(help => help
-        .UseSpectreHelp())
+        .UseSpectreHelpRenderer())
     .ConfigureErrorHandling(errors => errors
-        .UseSpectreErrors())
+        .UseSpectreErrorWriter())
     .ConfigureCommands(commands => commands
         .AddAsyncCommand<ListCommand>("list", "List all tasks")
         .AddAsyncCommand<AddCommand, AddParameters>("add", "Add a task"))

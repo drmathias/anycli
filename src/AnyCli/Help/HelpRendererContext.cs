@@ -5,13 +5,13 @@
 namespace AnyCli.Help;
 
 /// <summary>
-/// Provides the inputs used to create a help provider.
+/// Provides the inputs used to create a help renderer.
 /// </summary>
 /// <param name="ServiceProvider">The application service provider, when one is configured.</param>
 /// <param name="TextProvider">The configured help text provider.</param>
 /// <param name="ValueFormatter">The configured help value formatter.</param>
 /// <param name="Localization">The configured localization options.</param>
-public sealed record HelpProviderContext(
+public sealed record HelpRendererContext(
     IServiceProvider? ServiceProvider,
     IHelpTextProvider TextProvider,
     IHelpValueFormatter ValueFormatter,

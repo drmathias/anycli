@@ -70,7 +70,7 @@ public class ApplicationInfoTests
                     "Manage remotes",
                     group => group.AddCommand<ApplicationCommand>("add"));
             })
-            .ConfigureHelp(help => help.UseProvider<ApplicationHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<ApplicationHelpRenderer>())
             .Build();
 
     private static string DescribeCommands(IReadOnlyList<CommandInfo> commands) =>
@@ -105,7 +105,7 @@ public class ApplicationInfoTests
         }
     }
 
-    private sealed class ApplicationHelpProvider : IHelpProvider
+    private sealed class ApplicationHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,

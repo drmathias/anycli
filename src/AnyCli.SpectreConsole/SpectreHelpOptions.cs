@@ -7,7 +7,7 @@ using Spectre.Console;
 namespace AnyCli.SpectreConsole;
 
 /// <summary>
-/// Configures the styles used by <see cref="SpectreHelpProvider"/>.
+/// Configures the styles used by <see cref="SpectreHelpRenderer"/>.
 /// </summary>
 public sealed record SpectreHelpOptions
 {

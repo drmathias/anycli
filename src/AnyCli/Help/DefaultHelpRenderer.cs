@@ -7,20 +7,20 @@ namespace AnyCli.Help;
 /// <summary>
 /// Writes plain-text help output.
 /// </summary>
-public sealed class DefaultHelpProvider : IHelpProvider
+public sealed class DefaultHelpRenderer : IHelpRenderer
 {
     private readonly IHelpTextProvider _textProvider;
     private readonly IHelpValueFormatter _valueFormatter;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultHelpProvider"/> class.
+    /// Initializes a new instance of the <see cref="DefaultHelpRenderer"/> class.
     /// </summary>
     /// <param name="textProvider">The provider for localized help text.</param>
     /// <param name="valueFormatter">The formatter for default values.</param>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="textProvider"/> is <see langword="null"/>.
     /// </exception>
-    public DefaultHelpProvider(
+    public DefaultHelpRenderer(
         IHelpTextProvider textProvider,
         IHelpValueFormatter? valueFormatter = null)
     {

@@ -133,6 +133,62 @@ public class ErrorHandlingTests
     }
 
     [Test]
+    public async Task HandlerFactory_ReceivesConfiguredMessageProviderAndWriter()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureErrorHandling(errors => errors
+                .UseHandler(context => new ConfiguredHandler(context))
+                .UseMessageProvider<CustomMessageProvider>()
+                .UseWriter<PrefixErrorWriter>())
+            .ConfigureCommands(commands => commands.AddCommand<NoOpCommand>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["run", "--nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).IsEqualTo($"written: custom option: --nope{Environment.NewLine}");
+    }
+
+    [Test]
+    public async Task UseMessageProvider_Instance_UsesProvidedInstance()
+    {
+        var provider = new CustomMessageProvider();
+
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureErrorHandling(errors => errors
+                .UseMessageProvider(provider))
+            .ConfigureCommands(commands => commands.AddCommand<NoOpCommand>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["run", "--nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Error).IsEqualTo($"custom option: --nope{Environment.NewLine}");
+    }
+
+    [Test]
+    public async Task UseWriter_Instance_UsesProvidedInstance()
+    {
+        var writer = new PrefixErrorWriter();
+
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureErrorHandling(errors => errors
+                .UseWriter(writer))
+            .ConfigureCommands(commands => commands.AddCommand<NoOpCommand>("run"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["run", "--nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(2);
+        await Assert.That(result.Error).IsEqualTo(
+            $"written: Unknown option '--nope'.{Environment.NewLine}");
+    }
+
+    [Test]
     public async Task LocalizedErrorMessageProvider_LocalizesFallbackError()
     {
         var provider = new LocalizedCommandErrorMessageProvider(
@@ -336,6 +392,14 @@ public class ErrorHandlingTests
             context.Console.Error.WriteLine($"written: {message}");
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class ConfiguredHandler(CommandErrorHandlerContext context) : ICommandErrorHandler
+    {
+        public ValueTask HandleAsync(
+            CommandErrorContext errorContext,
+            CancellationToken cancellationToken) =>
+            context.DefaultHandler.HandleAsync(errorContext, cancellationToken);
     }
 
     private sealed class CapturingErrorHandler : ICommandErrorHandler

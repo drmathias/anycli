@@ -370,7 +370,7 @@ public class DefaultValueTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureLocalization(LocalizationOptions.FromCulture("en"))
-            .ConfigureHelp(help => help
+            .ConfigureHelp(help => help.UseLocalizedTextProvider()
                 .UseValueFormatter<UpperCaseHelpValueFormatter>())
             .ConfigureCommands(commands =>
                 commands.AddCommand<DefaultOptionsCommand, DefaultOptionsParameters>("opts"))
@@ -383,13 +383,33 @@ public class DefaultValueTests
     }
 
     [Test]
-    public async Task CustomHelpProvider_ReceivesConfiguredValueFormatter()
+    public async Task CustomHelpValueFormatter_Instance_FormatsEnumDefaults()
+    {
+        var formatter = new UpperCaseHelpValueFormatter();
+
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureLocalization(LocalizationOptions.FromCulture("en"))
+            .ConfigureHelp(help => help
+                .UseValueFormatter(formatter))
+            .ConfigureCommands(commands =>
+                commands.AddCommand<DefaultOptionsCommand, DefaultOptionsParameters>("opts"))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["opts", "--help"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo(0);
+        await Assert.That(result.Output).Contains("[default: TEXT]");
+    }
+
+    [Test]
+    public async Task CustomHelpRenderer_ReceivesConfiguredValueFormatter()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureHelp(help => help
                 .UseValueFormatter<UpperCaseHelpValueFormatter>()
-                .UseProvider(context => new FormatterHelpProvider(context.ValueFormatter)))
+                .UseRenderer(context => new FormatterHelpRenderer(context.ValueFormatter)))
             .ConfigureCommands(commands =>
                 commands.AddCommand<DefaultOptionsCommand, DefaultOptionsParameters>("opts"))
             .Build();
@@ -406,7 +426,7 @@ public class DefaultValueTests
         var app = ConsoleAppBuilder.Create()
             .ConfigureCommands(commands =>
                 commands.AddCommand<DefaultOptionsCommand, DefaultOptionsParameters>("opts"))
-            .ConfigureHelp(help => help.UseProvider<DefaultHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<DefaultHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["opts", "--help"]);
@@ -527,7 +547,7 @@ public class DefaultValueTests
         }
     }
 
-    private sealed class FormatterHelpProvider(IHelpValueFormatter formatter) : IHelpProvider
+    private sealed class FormatterHelpRenderer(IHelpValueFormatter formatter) : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,
@@ -550,7 +570,7 @@ public class DefaultValueTests
         }
     }
 
-    private sealed class DefaultHelpProvider : IHelpProvider
+    private sealed class DefaultHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,

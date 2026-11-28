@@ -20,11 +20,11 @@ public static class CommandErrorHandlingBuilderExtensions
     /// <exception cref="ArgumentNullException">
     /// <paramref name="errors"/> is <see langword="null"/>.
     /// </exception>
-    public static CommandErrorHandlingBuilder UseSpectreErrors(
+    public static CommandErrorHandlingBuilder UseSpectreErrorWriter(
         this CommandErrorHandlingBuilder errors,
         SpectreErrorOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(errors);
-        return errors.UseWriter(_ => new SpectreCommandErrorWriter(options));
+        return errors.UseWriter(new SpectreCommandErrorWriter(options));
     }
 }

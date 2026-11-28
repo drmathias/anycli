@@ -71,6 +71,8 @@ todo list --log-level debug
 
 Command-line parsing failures are structured errors. By default they are written to standard error and return exit code `2`. Error output and exit codes can be customized through `ConfigureErrorHandling`.
 
+See [Errors reference](errors.md) and [Customize command-line errors](../guides/customize-command-line-errors.md).
+
 ## API reference
 
 - [`ArgumentAttribute`](xref:AnyCli.Parameters.Arguments.ArgumentAttribute), [`OptionalArgumentAttribute`](xref:AnyCli.Parameters.Arguments.OptionalArgumentAttribute), [`VariadicArgumentAttribute`](xref:AnyCli.Parameters.Arguments.VariadicArgumentAttribute)

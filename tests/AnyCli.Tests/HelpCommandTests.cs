@@ -75,7 +75,7 @@ public class HelpCommandTests
             .ConfigureCommands(commands => commands.AddCommand<ThrowCommand, ThrowParameters>(
                 "throw",
                 "Opens a Jvln HTTP tunnel"))
-            .ConfigureHelp(help => help.UseProvider<ThrowHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<ThrowHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["throw", flag]);
@@ -91,7 +91,7 @@ public class HelpCommandTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<TypeCommand, TypeMetadataParameters>("types"))
-            .ConfigureHelp(help => help.UseProvider<TypeHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<TypeHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["types", "--help"]);
@@ -110,7 +110,7 @@ public class HelpCommandTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<OneOrMoreCommand, OneOrMoreParameters>("tags"))
-            .ConfigureHelp(help => help.UseProvider<TypeHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<TypeHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["tags", "--help"]);
@@ -127,7 +127,7 @@ public class HelpCommandTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(commands => commands.AddCommand<OptionMetadataCommand, OptionParameters>("opts"))
-            .ConfigureHelp(help => help.UseProvider<OptionHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<OptionHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, "opts", "--help");
@@ -153,7 +153,7 @@ public class HelpCommandTests
                 commands.AddCommand<NoOpCommand>("throw", "Opens a Jvln tunnel");
                 commands.AddCommand<NoOpCommand>("retrieve", "Closes a Jvln tunnel");
             })
-            .ConfigureHelp(help => help.UseProvider<StubHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<StubHelpRenderer>())
             .Build();
 
         return await TestAppHarness.RunAsync(app, args);
@@ -177,7 +177,7 @@ public class HelpCommandTests
         public int Execute(CommandContext context, OptionParameters parameters) => 0;
     }
 
-    private sealed class OptionHelpProvider : IHelpProvider
+    private sealed class OptionHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,
@@ -211,7 +211,7 @@ public class HelpCommandTests
         public int Execute(CommandContext context, OneOrMoreParameters parameters) => 0;
     }
 
-    private sealed class TypeHelpProvider : IHelpProvider
+    private sealed class TypeHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,
@@ -231,7 +231,7 @@ public class HelpCommandTests
         }
     }
 
-    private sealed class ThrowHelpProvider : IHelpProvider
+    private sealed class ThrowHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,
@@ -282,7 +282,7 @@ public class HelpCommandTests
         }
     }
 
-    private sealed class StubHelpProvider : IHelpProvider
+    private sealed class StubHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,

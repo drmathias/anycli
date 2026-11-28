@@ -102,7 +102,7 @@ public class SpectreHelpTests
                         Resources.HelpDescriptions.ResourceManager);
                 }
 
-                if (useSpectre) help.UseSpectreHelp();
+                if (useSpectre) help.UseSpectreHelpRenderer();
             })
             .ConfigureCommands(commands =>
                 commands.AddCommand<SpectreHelpCommand, SpectreHelpParameters>(
@@ -116,7 +116,7 @@ public class SpectreHelpTests
             .ConfigureLocalization(LocalizationOptions.FromCulture("en"))
             .ConfigureHelp(help =>
             {
-                if (useSpectre) help.UseSpectreHelp();
+                if (useSpectre) help.UseSpectreHelpRenderer();
             })
             .ConfigureCommands(commands =>
                 commands.AddCommand<DefaultValueCommand, SpectreDefaultParameters>("defaults"))

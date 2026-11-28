@@ -68,16 +68,16 @@ public class DependencyInjectionTests
     }
 
     [Test]
-    public async Task HelpProvider_IsResolvedFromProvider()
+    public async Task HelpRenderer_IsResolvedFromProvider()
     {
         var serviceProvider = new StubServiceProvider();
-        serviceProvider.Add(() => new InjectedHelpProvider(new GreetingService("help")));
+        serviceProvider.Add(() => new InjectedHelpRenderer(new GreetingService("help")));
 
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .UseServiceProvider(serviceProvider)
             .ConfigureCommands(_ => { })
-            .ConfigureHelp(help => help.UseProvider<InjectedHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<InjectedHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["--help"]);
@@ -118,13 +118,13 @@ public class DependencyInjectionTests
     }
 
     [Test]
-    public async Task HelpProvider_FallsBackToParameterlessConstructor()
+    public async Task HelpRenderer_FallsBackToParameterlessConstructor()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .UseServiceProvider(new StubServiceProvider())
             .ConfigureCommands(_ => { })
-            .ConfigureHelp(help => help.UseProvider<PlainHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<PlainHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["--help"]);
@@ -154,7 +154,7 @@ public class DependencyInjectionTests
         }
     }
 
-    private sealed class PlainHelpProvider : IHelpProvider
+    private sealed class PlainHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,
@@ -178,7 +178,7 @@ public class DependencyInjectionTests
         public string Greeting { get; } = greeting;
     }
 
-    private sealed class InjectedHelpProvider(GreetingService greeting) : IHelpProvider
+    private sealed class InjectedHelpRenderer(GreetingService greeting) : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,

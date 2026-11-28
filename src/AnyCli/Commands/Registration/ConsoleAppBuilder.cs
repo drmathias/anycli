@@ -16,14 +16,14 @@ public sealed class ConsoleAppBuilder
 {
     private readonly GlobalOptionBuilder _globalOptions = new();
     private readonly List<Func<IServiceProvider?, ICommandInterceptor>> _interceptorFactories = [];
-    private Func<CommandErrorContext, int> _errorExitCodeProvider = static _ => 2;
-    private Func<IServiceProvider?, ICommandErrorHandler>? _errorHandlerFactory;
+    private Func<CommandError, int> _errorExitCodeProvider = static _ => 2;
+    private Func<CommandErrorHandlerContext, ICommandErrorHandler>? _errorHandlerFactory;
     private Func<IServiceProvider?, ICommandErrorMessageProvider>? _errorMessageProviderFactory;
     private Func<IServiceProvider?, ICommandErrorWriter> _errorWriterFactory =
         static _ => new PlainCommandErrorWriter();
     private readonly HelpFormattingOptions _helpFormatting = new();
     private IGlobalOptionsDefinition? _globalOptionsDefinition;
-    private Func<HelpProviderContext, IHelpProvider>? _helpProviderFactory;
+    private Func<HelpRendererContext, IHelpRenderer>? _helpRendererFactory;
     private LocalizationOptions _localization = LocalizationOptions.Default;
     private IServiceProvider? _serviceProvider;
     private string? _name;
@@ -501,16 +501,16 @@ public sealed class ConsoleAppBuilder
 
     internal HelpFormattingOptions HelpFormatting => _helpFormatting;
 
-    internal void UseHelpProviderCore<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>()
-        where THelpProvider : class, IHelpProvider
+    internal void UseHelpRendererCore<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpRenderer>()
+        where THelpRenderer : class, IHelpRenderer
     {
-        _helpProviderFactory = context => ResolveHelpProvider<THelpProvider>(context.ServiceProvider);
+        _helpRendererFactory = context => ResolveHelpRenderer<THelpRenderer>(context.ServiceProvider);
     }
 
-    internal void UseHelpProviderCore(Func<HelpProviderContext, IHelpProvider> factory)
+    internal void UseHelpRendererCore(Func<HelpRendererContext, IHelpRenderer> factory)
     {
-        _helpProviderFactory = factory;
+        _helpRendererFactory = factory;
     }
 
     /// <summary>
@@ -533,7 +533,12 @@ public sealed class ConsoleAppBuilder
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>()
         where THandler : class, ICommandErrorHandler
     {
-        _errorHandlerFactory = ResolveErrorHandler<THandler>;
+        _errorHandlerFactory = context => ResolveErrorHandler<THandler>(context.ServiceProvider);
+    }
+
+    internal void UseErrorHandlerCore(Func<CommandErrorHandlerContext, ICommandErrorHandler> factory)
+    {
+        _errorHandlerFactory = factory;
     }
 
     internal void UseErrorMessageProviderCore<
@@ -541,6 +546,11 @@ public sealed class ConsoleAppBuilder
         where TProvider : class, ICommandErrorMessageProvider
     {
         _errorMessageProviderFactory = ResolveErrorMessageProvider<TProvider>;
+    }
+
+    internal void UseErrorMessageProviderCore(ICommandErrorMessageProvider provider)
+    {
+        _errorMessageProviderFactory = _ => provider;
     }
 
     internal void UseLocalizedErrorMessageProviderCore(
@@ -551,14 +561,6 @@ public sealed class ConsoleAppBuilder
             _localization);
     }
 
-    internal void UseLocalizedErrorMessageProviderCore(
-        Func<IServiceProvider?, IEnumerable<ResourceManager>> messageResourcesFactory)
-    {
-        _errorMessageProviderFactory = serviceProvider => new LocalizedCommandErrorMessageProvider(
-            messageResourcesFactory(serviceProvider),
-            _localization);
-    }
-
     internal void UseErrorWriterCore<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TWriter>()
         where TWriter : class, ICommandErrorWriter
@@ -566,12 +568,12 @@ public sealed class ConsoleAppBuilder
         _errorWriterFactory = ResolveErrorWriter<TWriter>;
     }
 
-    internal void UseErrorWriterCore(Func<IServiceProvider?, ICommandErrorWriter> factory)
+    internal void UseErrorWriterCore(ICommandErrorWriter writer)
     {
-        _errorWriterFactory = factory;
+        _errorWriterFactory = _ => writer;
     }
 
-    internal void SetErrorExitCodeProvider(Func<CommandErrorContext, int> exitCodeProvider)
+    internal void SetErrorExitCodeProvider(Func<CommandError, int> exitCodeProvider)
     {
         _errorExitCodeProvider = exitCodeProvider;
     }
@@ -613,8 +615,8 @@ public sealed class ConsoleAppBuilder
             globalOptions,
             _globalOptionsDefinition,
             _serviceProvider,
-            CreateHelpProviderFactory(),
-            _errorHandlerFactory ?? CreateDefaultErrorHandlerFactory(),
+            CreateHelpRendererFactory(),
+            CreateErrorHandlerFactory(),
             _errorExitCodeProvider,
             [.. _interceptorFactories]);
     }
@@ -627,10 +629,10 @@ public sealed class ConsoleAppBuilder
         }
     }
 
-    private Func<IServiceProvider?, IHelpProvider> CreateHelpProviderFactory() =>
+    private Func<IServiceProvider?, IHelpRenderer> CreateHelpRendererFactory() =>
         serviceProvider =>
         {
-            var defaultContext = new HelpProviderContext(
+            var defaultContext = new HelpRendererContext(
                 serviceProvider,
                 new LocalizedHelpTextProvider(
                     descriptionResources: null,
@@ -643,18 +645,27 @@ public sealed class ConsoleAppBuilder
                 ValueFormatter = _helpFormatting.CreateValueFormatter(defaultContext),
             };
 
-            return _helpProviderFactory is null
-                ? new DefaultHelpProvider(context.TextProvider, context.ValueFormatter)
-                : _helpProviderFactory(context);
+            return _helpRendererFactory is null
+                ? new DefaultHelpRenderer(context.TextProvider, context.ValueFormatter)
+                : _helpRendererFactory(context);
         };
 
-    private Func<IServiceProvider?, ICommandErrorHandler> CreateDefaultErrorHandlerFactory() =>
-        serviceProvider => new DefaultCommandErrorHandler(
-            _errorMessageProviderFactory?.Invoke(serviceProvider) ??
-            new LocalizedCommandErrorMessageProvider(
-                messageResources: null,
-                _localization),
-            _errorWriterFactory(serviceProvider));
+    private Func<IServiceProvider?, ICommandErrorHandler> CreateErrorHandlerFactory() =>
+        serviceProvider =>
+        {
+            var context = new CommandErrorHandlerContext(
+                serviceProvider,
+                _errorMessageProviderFactory?.Invoke(serviceProvider) ??
+                new LocalizedCommandErrorMessageProvider(
+                    messageResources: null,
+                    _localization),
+                _errorWriterFactory(serviceProvider),
+                _localization);
+
+            return _errorHandlerFactory is null
+                ? context.DefaultHandler
+                : _errorHandlerFactory(context);
+        };
 
     private static void ValidateCommandTree(CommandNode parent)
     {
@@ -762,11 +773,11 @@ public sealed class ConsoleAppBuilder
         where TExitCode : struct, Enum =>
         Convert.ToInt32(await exitCode.ConfigureAwait(false), CultureInfo.InvariantCulture);
 
-    private static THelpProvider ResolveHelpProvider<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpProvider>(
+    private static THelpRenderer ResolveHelpRenderer<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THelpRenderer>(
         IServiceProvider? serviceProvider)
-        where THelpProvider : class =>
-        ServiceResolver.Resolve<THelpProvider>(serviceProvider, "help provider");
+        where THelpRenderer : class =>
+        ServiceResolver.Resolve<THelpRenderer>(serviceProvider, "help renderer");
 
     private static THandler ResolveErrorHandler<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] THandler>(

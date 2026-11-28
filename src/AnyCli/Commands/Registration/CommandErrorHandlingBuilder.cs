@@ -39,6 +39,22 @@ public sealed class CommandErrorHandlingBuilder
     }
 
     /// <summary>
+    /// Registers the factory used to create the command-line error handler.
+    /// </summary>
+    /// <param name="factory">The factory that creates the error handler.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="factory"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandErrorHandlingBuilder UseHandler(
+        Func<CommandErrorHandlerContext, ICommandErrorHandler> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        _builder.UseErrorHandlerCore(factory);
+        return this;
+    }
+
+    /// <summary>
     /// Registers the provider used to create command-line error messages.
     /// </summary>
     /// <typeparam name="TProvider">The message provider type.</typeparam>
@@ -52,6 +68,21 @@ public sealed class CommandErrorHandlingBuilder
         where TProvider : class, ICommandErrorMessageProvider
     {
         _builder.UseErrorMessageProviderCore<TProvider>();
+        return this;
+    }
+
+    /// <summary>
+    /// Uses the specified command-line error message provider.
+    /// </summary>
+    /// <param name="provider">The message provider.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="provider"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandErrorHandlingBuilder UseMessageProvider(ICommandErrorMessageProvider provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        _builder.UseErrorMessageProviderCore(provider);
         return this;
     }
 
@@ -70,24 +101,6 @@ public sealed class CommandErrorHandlingBuilder
     {
         ArgumentNullException.ThrowIfNull(messageResources);
         _builder.UseLocalizedErrorMessageProviderCore(messageResources);
-        return this;
-    }
-
-    /// <summary>
-    /// Uses the localized error message provider with resources created by a factory.
-    /// </summary>
-    /// <param name="messageResourcesFactory">
-    /// The factory that creates message resource managers, in priority order.
-    /// </param>
-    /// <returns>The current builder.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="messageResourcesFactory"/> is <see langword="null"/>.
-    /// </exception>
-    public CommandErrorHandlingBuilder UseLocalizedMessageProvider(
-        Func<IServiceProvider?, IEnumerable<ResourceManager>> messageResourcesFactory)
-    {
-        ArgumentNullException.ThrowIfNull(messageResourcesFactory);
-        _builder.UseLocalizedErrorMessageProviderCore(messageResourcesFactory);
         return this;
     }
 
@@ -132,18 +145,17 @@ public sealed class CommandErrorHandlingBuilder
     }
 
     /// <summary>
-    /// Registers the factory used to create the writer for command-line error messages.
+    /// Uses the specified command-line error writer.
     /// </summary>
-    /// <param name="factory">The factory that creates the error writer.</param>
+    /// <param name="writer">The error writer.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="factory"/> is <see langword="null"/>.
+    /// <paramref name="writer"/> is <see langword="null"/>.
     /// </exception>
-    public CommandErrorHandlingBuilder UseWriter(
-        Func<IServiceProvider?, ICommandErrorWriter> factory)
+    public CommandErrorHandlingBuilder UseWriter(ICommandErrorWriter writer)
     {
-        ArgumentNullException.ThrowIfNull(factory);
-        _builder.UseErrorWriterCore(factory);
+        ArgumentNullException.ThrowIfNull(writer);
+        _builder.UseErrorWriterCore(writer);
         return this;
     }
 
@@ -169,6 +181,25 @@ public sealed class CommandErrorHandlingBuilder
         UseExitCode(Convert.ToInt32(exitCode, CultureInfo.InvariantCulture));
 
     /// <summary>
+    /// Sets the provider used to choose a typed exit code after a command-line error is handled.
+    /// </summary>
+    /// <typeparam name="TExitCode">The exit code enum type.</typeparam>
+    /// <param name="exitCodeProvider">The exit code provider.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="exitCodeProvider"/> is <see langword="null"/>.
+    /// </exception>
+    public CommandErrorHandlingBuilder UseExitCode<TExitCode>(
+        Func<CommandError, TExitCode> exitCodeProvider)
+        where TExitCode : struct, Enum
+    {
+        ArgumentNullException.ThrowIfNull(exitCodeProvider);
+        _builder.SetErrorExitCodeProvider(error =>
+            Convert.ToInt32(exitCodeProvider(error), CultureInfo.InvariantCulture));
+        return this;
+    }
+
+    /// <summary>
     /// Sets the provider used to choose the exit code after a command-line error is handled.
     /// </summary>
     /// <param name="exitCodeProvider">The exit code provider.</param>
@@ -177,7 +208,7 @@ public sealed class CommandErrorHandlingBuilder
     /// <paramref name="exitCodeProvider"/> is <see langword="null"/>.
     /// </exception>
     public CommandErrorHandlingBuilder UseExitCode(
-        Func<CommandErrorContext, int> exitCodeProvider)
+        Func<CommandError, int> exitCodeProvider)
     {
         ArgumentNullException.ThrowIfNull(exitCodeProvider);
         _builder.SetErrorExitCodeProvider(exitCodeProvider);

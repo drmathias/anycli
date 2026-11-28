@@ -14,35 +14,29 @@ dotnet add package AnyCli.SpectreConsole
 
 Use the `AnyCli.SpectreConsole` namespace for the adapter, providers, writers, and options. For exact members and signatures, use the API Reference in the top navigation.
 
-## What the adapter adds
+## Adapter surface
 
-The adapter connects AnyCLI's console abstractions to Spectre.Console:
+The adapter provides:
 
 - `context.AnsiConsole.Output` and `context.AnsiConsole.Error` on command contexts
 - `context.AnsiConsole.Output` on help contexts
 - `context.AnsiConsole.Error` on command error contexts
-- `UseSpectreHelp` for styled help through `SpectreHelpProvider`
-- `UseSpectreErrors` for styled errors through `SpectreCommandErrorWriter`
+- `UseSpectreHelpRenderer` for styled help through `SpectreHelpRenderer`
+- `UseSpectreErrorWriter` for styled errors through `SpectreCommandErrorWriter`
 
-The ANSI consoles are created from the existing output writers and cached per context. Raw writes through `context.Console.Output` remain available and can be mixed with Spectre output.
+ANSI consoles are created from the existing output writers and cached per context. Raw writes through `context.Console.Output` remain available and can be mixed with Spectre output.
 
-## What it does not replace
+## Configuration boundary
 
-The adapter is a presentation layer. It does not replace:
+`UseSpectreHelpRenderer` uses the shared `IHelpTextProvider` and `IHelpValueFormatter` configured on `ConfigureHelp`. Headings, descriptions, and default values therefore behave the same way as with the default renderer.
 
-- the help text provider that supplies headings, descriptions, and localization
-- the help value formatter that displays fallback defaults
-- the error message provider that turns structured errors into text
-- the error exit-code configuration
-- command registration or parameter binding
-
-`UseSpectreHelp` uses the shared `IHelpTextProvider` and `IHelpValueFormatter` configured on `ConfigureHelp`, so headings, descriptions, and default values work the same way as the default provider. `UseSpectreErrors` replaces only the writer; the message provider and exit code remain unchanged.
+`UseSpectreErrorWriter` replaces only the error writer. The error message provider and exit code remain configured through `ConfigureErrorHandling`.
 
 ## Help behavior
 
-`SpectreHelpOptions` controls only Spectre-specific styles. Unless overridden, help uses aqua headings, grey option placeholders, white command placeholders, and medium-purple argument syntax. Usage lines, commands, options, and descriptions use plain styles by default.
+`SpectreHelpOptions` controls Spectre-specific styles. Unless overridden, help uses aqua headings, grey option placeholders, white command placeholders, and medium-purple argument syntax. Usage lines, commands, options, and descriptions use plain styles by default.
 
-Help rendering only uses the output stream. The underlying help context also exposes an error console because it shares the console-writer abstraction, but that stream is not part of the help pipeline.
+Help rendering uses only the output stream. The underlying help context also exposes an error console because it shares the console-writer abstraction, but that stream is not part of the help pipeline.
 
 ## Error behavior
 
@@ -59,12 +53,14 @@ Use `SpectreConsoleOptions.ForTesting` when asserting rendered output. The adapt
 ## API reference
 
 - [`SpectreConsoleAdapter`](xref:AnyCli.SpectreConsole.SpectreConsoleAdapter)
-- [`SpectreHelpProvider`](xref:AnyCli.SpectreConsole.SpectreHelpProvider), [`SpectreHelpOptions`](xref:AnyCli.SpectreConsole.SpectreHelpOptions)
+- [`SpectreHelpRenderer`](xref:AnyCli.SpectreConsole.SpectreHelpRenderer), [`SpectreHelpOptions`](xref:AnyCli.SpectreConsole.SpectreHelpOptions)
 - [`SpectreCommandErrorWriter`](xref:AnyCli.SpectreConsole.SpectreCommandErrorWriter), [`SpectreErrorOptions`](xref:AnyCli.SpectreConsole.SpectreErrorOptions)
 - [`SpectreConsoleOptions`](xref:AnyCli.SpectreConsole.SpectreConsoleOptions)
 - [`IAnsiConsoleWriter`](xref:AnyCli.SpectreConsole.IAnsiConsoleWriter), [`IAnsiConsoleOutputWriter`](xref:AnyCli.SpectreConsole.IAnsiConsoleOutputWriter), [`IAnsiConsoleErrorWriter`](xref:AnyCli.SpectreConsole.IAnsiConsoleErrorWriter)
 
 ## Related
 
-- [The Spectre.Console adapter](../explanation/spectre-adapter.md)
-- [Help and error pipeline reference](help-and-error-pipeline.md)
+- [Help reference](help.md)
+- [Errors reference](errors.md)
+- [Understanding help and error handling](../explanation/understanding-help-and-errors.md)
+- [Styled output with Spectre.Console](../getting-started/styled-output-with-spectreconsole.md)

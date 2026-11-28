@@ -12,15 +12,15 @@ namespace AnyCli.SpectreConsole;
 public static class HelpConfigurationBuilderExtensions
 {
     /// <summary>
-    /// Uses the default Spectre.Console help provider.
+    /// Uses the default Spectre.Console help renderer.
     /// </summary>
     /// <param name="help">The help configuration builder.</param>
-    /// <param name="configure">An optional callback for configuring the provider.</param>
+    /// <param name="configure">An optional callback for configuring the renderer.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="help"/> is <see langword="null"/>.
     /// </exception>
-    public static HelpConfigurationBuilder UseSpectreHelp(
+    public static HelpConfigurationBuilder UseSpectreHelpRenderer(
         this HelpConfigurationBuilder help,
         Action<SpectreHelpOptions>? configure = null)
     {
@@ -29,7 +29,7 @@ public static class HelpConfigurationBuilderExtensions
         var options = new SpectreHelpOptions();
         configure?.Invoke(options);
 
-        return help.UseProvider(context => new SpectreHelpProvider(
+        return help.UseRenderer(context => new SpectreHelpRenderer(
             context.TextProvider,
             context.ValueFormatter,
             options));

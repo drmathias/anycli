@@ -7,7 +7,7 @@ namespace AnyCli.Help;
 /// <summary>
 /// Writes help output for the application or a single command.
 /// </summary>
-public interface IHelpProvider
+public interface IHelpRenderer
 {
     /// <summary>
     /// Writes root help output.

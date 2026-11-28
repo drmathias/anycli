@@ -48,7 +48,7 @@ AnyCLI is built around a deliberate balance between performance and utility. Com
 
 It was created because the other available packages were either too verbose, too opinionated, or simply lacking in features.
 
-With AnyCLI, every major behavior is extensible. The help provider, error handler, message provider, console writer, parameter parsers, interceptors, and service resolution can be replaced to fit the application.
+With AnyCLI, every major behavior is extensible. The help renderer, error handler, message provider, console writer, parameter parsers, interceptors, and service resolution can be replaced to fit the application.
 
 AnyCLI is a good fit for:
 

@@ -36,9 +36,9 @@ var app = ConsoleAppBuilder.Create()
         .UseLocalizedTextProvider(
             "TodoCli.HelpDescriptions",
             typeof(JsonTodoStore).Assembly)
-        .UseSpectreHelp())
+        .UseSpectreHelpRenderer())
     .ConfigureErrorHandling(errors => errors
-        .UseSpectreErrors()
+        .UseSpectreErrorWriter()
         .UseExitCode(TodoExitCode.CommandLineError))
     .ConfigureCommands<TodoExitCode>(commands => commands
         .AddAsyncCommand<ListCommand, ListParameters>(

@@ -284,7 +284,7 @@ public class GlobalOptionTests
     {
         var app = ConsoleAppBuilder.Create()
             .AddGlobalOptions<TestGlobalOptions>()
-            .ConfigureHelp(help => help.UseProvider<GlobalHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<GlobalHelpRenderer>())
             .ConfigureCommands(commands => commands.AddCommand<GlobalEchoCommand, TestGlobalEchoParameters>("run"))
             .Build();
 
@@ -300,7 +300,7 @@ public class GlobalOptionTests
     {
         var app = ConsoleAppBuilder.Create()
             .AddGlobalOptions<RequiredGlobalOptions>()
-            .ConfigureHelp(help => help.UseProvider<GlobalHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<GlobalHelpRenderer>())
             .ConfigureCommands(commands => commands.AddCommand<RequiredEchoCommand, RequiredEchoParameters>("run"))
             .Build();
 
@@ -355,7 +355,7 @@ public class GlobalOptionTests
         {
             _ = ConsoleAppBuilder.Create()
                 .AddGlobalOptions<BuiltInConflictGlobalOptions>()
-                .ConfigureHelp(help => help.UseProvider<GlobalHelpProvider>())
+                .ConfigureHelp(help => help.UseRenderer<GlobalHelpRenderer>())
                 .Build();
         }
         catch (InvalidOperationException ex)
@@ -548,7 +548,7 @@ public class GlobalOptionTests
         }
     }
 
-    private sealed class GlobalHelpProvider : IHelpProvider
+    private sealed class GlobalHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,

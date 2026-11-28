@@ -58,7 +58,7 @@ public class NestedCommandTests
                     group.AddCommand<NestedPathCommand>("add", "Add a remote");
                 });
             })
-            .ConfigureHelp(help => help.UseProvider<TreeHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<TreeHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["--help"]);
@@ -81,7 +81,7 @@ public class NestedCommandTests
                     group.AddCommand<NestedPathCommand>("remove", "Remove a remote");
                 });
             })
-            .ConfigureHelp(help => help.UseProvider<TreeHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<TreeHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["remote", "--help"]);
@@ -102,7 +102,7 @@ public class NestedCommandTests
                     group.AddCommand<NestedPathCommand>("add", "Add a remote");
                 });
             })
-            .ConfigureHelp(help => help.UseProvider<TreeHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<TreeHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["remote", "add", "--help"]);
@@ -255,7 +255,7 @@ public class NestedCommandTests
                     "Manage remotes",
                     group => group.AddCommand<NestedPathCommand>("add", "Add a remote"));
             })
-            .ConfigureHelp(help => help.UseProvider<ExecutableGroupHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<ExecutableGroupHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["remote", "--help"]);
@@ -376,7 +376,7 @@ public class NestedCommandTests
         public int Execute(CommandContext context, ExecutableGroupWithArgumentParameters parameters) => 0;
     }
 
-    private sealed class ExecutableGroupHelpProvider : IHelpProvider
+    private sealed class ExecutableGroupHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,
@@ -398,7 +398,7 @@ public class NestedCommandTests
         }
     }
 
-    private sealed class TreeHelpProvider : IHelpProvider
+    private sealed class TreeHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,

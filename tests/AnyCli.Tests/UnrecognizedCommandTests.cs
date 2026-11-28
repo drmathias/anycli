@@ -61,13 +61,32 @@ public class UnrecognizedCommandTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureCommands(_ => { })
-            .ConfigureErrorHandling(errors => errors.UseExitCode(context =>
-                context.Error is UnknownCommandError ? 42 : 2))
+            .ConfigureErrorHandling(errors => errors.UseExitCode(error =>
+                error is UnknownCommandError ? 42 : 2))
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
 
         await Assert.That(result.ExitCode).IsEqualTo(42);
+        await Assert.That(result.Output).IsEmpty();
+        await Assert.That(result.Error).Contains("Unknown command");
+    }
+
+    [Test]
+    public async Task ExitCodeSelector_CanReturnTypedExitCode()
+    {
+        var app = ConsoleAppBuilder.Create()
+            .WithName("anycli")
+            .ConfigureCommands(_ => { })
+            .ConfigureErrorHandling(errors => errors.UseExitCode(error =>
+                error is UnknownCommandError
+                    ? UnrecognizedExitCode.UnknownCommand
+                    : UnrecognizedExitCode.CommandLineError))
+            .Build();
+
+        var result = await TestAppHarness.RunAsync(app, ["nope"]);
+
+        await Assert.That(result.ExitCode).IsEqualTo((int)UnrecognizedExitCode.UnknownCommand);
         await Assert.That(result.Output).IsEmpty();
         await Assert.That(result.Error).Contains("Unknown command");
     }
@@ -179,5 +198,6 @@ public class UnrecognizedCommandTests
 
 public enum UnrecognizedExitCode
 {
+    CommandLineError = 2,
     UnknownCommand = 9,
 }

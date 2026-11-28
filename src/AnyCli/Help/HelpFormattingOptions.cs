@@ -10,12 +10,12 @@ using System.Resources;
 namespace AnyCli.Help;
 
 /// <summary>
-/// Configures formatting services used by help providers.
+/// Configures formatting services used by help renderers.
 /// </summary>
 internal sealed class HelpFormattingOptions
 {
-    private Func<HelpProviderContext, IHelpTextProvider>? _textProviderFactory;
-    private Func<HelpProviderContext, IHelpValueFormatter>? _valueFormatterFactory;
+    private Func<HelpRendererContext, IHelpTextProvider>? _textProviderFactory;
+    private Func<HelpRendererContext, IHelpValueFormatter>? _valueFormatterFactory;
 
     /// <summary>
     /// Uses the specified help text provider type.
@@ -31,6 +31,18 @@ internal sealed class HelpFormattingOptions
     }
 
     /// <summary>
+    /// Uses the specified help text provider.
+    /// </summary>
+    /// <param name="textProvider">The help text provider.</param>
+    /// <returns>The current options.</returns>
+    public HelpFormattingOptions UseTextProvider(IHelpTextProvider textProvider)
+    {
+        ArgumentNullException.ThrowIfNull(textProvider);
+        _textProviderFactory = _ => textProvider;
+        return this;
+    }
+
+    /// <summary>
     /// Uses the localized help text provider with the specified description resources.
     /// </summary>
     /// <param name="descriptionResources">The resource managers used to resolve descriptions.</param>
@@ -41,21 +53,6 @@ internal sealed class HelpFormattingOptions
         ArgumentNullException.ThrowIfNull(descriptionResources);
         _textProviderFactory = context => new LocalizedHelpTextProvider(
             descriptionResources,
-            context.Localization);
-        return this;
-    }
-
-    /// <summary>
-    /// Uses the localized help text provider with resources created by a factory.
-    /// </summary>
-    /// <param name="descriptionResourcesFactory">The resource manager factory.</param>
-    /// <returns>The current options.</returns>
-    public HelpFormattingOptions UseLocalizedTextProvider(
-        Func<IServiceProvider?, IEnumerable<ResourceManager>> descriptionResourcesFactory)
-    {
-        ArgumentNullException.ThrowIfNull(descriptionResourcesFactory);
-        _textProviderFactory = context => new LocalizedHelpTextProvider(
-            descriptionResourcesFactory(context.ServiceProvider),
             context.Localization);
         return this;
     }
@@ -103,24 +100,11 @@ internal sealed class HelpFormattingOptions
     }
 
     /// <summary>
-    /// Uses a factory to create the default value formatter.
-    /// </summary>
-    /// <param name="factory">The formatter factory.</param>
-    /// <returns>The current options.</returns>
-    public HelpFormattingOptions UseValueFormatter(
-        Func<IServiceProvider?, IHelpValueFormatter> factory)
-    {
-        ArgumentNullException.ThrowIfNull(factory);
-        _valueFormatterFactory = context => factory(context.ServiceProvider);
-        return this;
-    }
-
-    /// <summary>
     /// Creates the configured help text provider.
     /// </summary>
-    /// <param name="context">The help provider context.</param>
+    /// <param name="context">The help renderer context.</param>
     /// <returns>The help text provider.</returns>
-    internal IHelpTextProvider CreateTextProvider(HelpProviderContext context)
+    internal IHelpTextProvider CreateTextProvider(HelpRendererContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         return _textProviderFactory?.Invoke(context) ?? context.TextProvider;
@@ -129,9 +113,9 @@ internal sealed class HelpFormattingOptions
     /// <summary>
     /// Creates the configured default value formatter.
     /// </summary>
-    /// <param name="context">The help provider context.</param>
+    /// <param name="context">The help renderer context.</param>
     /// <returns>The default value formatter.</returns>
-    internal IHelpValueFormatter CreateValueFormatter(HelpProviderContext context)
+    internal IHelpValueFormatter CreateValueFormatter(HelpRendererContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         return _valueFormatterFactory?.Invoke(context) ?? context.ValueFormatter;

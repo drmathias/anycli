@@ -194,7 +194,7 @@ public class InterceptorTests
         var app = ConsoleAppBuilder.Create()
             .WithVersion("1.0.0")
             .ConfigureCommands(commands => commands.AddCommand<OutputCommand>("run"))
-            .ConfigureHelp(help => help.UseProvider<NoopHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<NoopHelpRenderer>())
             .AddInterceptor<MarkerInterceptor>()
             .Build();
 
@@ -429,7 +429,7 @@ public class InterceptorTests
         }
     }
 
-    private sealed class NoopHelpProvider : IHelpProvider
+    private sealed class NoopHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,

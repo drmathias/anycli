@@ -9,7 +9,7 @@ namespace AnyCli.Tests;
 public class HelpLocalizationTests
 {
     [Test]
-    public async Task DefaultHelpProvider_IsUsedWithoutConfiguration()
+    public async Task DefaultHelpRenderer_IsUsedWithoutConfiguration()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -45,7 +45,7 @@ public class HelpLocalizationTests
     }
 
     [Test]
-    public async Task DefaultHelpProvider_LocalizesSectionTitles()
+    public async Task DefaultHelpRenderer_LocalizesSectionTitles()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")

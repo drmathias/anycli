@@ -31,9 +31,9 @@ public static class TodoApp
             .UseServiceProvider(provider)
             .WithName("todo")
             .ConfigureHelp(help => help
-                .UseSpectreHelp())
+                .UseSpectreHelpRenderer())
             .ConfigureErrorHandling(errors => errors
-                .UseSpectreErrors()
+                .UseSpectreErrorWriter()
                 .UseExitCode(TodoExitCode.CommandLineError))
             .ConfigureCommands<TodoExitCode>(commands => commands
                 .AddAsyncCommand<ListCommand, ListParameters>("list", "List all tasks")

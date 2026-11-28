@@ -49,11 +49,11 @@ public class SpectreConsoleAdapterTests
     }
 
     [Test]
-    public async Task HelpProvider_WritesToAnsiConsole()
+    public async Task HelpRenderer_WritesToAnsiConsole()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
-            .ConfigureHelp(help => help.UseProvider<AnsiHelpProvider>())
+            .ConfigureHelp(help => help.UseRenderer<AnsiHelpRenderer>())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["--help"]);
@@ -70,7 +70,7 @@ public class SpectreConsoleAdapterTests
             .WithName("anycli")
             .ConfigureCommands(_ => { })
             .ConfigureErrorHandling(errors => errors
-                .UseSpectreErrors())
+                .UseSpectreErrorWriter())
             .Build();
 
         var result = await TestAppHarness.RunAsync(app, ["nope"]);
@@ -145,7 +145,7 @@ public class SpectreConsoleAdapterTests
         }
     }
 
-    private sealed class AnsiHelpProvider : IHelpProvider
+    private sealed class AnsiHelpRenderer : IHelpRenderer
     {
         public ValueTask WriteRootHelpAsync(
             RootHelpContext context,

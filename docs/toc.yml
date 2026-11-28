@@ -27,16 +27,13 @@
       href: getting-started/localize-the-app.md
     - name: Publish and Distribute
       href: getting-started/publish-and-distribute.md
-- name: Explanation
-  expanded: true
-  items:
-    - name: Help, Errors, and Output
-      href: explanation/help-errors-and-output.md
-    - name: The Spectre.Console Adapter
-      href: explanation/spectre-adapter.md
 - name: How-to Guides
   expanded: true
   items:
+    - name: Customize Help Output
+      href: guides/customize-help-output.md
+    - name: Customize Command-line Errors
+      href: guides/customize-command-line-errors.md
     - name: Optional and Variadic Arguments
       href: guides/optional-and-variadic-arguments.md
     - name: Require an Option
@@ -105,7 +102,14 @@
           href: reference/diagnostics/anycli025.md
         - name: ANYCLI026 - Ambiguous parameter parser
           href: reference/diagnostics/anycli026.md
-    - name: Help and Error Pipeline
-      href: reference/help-and-error-pipeline.md
+    - name: Help
+      href: reference/help.md
+    - name: Errors
+      href: reference/errors.md
     - name: Spectre.Console Adapter
       href: reference/spectre-console-adapter.md
+- name: Explanation
+  expanded: true
+  items:
+    - name: Understanding Help and Error Handling
+      href: explanation/understanding-help-and-errors.md

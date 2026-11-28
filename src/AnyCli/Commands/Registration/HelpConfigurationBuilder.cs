@@ -34,6 +34,20 @@ public sealed class HelpConfigurationBuilder
     }
 
     /// <summary>
+    /// Uses the specified help text provider.
+    /// </summary>
+    /// <param name="textProvider">The help text provider.</param>
+    /// <returns>The current builder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="textProvider"/> is <see langword="null"/>.
+    /// </exception>
+    public HelpConfigurationBuilder UseTextProvider(IHelpTextProvider textProvider)
+    {
+        _builder.HelpFormatting.UseTextProvider(textProvider);
+        return this;
+    }
+
+    /// <summary>
     /// Uses the localized help text provider with the specified description resources.
     /// </summary>
     /// <param name="descriptionResources">The resource managers used to resolve descriptions.</param>
@@ -42,18 +56,6 @@ public sealed class HelpConfigurationBuilder
         params ResourceManager[] descriptionResources)
     {
         _builder.HelpFormatting.UseLocalizedTextProvider(descriptionResources);
-        return this;
-    }
-
-    /// <summary>
-    /// Uses the localized help text provider with resources created by a factory.
-    /// </summary>
-    /// <param name="descriptionResourcesFactory">The resource manager factory.</param>
-    /// <returns>The current builder.</returns>
-    public HelpConfigurationBuilder UseLocalizedTextProvider(
-        Func<IServiceProvider?, IEnumerable<ResourceManager>> descriptionResourcesFactory)
-    {
-        _builder.HelpFormatting.UseLocalizedTextProvider(descriptionResourcesFactory);
         return this;
     }
 
@@ -96,47 +98,35 @@ public sealed class HelpConfigurationBuilder
     }
 
     /// <summary>
-    /// Uses a factory to create the default value formatter.
+    /// Registers the renderer used for help output.
     /// </summary>
-    /// <param name="factory">The formatter factory.</param>
-    /// <returns>The current builder.</returns>
-    public HelpConfigurationBuilder UseValueFormatter(
-        Func<IServiceProvider?, IHelpValueFormatter> factory)
-    {
-        _builder.HelpFormatting.UseValueFormatter(factory);
-        return this;
-    }
-
-    /// <summary>
-    /// Registers the provider used to render help output.
-    /// </summary>
-    /// <typeparam name="TProvider">The help provider type.</typeparam>
+    /// <typeparam name="TRenderer">The help renderer type.</typeparam>
     /// <returns>The current builder.</returns>
     /// <remarks>
-    /// When the provider is registered in the configured service provider, that instance is used;
+    /// When the renderer is registered in the configured service provider, that instance is used;
     /// otherwise, a public parameterless constructor is used.
     /// </remarks>
-    public HelpConfigurationBuilder UseProvider<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TProvider>()
-        where TProvider : class, IHelpProvider
+    public HelpConfigurationBuilder UseRenderer<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TRenderer>()
+        where TRenderer : class, IHelpRenderer
     {
-        _builder.UseHelpProviderCore<TProvider>();
+        _builder.UseHelpRendererCore<TRenderer>();
         return this;
     }
 
     /// <summary>
-    /// Registers the factory used to create the help provider.
+    /// Registers the factory used to create the help renderer.
     /// </summary>
-    /// <param name="factory">The factory that creates the help provider.</param>
+    /// <param name="factory">The factory that creates the help renderer.</param>
     /// <returns>The current builder.</returns>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="factory"/> is <see langword="null"/>.
     /// </exception>
-    public HelpConfigurationBuilder UseProvider(
-        Func<HelpProviderContext, IHelpProvider> factory)
+    public HelpConfigurationBuilder UseRenderer(
+        Func<HelpRendererContext, IHelpRenderer> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        _builder.UseHelpProviderCore(factory);
+        _builder.UseHelpRendererCore(factory);
         return this;
     }
 }

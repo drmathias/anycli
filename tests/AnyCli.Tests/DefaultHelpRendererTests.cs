@@ -6,7 +6,7 @@ using AnyCli.Tests.Fixtures;
 
 namespace AnyCli.Tests;
 
-public class DefaultHelpProviderTests
+public class DefaultHelpRendererTests
 {
     private const string ExpectedRootHelp =
         """
