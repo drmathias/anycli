@@ -98,8 +98,7 @@ public class SpectreHelpTests
             {
                 if (useDescriptionResources)
                 {
-                    help.UseLocalizedTextProvider(
-                        Resources.HelpDescriptions.ResourceManager);
+                    help.UseLocalizedTextResources(Resources.HelpDescriptions.ResourceManager);
                 }
 
                 if (useSpectre) help.UseSpectreHelpRenderer();

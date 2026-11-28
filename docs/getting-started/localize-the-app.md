@@ -37,7 +37,7 @@ var app = ConsoleAppBuilder.Create()
     .AddGlobalOptions<TodoGlobalOptions>()
     .ConfigureLocalization(localization)
     .ConfigureHelp(help => help
-        .UseLocalizedTextProvider(
+        .UseLocalizedTextResources(
             new ResourceManager(
                 "TodoCli.HelpDescriptions",
                 typeof(JsonTodoStore).Assembly))

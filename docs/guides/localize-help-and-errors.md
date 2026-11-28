@@ -95,13 +95,13 @@ The base name is normally the project root namespace plus the resource file name
 
 ## Provide application help resources
 
-AnyCLI provides localized help headings and standard option descriptions without extra configuration. `UseLocalizedTextProvider` makes application resource managers available to help, including the resources used by `[HelpDescription]` and `[HelpDefaultValue]`.
+AnyCLI provides localized help headings and standard option descriptions without extra configuration. `UseLocalizedTextResources` makes application resource managers available to help, including the resources used by `[HelpDescription]` and `[HelpDefaultValue]`.
 
 Register the application resources even when you are not overriding built-in text:
 
 ```csharp
 .ConfigureHelp(help => help
-    .UseLocalizedTextProvider(Resources.HelpDescriptions.ResourceManager))
+    .UseLocalizedTextResources(Resources.HelpDescriptions.ResourceManager))
 ```
 
 Without this registration, resource keys such as `TitleDescription` cannot be resolved and the literal fallback text is used.
@@ -114,7 +114,7 @@ Register the override resources before the application resources so they take pr
 
 ```csharp
 .ConfigureHelp(help => help
-    .UseLocalizedTextProvider(
+    .UseLocalizedTextResources(
         Resources.HelpOverrides.ResourceManager,
         Resources.HelpDescriptions.ResourceManager))
 ```
@@ -125,7 +125,7 @@ If the application uses Spectre.Console, `UseSpectreHelpRenderer` uses the same 
 
 ```csharp
 .ConfigureHelp(help => help
-    .UseLocalizedTextProvider(
+    .UseLocalizedTextResources(
         Resources.HelpOverrides.ResourceManager,
         Resources.HelpDescriptions.ResourceManager)
     .UseSpectreHelpRenderer())
@@ -173,7 +173,7 @@ AnyCLI already provides localized command-line error messages. Put replacements 
 
 ```csharp
 .ConfigureErrorHandling(errors => errors
-    .UseLocalizedMessageProvider(Resources.ErrorOverrides.ResourceManager))
+    .UseLocalizedMessageResources(Resources.ErrorOverrides.ResourceManager))
 ```
 
 Keys correspond to `CommandErrorResourceKeys`, such as `UnknownCommand`, `UnknownOption`, or `MissingRequiredArgument`. Override resources are searched before the built-in messages.

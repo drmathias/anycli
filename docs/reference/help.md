@@ -50,7 +50,7 @@ A custom renderer factory receives `HelpRendererContext`, which contains:
 
 `IHelpValueFormatter` formats fallback default values such as enums and collections. The default is `DefaultHelpValueFormatter`.
 
-Use `ConfigureHelp` with `UseTextProvider`, `UseLocalizedTextProvider`, or `UseValueFormatter` to replace these services. Each leaf component supports type-based resolution through DI or a parameterless constructor, and an instance overload for a preconfigured component. The localized-resource overloads create a localized provider from resources.
+Use `ConfigureHelp` with `UseTextProvider`, `UseLocalizedTextResources`, or `UseValueFormatter` to replace these services. Each leaf component supports type-based resolution through DI or a parameterless constructor, and an instance overload for a preconfigured component. The localized-resource overloads create a localized provider from resources.
 
 Help renderers use a different rule: `UseRenderer<TRenderer>()` resolves through DI, while `UseRenderer(Func<HelpRendererContext, IHelpRenderer>)` receives the configured text provider, value formatter, localization, and service provider.
 

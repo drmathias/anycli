@@ -553,7 +553,7 @@ public sealed class ConsoleAppBuilder
         _errorMessageProviderFactory = _ => provider;
     }
 
-    internal void UseLocalizedErrorMessageProviderCore(
+    internal void UseLocalizedErrorMessageResourcesCore(
         IEnumerable<ResourceManager> messageResources)
     {
         _errorMessageProviderFactory = _ => new LocalizedCommandErrorMessageProvider(

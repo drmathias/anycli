@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Globalization;
+using System.Resources;
+
 using AnyCli.SpectreConsole;
 using AnyCli.Tests.Fixtures;
 using AnyCli.Tests.Helpers;
@@ -13,10 +16,10 @@ public class ErrorHandlingTests
     [Test]
     public async Task DefaultResources_ContainAllEnglishMessages()
     {
-        var resources = new System.Resources.ResourceManager(
+        var resources = new ResourceManager(
             "AnyCli.Errors.CommandErrorMessages",
             typeof(LocalizedCommandErrorMessageProvider).Assembly);
-        var english = System.Globalization.CultureInfo.GetCultureInfo("en");
+        var english = CultureInfo.GetCultureInfo("en");
 
         foreach (var key in new[]
         {
@@ -44,10 +47,10 @@ public class ErrorHandlingTests
     [Test]
     public async Task DefaultResources_FallBackToEnglishForUnknownCulture()
     {
-        var resources = new System.Resources.ResourceManager(
+        var resources = new ResourceManager(
             "AnyCli.Errors.CommandErrorMessages",
             typeof(LocalizedCommandErrorMessageProvider).Assembly);
-        var japanese = System.Globalization.CultureInfo.GetCultureInfo("ja-JP");
+        var japanese = CultureInfo.GetCultureInfo("ja-JP");
 
         var message = resources.GetString("UnknownOption", japanese);
 
@@ -57,7 +60,7 @@ public class ErrorHandlingTests
     [Test]
     public async Task DefaultResources_ContainTranslations()
     {
-        var resources = new System.Resources.ResourceManager(
+        var resources = new ResourceManager(
             "AnyCli.Errors.CommandErrorMessages",
             typeof(LocalizedCommandErrorMessageProvider).Assembly);
 
@@ -73,7 +76,7 @@ public class ErrorHandlingTests
 
         foreach (var (cultureName, expectedMessage) in expected)
         {
-            var culture = System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+            var culture = CultureInfo.GetCultureInfo(cultureName);
             var message = resources.GetString("UnknownOption", culture);
 
             await Assert.That(message).IsEqualTo(expectedMessage);
@@ -84,7 +87,7 @@ public class ErrorHandlingTests
     public async Task DefaultMessageProvider_UsesCultureSpecificMessage()
     {
         var provider = new FixedCultureMessageProvider(
-            System.Globalization.CultureInfo.GetCultureInfo("de"));
+            CultureInfo.GetCultureInfo("de"));
         using var error = new StringWriter();
         var console = new TextConsole(new StringReader(string.Empty), new StringWriter(), error);
         var context = new CommandErrorContext(
@@ -192,9 +195,9 @@ public class ErrorHandlingTests
     public async Task LocalizedErrorMessageProvider_LocalizesFallbackError()
     {
         var provider = new LocalizedCommandErrorMessageProvider(
-            localization: new AnyCli.Localization.LocalizationOptions
+            localization: new LocalizationOptions
             {
-                UICultureProvider = () => System.Globalization.CultureInfo.GetCultureInfo("fr"),
+                UICultureProvider = () => CultureInfo.GetCultureInfo("fr"),
             });
         using var error = new StringWriter();
         var console = new TextConsole(new StringReader(string.Empty), new StringWriter(), error);
@@ -215,8 +218,8 @@ public class ErrorHandlingTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureLocalization(LocalizationOptions.FromCulture("fr"))
-            .ConfigureErrorHandling(errors => errors.UseLocalizedMessageProvider(
-                AnyCli.Tests.Resources.ErrorMessages.ResourceManager))
+            .ConfigureErrorHandling(errors => errors.UseLocalizedMessageResources(
+                Resources.ErrorMessages.ResourceManager))
             .ConfigureCommands(commands => commands.AddCommand<NoOpCommand>("run"))
             .Build();
 
@@ -234,8 +237,8 @@ public class ErrorHandlingTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureLocalization(LocalizationOptions.FromCulture("fr"))
-            .ConfigureErrorHandling(errors => errors.UseLocalizedMessageProvider(
-                new System.Resources.ResourceManager(
+            .ConfigureErrorHandling(errors => errors.UseLocalizedMessageResources(
+                new ResourceManager(
                     "AnyCli.Tests.Resources.MissingErrorMessages",
                     typeof(ErrorHandlingTests).Assembly)))
             .ConfigureCommands(commands => commands.AddCommand<NoOpCommand>("run"))
@@ -366,10 +369,9 @@ public class ErrorHandlingTests
     }
 
     private sealed class FixedCultureMessageProvider(
-        System.Globalization.CultureInfo culture) : LocalizedCommandErrorMessageProvider
+        CultureInfo culture) : LocalizedCommandErrorMessageProvider
     {
-        protected override System.Globalization.CultureInfo GetUICulture() =>
-            culture;
+        protected override CultureInfo GetUICulture() => culture;
     }
 
     private sealed record CustomError : CommandError;

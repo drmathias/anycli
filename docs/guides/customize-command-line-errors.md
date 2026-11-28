@@ -10,13 +10,13 @@ Command-line errors are separate from exceptions thrown by command bodies. This 
 
 ## Change error messages
 
-The default message provider is localized. Put replacements for built-in messages in a separate `ErrorOverrides.resx` file and register it with `UseLocalizedMessageProvider`:
+The default message provider is localized. Put replacements for built-in messages in a separate `ErrorOverrides.resx` file and register it with `UseLocalizedMessageResources`:
 
 ```csharp
 var app = ConsoleAppBuilder.Create()
     .WithName("todo")
     .ConfigureErrorHandling(errors => errors
-        .UseLocalizedMessageProvider(Resources.ErrorOverrides.ResourceManager))
+        .UseLocalizedMessageResources(Resources.ErrorOverrides.ResourceManager))
     .ConfigureCommands(commands => commands
         .AddCommand<RunCommand, RunParameters>("run"))
     .Build();

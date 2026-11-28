@@ -95,11 +95,11 @@ public sealed class CommandErrorHandlingBuilder
     /// <exception cref="ArgumentNullException">
     /// <paramref name="messageResources"/> is <see langword="null"/>.
     /// </exception>
-    public CommandErrorHandlingBuilder UseLocalizedMessageProvider(
+    public CommandErrorHandlingBuilder UseLocalizedMessageResources(
         params ResourceManager[] messageResources)
     {
         ArgumentNullException.ThrowIfNull(messageResources);
-        _builder.UseLocalizedErrorMessageProviderCore(messageResources);
+        _builder.UseLocalizedErrorMessageResourcesCore(messageResources);
         return this;
     }
 

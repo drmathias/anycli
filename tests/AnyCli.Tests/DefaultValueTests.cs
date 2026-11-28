@@ -286,7 +286,7 @@ public class DefaultValueTests
             .WithName("anycli")
             .ConfigureLocalization(LocalizationOptions.FromCulture("en"))
             .ConfigureHelp(help => help
-                .UseLocalizedTextProvider(Resources.HelpDescriptions.ResourceManager))
+                .UseLocalizedTextResources(Resources.HelpDescriptions.ResourceManager))
             .ConfigureCommands(commands =>
                 commands.AddCommand<ProviderCommand, ProviderParameters>("provider"))
             .Build();
@@ -306,7 +306,7 @@ public class DefaultValueTests
             .WithName("anycli")
             .ConfigureLocalization(LocalizationOptions.FromCulture("es"))
             .ConfigureHelp(help => help
-                .UseLocalizedTextProvider(Resources.HelpDescriptions.ResourceManager))
+                .UseLocalizedTextResources(Resources.HelpDescriptions.ResourceManager))
             .ConfigureCommands(commands =>
                 commands.AddCommand<ProviderCommand, ProviderParameters>("provider"))
             .Build();
@@ -370,7 +370,7 @@ public class DefaultValueTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureLocalization(LocalizationOptions.FromCulture("en"))
-            .ConfigureHelp(help => help.UseLocalizedTextProvider()
+            .ConfigureHelp(help => help.UseLocalizedTextResources()
                 .UseValueFormatter<UpperCaseHelpValueFormatter>())
             .ConfigureCommands(commands =>
                 commands.AddCommand<DefaultOptionsCommand, DefaultOptionsParameters>("opts"))

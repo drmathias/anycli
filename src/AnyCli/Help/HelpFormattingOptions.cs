@@ -46,7 +46,7 @@ internal sealed class HelpFormattingOptions
     /// </summary>
     /// <param name="descriptionResources">The resource managers used to resolve descriptions.</param>
     /// <returns>The current options.</returns>
-    public HelpFormattingOptions UseLocalizedTextProvider(
+    public HelpFormattingOptions UseLocalizedTextResources(
         params ResourceManager[] descriptionResources)
     {
         ArgumentNullException.ThrowIfNull(descriptionResources);

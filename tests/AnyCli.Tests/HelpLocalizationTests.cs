@@ -71,7 +71,7 @@ public class HelpLocalizationTests
             .WithName("anycli")
             .ConfigureLocalization(LocalizationOptions.FromCulture("fr"))
             .ConfigureHelp(help => help
-                .UseLocalizedTextProvider(
+                .UseLocalizedTextResources(
                     Resources.HelpDescriptions.ResourceManager))
             .ConfigureCommands(commands => commands.AddCommand<ArgumentCommand, ArgumentParameters>("run"))
             .Build();
@@ -89,7 +89,7 @@ public class HelpLocalizationTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureHelp(help => help
-                .UseLocalizedTextProvider(
+                .UseLocalizedTextResources(
                     Resources.HelpDescriptions.ResourceManager))
             .ConfigureCommands(commands => commands.AddCommand<FallbackCommand, FallbackParameters>("run"))
             .Build();
@@ -123,7 +123,7 @@ public class HelpLocalizationTests
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
             .ConfigureHelp(help => help
-                .UseLocalizedTextProvider(
+                .UseLocalizedTextResources(
                     new ResourceManager(
                         "AnyCli.Tests.Resources.MissingHelpDescriptions",
                         typeof(HelpLocalizationTests).Assembly)))

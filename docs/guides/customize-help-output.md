@@ -24,13 +24,13 @@ Parameter descriptions use `[HelpDescription]`:
 public string DataFile { get; init; } = "";
 ```
 
-Use `UseLocalizedTextProvider` when descriptions come from resource files:
+Use `UseLocalizedTextResources` when descriptions come from resource files:
 
 ```csharp
 var app = ConsoleAppBuilder.Create()
     .WithName("todo")
     .ConfigureHelp(help => help
-        .UseLocalizedTextProvider(Resources.HelpDescriptions.ResourceManager))
+        .UseLocalizedTextResources(Resources.HelpDescriptions.ResourceManager))
     .ConfigureCommands(commands => commands
         .AddCommand<ListCommand, ListParameters>("list"))
     .Build();
@@ -40,7 +40,7 @@ If you need to replace built-in help headings or standard option descriptions, k
 
 ```csharp
 .ConfigureHelp(help => help
-    .UseLocalizedTextProvider(
+    .UseLocalizedTextResources(
         Resources.HelpOverrides.ResourceManager,
         Resources.HelpDescriptions.ResourceManager))
 ```

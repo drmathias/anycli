@@ -204,7 +204,7 @@ public class DefaultHelpRendererTests
             .WithVersion("1.0.0")
             .ConfigureLocalization(LocalizationOptions.FromCulture(culture))
             .ConfigureHelp(help => help
-                .UseLocalizedTextProvider(
+                .UseLocalizedTextResources(
                     Resources.HelpDescriptions.ResourceManager))
             .ConfigureCommands(commands =>
             {

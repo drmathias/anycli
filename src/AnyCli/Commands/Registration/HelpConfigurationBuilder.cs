@@ -51,10 +51,10 @@ public sealed class HelpConfigurationBuilder
     /// </summary>
     /// <param name="descriptionResources">The resource managers used to resolve descriptions.</param>
     /// <returns>The current builder.</returns>
-    public HelpConfigurationBuilder UseLocalizedTextProvider(
+    public HelpConfigurationBuilder UseLocalizedTextResources(
         params ResourceManager[] descriptionResources)
     {
-        _builder.HelpFormatting.UseLocalizedTextProvider(descriptionResources);
+        _builder.HelpFormatting.UseLocalizedTextResources(descriptionResources);
         return this;
     }
 
