@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-using System.ComponentModel;
-
 using AnyCli.Tests.Fixtures;
 
 namespace AnyCli.Tests;
@@ -65,7 +63,7 @@ public class HelpLocalizationTests
     }
 
     [Test]
-    public async Task ResourceDescription_UsesConfiguredResourceManager()
+    public async Task HelpDescription_UsesConfiguredResourceManager()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -84,7 +82,7 @@ public class HelpLocalizationTests
     }
 
     [Test]
-    public async Task ResourceDescription_UsesLiteralFallbackWhenKeyIsMissing()
+    public async Task HelpDescription_UsesLiteralFallbackWhenKeyIsMissing()
     {
         var app = ConsoleAppBuilder.Create()
             .WithName("anycli")
@@ -235,15 +233,13 @@ public class HelpLocalizationTests
 public sealed partial class ArgumentParameters
 {
     [Argument(0)]
-    [Description("Input file")]
-    [ResourceDescription("InputDescription")]
+    [HelpDescription("Input file", ResourceKey = "InputDescription")]
     public string Input { get; set; } = "";
 }
 
 public sealed partial class FallbackParameters
 {
     [Argument(0)]
-    [Description("Fallback input")]
-    [ResourceDescription("MissingDescription")]
+    [HelpDescription("Fallback input", ResourceKey = "MissingDescription")]
     public string Input { get; set; } = "";
 }

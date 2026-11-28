@@ -4,12 +4,12 @@ SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 SPDX-License-Identifier: MIT
 -->
 
-# ANYCLI022: Default value display on required parameter
+# ANYCLI022: Help default value on required parameter
 
 | Property | Value |
 | --- | --- |
 | Rule ID | `ANYCLI022` |
-| Title | Default value display on required parameter |
+| Title | Help default value on required parameter |
 | Category | `AnyCli` |
 | Diagnostic type | Source generator |
 | Enabled by default | Yes |
@@ -18,11 +18,11 @@ SPDX-License-Identifier: MIT
 
 ## Cause
 
-A required parameter has `DefaultValueDisplay` or `DefaultValueDisplayResource`.
+A required parameter has `HelpDefaultValue` metadata.
 
 ## Resolution
 
-The display metadata is ignored. Remove it or make the parameter optional.
+The help default value metadata is ignored. Remove it or make the parameter optional.
 
 ## Related
 

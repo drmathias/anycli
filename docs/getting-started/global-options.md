@@ -13,7 +13,7 @@ As it stands `todo` currently logs at a fixed `Information` level. In this step,
 Add the global options type to the project:
 
 ```csharp
-using System.ComponentModel;
+using AnyCli.Help;
 
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 public partial record TodoGlobalOptions
 {
     [Option("--log-level", "-l")]
-    [Description("Minimum log level")]
+    [HelpDescription("Minimum log level")]
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
 }
 ```

@@ -97,9 +97,9 @@
           href: reference/diagnostics/anycli019.md
         - name: ANYCLI020 - Invalid default value provider
           href: reference/diagnostics/anycli020.md
-        - name: ANYCLI022 - Default value display on required parameter
+        - name: ANYCLI022 - Help default value on required parameter
           href: reference/diagnostics/anycli022.md
-        - name: ANYCLI023 - Default value display without default value
+        - name: ANYCLI023 - Help default value without default value
           href: reference/diagnostics/anycli023.md
         - name: ANYCLI025 - Ambiguous default value provider
           href: reference/diagnostics/anycli025.md

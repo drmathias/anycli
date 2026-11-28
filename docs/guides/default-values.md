@@ -59,7 +59,7 @@ Use a provider when the default depends on services, configuration, the environm
 public sealed partial record SyncParameters
 {
     [Option("--data", DefaultValueProvider = typeof(DataFileDefaultProvider))]
-    [DefaultValueDisplay("$HOME/.config/anycli/tasks.json")]
+    [HelpDefaultValue("$HOME/.config/anycli/tasks.json")]
     public string DataFile { get; init; } = "";
 }
 
@@ -162,20 +162,18 @@ Formatting is configurable through `IHelpValueFormatter`:
 
 This formatter applies only when no explicit default display text is configured.
 
-Use display metadata to override the text or provide help for computed defaults:
+Use `[HelpDefaultValue]` to override the text or provide help for computed defaults:
 
 ```csharp
 [Option("--data")]
-[DefaultValueDisplay("tasks.json")]
-[DefaultValueDisplayResource("DataFileDefault")]
+[HelpDefaultValue("tasks.json", ResourceKey = "DataFileDefault")]
 public string DataFile { get; init; } = "tasks.json";
 ```
 
-- `[DefaultValueDisplay]` supplies literal fallback text.
-- `[DefaultValueDisplayResource]` supplies a localization resource key.
-- When both are present, the resource key is resolved first and the literal text is used as the fallback.
+- `[HelpDefaultValue]` supplies literal fallback text, a localization resource key, or both.
+- The resource key is resolved first; the literal text is used as the fallback.
 
-Default display metadata overrides any captured initializer value. It is help-only and does not affect binding or invoke a default value provider.
+`[HelpDefaultValue]` overrides any captured initializer value. It is help-only and does not affect binding or invoke a default value provider.
 
 ## Priority
 
@@ -191,8 +189,8 @@ When a parameter is omitted, the order is:
 The generator reports incorrect default configurations:
 
 - `ANYCLI020` — the provider type is invalid.
-- `ANYCLI022` — default display metadata on a required parameter is ignored.
-- `ANYCLI023` — default display metadata without a default source is ignored.
+- `ANYCLI022` — help default value metadata on a required parameter is ignored.
+- `ANYCLI023` — help default value metadata without a default source is ignored.
 - `ANYCLI025` — a provider implements both sync and async interfaces; the async provider is used.
 
 ## Related

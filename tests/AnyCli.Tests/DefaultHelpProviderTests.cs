@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-using System.ComponentModel;
-
 using AnyCli.Tests.Fixtures;
 
 namespace AnyCli.Tests;
@@ -247,20 +245,20 @@ public class DefaultHelpProviderTests
 public sealed partial class RunParameters
 {
     [Argument(0)]
-    [ResourceDescription("InputDescription")]
+    [HelpDescription(ResourceKey = "InputDescription")]
     public string Input { get; set; } = "";
 
     [Option("--count")]
-    [ResourceDescription("CountDescription")]
-    [DefaultValueDisplayResource("CountDefault")]
+    [HelpDescription(ResourceKey = "CountDescription")]
+    [HelpDefaultValue(ResourceKey = "CountDefault")]
     public int Count { get; set; } = 3;
 
     [Option("--mode")]
-    [ResourceDescription("ModeDescription")]
+    [HelpDescription(ResourceKey = "ModeDescription")]
     public OutputMode Mode { get; set; } = OutputMode.Text;
 
     [Option("--verbose")]
-    [ResourceDescription("VerboseDescription")]
+    [HelpDescription(ResourceKey = "VerboseDescription")]
     public bool Verbose { get; set; }
 }
 
@@ -273,10 +271,10 @@ public enum OutputMode
 public sealed partial class VariadicCopyParameters
 {
     [Argument(0)]
-    [Description("Source")]
+    [HelpDescription("Source")]
     public string Source { get; set; } = "";
 
     [VariadicArgument(1)]
-    [Description("Destinations")]
+    [HelpDescription("Destinations")]
     public string[] Destinations { get; set; } = [];
 }

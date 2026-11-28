@@ -30,7 +30,7 @@ The provider decides the layout and writes the result. `DefaultHelpProvider` is 
 
 Root and command help use different contexts. Both expose shared `Application` metadata and a `Console`. `CommandHelpContext` adds the selected command or command group. `Application` contains the application name, application-declared global options, framework-provided options, and the root command tree.
 
-Default value display metadata affects help output only. It does not change binding or invoke a default value provider. Built-in resource keys for help text are exposed by `HelpTextResourceKeys`.
+`[HelpDefaultValue]` metadata affects help output only. It does not change binding or invoke a default value provider. Built-in resource keys for help text are exposed by `HelpTextResourceKeys`.
 
 ## Error pipeline
 

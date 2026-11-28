@@ -106,16 +106,15 @@ Simple initializers are captured by the generator and shown in help output. Comp
 
 ### Default value display
 
-Use `[DefaultValueDisplay]` for literal help text and `[DefaultValueDisplayResource]` for a resource key:
+Use `[HelpDefaultValue]` with literal help text, a resource key, or both:
 
 ```csharp
 [Option("--data")]
-[DefaultValueDisplay("tasks.json")]
-[DefaultValueDisplayResource("DataFileDefault")]
+[HelpDefaultValue("tasks.json", ResourceKey = "DataFileDefault")]
 public string DataFile { get; init; } = "tasks.json";
 ```
 
-Display metadata affects help output only. It overrides captured initializer values and does not change binding behavior. It is ignored for required parameters and when no default source is configured.
+Display metadata affects help output only. It overrides captured initializer values and does not change binding behavior. It is ignored for required parameters and when no default source is configured. When a property overrides a base property, the nearest non-empty `[HelpDefaultValue]` attribute wins as a whole.
 
 ## Supported types
 
@@ -149,14 +148,14 @@ add "Write docs" --tag docs --tag release
 
 ## Descriptions
 
-Use `[Description]` for literal help text or `[ResourceDescription]` for a resource key. The description is shown in help output and can be localized through the configured text provider.
+Use `[HelpDescription]` with literal help text, a resource key, or both. The description is shown in help output and can be localized through the configured text provider. When a property overrides a base property, the nearest non-empty `[HelpDescription]` attribute wins as a whole.
 
 ## API reference
 
 - [`ArgumentAttribute`](xref:AnyCli.Parameters.Arguments.ArgumentAttribute), [`OptionalArgumentAttribute`](xref:AnyCli.Parameters.Arguments.OptionalArgumentAttribute), [`VariadicArgumentAttribute`](xref:AnyCli.Parameters.Arguments.VariadicArgumentAttribute)
 - [`OptionAttribute`](xref:AnyCli.Parameters.Options.OptionAttribute), [`RequiredOptionAttribute`](xref:AnyCli.Parameters.Options.RequiredOptionAttribute), [`GlobalOptionsAttribute`](xref:AnyCli.Parameters.Options.GlobalOptionsAttribute)
 - [`ArgumentAttributeBase`](xref:AnyCli.Parameters.Arguments.ArgumentAttributeBase), [`OptionAttributeBase`](xref:AnyCli.Parameters.Options.OptionAttributeBase)
-- [`DefaultValueDisplayAttribute`](xref:AnyCli.Help.DefaultValueDisplayAttribute), [`DefaultValueDisplayResourceAttribute`](xref:AnyCli.Help.DefaultValueDisplayResourceAttribute)
+- [`HelpDescriptionAttribute`](xref:AnyCli.Help.HelpDescriptionAttribute), [`HelpDefaultValueAttribute`](xref:AnyCli.Help.HelpDefaultValueAttribute)
 
 ## Related
 

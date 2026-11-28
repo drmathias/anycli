@@ -1,5 +1,3 @@
-using System.ComponentModel;
-
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 //
 // SPDX-License-Identifier: MIT
@@ -590,11 +588,11 @@ public class GlobalOptionTests
 public partial class TestGlobalOptions
 {
     [Option("--log-level", "-l")]
-    [Description("Log level")]
+    [HelpDescription("Log level")]
     public string LogLevel { get; set; } = "none";
 
     [Option("--tag")]
-    [Description("Tag")]
+    [HelpDescription("Tag")]
     public string[] Tags { get; set; } = [];
 
     [Option("--quiet")]

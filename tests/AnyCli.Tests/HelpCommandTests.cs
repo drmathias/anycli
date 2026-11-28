@@ -1,5 +1,3 @@
-using System.ComponentModel;
-
 // SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 //
 // SPDX-License-Identifier: MIT
@@ -331,7 +329,7 @@ public class HelpCommandTests
 public sealed partial class ThrowParameters
 {
     [Argument(0)]
-    [Description("Destination for HTTP traffic")]
+    [HelpDescription("Destination for HTTP traffic")]
     public string Upstream { get; set; } = "";
 }
 

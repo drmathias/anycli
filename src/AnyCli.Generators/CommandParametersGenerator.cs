@@ -22,11 +22,8 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
     private const string OptionAttributeName = "AnyCli.Parameters.Options.OptionAttribute";
     private const string RequiredOptionAttributeName = "AnyCli.Parameters.Options.RequiredOptionAttribute";
     private const string GlobalOptionsAttributeName = "AnyCli.Parameters.Options.GlobalOptionsAttribute";
-    private const string DescriptionAttributeName = "System.ComponentModel.DescriptionAttribute";
-    private const string ResourceDescriptionAttributeName = "AnyCli.Help.ResourceDescriptionAttribute";
-    private const string DefaultValueDisplayAttributeName = "AnyCli.Help.DefaultValueDisplayAttribute";
-    private const string DefaultValueDisplayResourceAttributeName =
-        "AnyCli.Help.DefaultValueDisplayResourceAttribute";
+    private const string HelpDescriptionAttributeName = "AnyCli.Help.HelpDescriptionAttribute";
+    private const string HelpDefaultValueAttributeName = "AnyCli.Help.HelpDefaultValueAttribute";
     private const string ParametersInterfaceName = "ICommandParameters`1";
     private const string GlobalOptionsInterfaceName = "IGlobalOptions`1";
     private const string DefaultValueProviderInterfaceName = "IDefaultValueProvider`1";
@@ -154,9 +151,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
     private static readonly DiagnosticDescriptor DefaultValueDisplayOnRequiredParameterDiagnostic = new(
         id: "ANYCLI022",
-        title: "Default value display on required parameter",
+        title: "Help default value on required parameter",
         messageFormat:
-            "Default value display metadata on required parameter property '{0}' is ignored",
+            "Help default value metadata on required parameter property '{0}' is ignored",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Warning,
         helpLinkUri: DiagnosticHelpLinks.For("ANYCLI022"),
@@ -164,9 +161,9 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
     private static readonly DiagnosticDescriptor DefaultValueDisplayWithoutDefaultDiagnostic = new(
         id: "ANYCLI023",
-        title: "Default value display without default value",
+        title: "Help default value without default value",
         messageFormat:
-            "Default value display metadata on parameter property '{0}' is ignored because no default value source is configured",
+            "Help default value metadata on parameter property '{0}' is ignored because no default value source is configured",
         category: "AnyCli",
         defaultSeverity: DiagnosticSeverity.Warning,
         helpLinkUri: DiagnosticHelpLinks.For("ANYCLI023"),
@@ -436,7 +433,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 argumentPositions.Add((position, location, property.Name));
 
                 var name = ToCamelCase(property.Name);
-                var helpText = GetHelpText(property);
+                var helpText = GetHelpDescription(property);
                 var optional = isOptionalArgument;
                 var minimumCount = 0;
                 var maximumCount = int.MaxValue;
@@ -560,6 +557,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
                 var defaultDisplay = GetDefaultValueDisplay(property);
                 if (!ShouldUseDefaultValueDisplay(
                         property,
+                        defaultDisplay,
                         isRequiredArgument,
                         hasDefaultSource,
                         diagnostics))
@@ -660,75 +658,67 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         }
     }
 
-    private static HelpTextModel GetHelpText(IPropertySymbol property)
-    {
-        string? text = null;
-        string? resourceKey = null;
+    private static HelpTextModel GetHelpDescription(IPropertySymbol property) =>
+        GetHelpText(property, HelpDescriptionAttributeName);
 
+    private static HelpTextModel GetDefaultValueDisplay(IPropertySymbol property) =>
+        GetHelpText(property, HelpDefaultValueAttributeName);
+
+    private static HelpTextModel GetHelpText(
+        IPropertySymbol property,
+        string attributeName)
+    {
         for (var current = property; current is not null; current = current.OverriddenProperty)
         {
             foreach (var attribute in current.GetAttributes())
             {
-                var attributeName = attribute.AttributeClass?.ToDisplayString();
-                if (attribute.ConstructorArguments.Length == 0 ||
-                    attribute.ConstructorArguments[0].Value is not string value)
+                if (attribute.AttributeClass?.ToDisplayString() != attributeName)
                 {
                     continue;
                 }
 
-                if (text is null && attributeName == DescriptionAttributeName)
+                var helpText = GetHelpText(attribute);
+                if (!helpText.IsEmpty)
                 {
-                    text = value;
+                    return helpText;
                 }
-                else if (resourceKey is null &&
-                         attributeName == ResourceDescriptionAttributeName &&
-                         !string.IsNullOrWhiteSpace(value))
-                {
-                    resourceKey = value;
-                }
-            }
-
-            if (text is not null && resourceKey is not null)
-            {
-                break;
             }
         }
 
-        return new HelpTextModel(text, resourceKey);
+        return new HelpTextModel(null, null);
     }
 
-    private static HelpTextModel GetDefaultValueDisplay(IPropertySymbol property)
+    private static HelpTextModel GetHelpText(AttributeData attribute)
     {
         string? text = null;
         string? resourceKey = null;
 
-        for (var current = property; current is not null; current = current.OverriddenProperty)
+        if (attribute.ConstructorArguments.Length > 0 &&
+            attribute.ConstructorArguments[0].Value is string constructorText)
         {
-            foreach (var attribute in current.GetAttributes())
-            {
-                var attributeName = attribute.AttributeClass?.ToDisplayString();
-                if (attribute.ConstructorArguments.Length == 0 ||
-                    attribute.ConstructorArguments[0].Value is not string value)
-                {
-                    continue;
-                }
+            text = constructorText;
+        }
 
-                if (text is null && attributeName == DefaultValueDisplayAttributeName)
-                {
-                    text = value;
-                }
-                else if (resourceKey is null &&
-                         attributeName == DefaultValueDisplayResourceAttributeName &&
-                         !string.IsNullOrWhiteSpace(value))
-                {
-                    resourceKey = value;
-                }
+        foreach (var argument in attribute.NamedArguments)
+        {
+            if (argument.Value.Value is not string stringValue)
+            {
+                continue;
             }
 
-            if (text is not null && resourceKey is not null)
+            if (argument.Key == "Text")
             {
-                break;
+                text = stringValue;
             }
+            else if (argument.Key == "ResourceKey")
+            {
+                resourceKey = stringValue;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(resourceKey))
+        {
+            resourceKey = null;
         }
 
         return new HelpTextModel(text, resourceKey);
@@ -736,23 +726,12 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
 
     private static bool ShouldUseDefaultValueDisplay(
         IPropertySymbol property,
+        HelpTextModel display,
         bool required,
         bool hasDefaultValue,
         List<DiagnosticModel> diagnostics)
     {
-        var hasDisplay = false;
-        for (var current = property; current is not null; current = current.OverriddenProperty)
-        {
-            if (current.GetAttributes().Any(attribute =>
-                    attribute.AttributeClass?.ToDisplayString() is
-                        DefaultValueDisplayAttributeName or DefaultValueDisplayResourceAttributeName))
-            {
-                hasDisplay = true;
-                break;
-            }
-        }
-
-        if (!hasDisplay)
+        if (display.IsEmpty)
         {
             return true;
         }
@@ -947,7 +926,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
             return null;
         }
 
-        var helpText = GetHelpText(property);
+        var helpText = GetHelpDescription(property);
         ITypeSymbol? parserType = null;
         foreach (var namedArgument in attribute.NamedArguments)
         {
@@ -1009,6 +988,7 @@ public sealed class CommandParametersGenerator : IIncrementalGenerator
         var defaultDisplay = GetDefaultValueDisplay(property);
         if (!ShouldUseDefaultValueDisplay(
                 property,
+                defaultDisplay,
                 required,
                 defaultFallbackExpression is not null ||
                 defaultProviderTypeName is not null ||

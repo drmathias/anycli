@@ -4,12 +4,12 @@ SPDX-FileCopyrightText: 2026 Adam Shirt <adamshirt@outlook.com>
 SPDX-License-Identifier: MIT
 -->
 
-# ANYCLI023: Default value display without default value
+# ANYCLI023: Help default value without default value
 
 | Property | Value |
 | --- | --- |
 | Rule ID | `ANYCLI023` |
-| Title | Default value display without default value |
+| Title | Help default value without default value |
 | Category | `AnyCli` |
 | Diagnostic type | Source generator |
 | Enabled by default | Yes |
@@ -18,11 +18,11 @@ SPDX-License-Identifier: MIT
 
 ## Cause
 
-A parameter has default display metadata but no default provider or property initializer.
+A parameter has `HelpDefaultValue` metadata but no default provider or property initializer.
 
 ## Resolution
 
-The display metadata is ignored. Add a default source or remove the metadata.
+The help default value metadata is ignored. Add a default source or remove the metadata.
 
 ## Related
 

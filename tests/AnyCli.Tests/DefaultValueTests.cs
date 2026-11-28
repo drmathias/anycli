@@ -638,15 +638,15 @@ public enum DefaultOutputMode
 public sealed partial class ProviderParameters
 {
     [Option("--name", DefaultValueProvider = typeof(ProviderNameDefault))]
-    [DefaultValueDisplay("provider")]
+    [HelpDefaultValue("provider")]
     public string Name { get; set; } = "initializer";
 
     [OptionalArgument(0, DefaultValueProvider = typeof(ProviderCountDefault))]
-    [DefaultValueDisplayResource("CountDescription")]
+    [HelpDefaultValue(ResourceKey = "CountDescription")]
     public int Count { get; set; } = 1;
 
     [VariadicArgument(1, DefaultValueProvider = typeof(ProviderTagsDefault))]
-    [DefaultValueDisplay("a,b")]
+    [HelpDefaultValue("a,b")]
     public string[] Tags { get; set; } = [];
 }
 

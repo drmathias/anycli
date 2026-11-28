@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-using System.ComponentModel;
 using System.Text.RegularExpressions;
 
 using AnyCli.SpectreConsole;
@@ -146,12 +145,11 @@ public class SpectreHelpTests
 public sealed partial class SpectreHelpParameters
 {
     [Argument(0)]
-    [Description("Input file")]
-    [ResourceDescription("InputDescription")]
+    [HelpDescription("Input file", ResourceKey = "InputDescription")]
     public string Input { get; set; } = "";
 
     [Option("--verbose")]
-    [Description("Verbose output")]
+    [HelpDescription("Verbose output")]
     public bool Verbose { get; set; }
 }
 
@@ -159,7 +157,7 @@ public sealed partial class SpectreHelpParameters
 public sealed partial class SpectreDefaultParameters
 {
     [Option("--data")]
-    [DefaultValueDisplay("tasks.json")]
+    [HelpDefaultValue("tasks.json")]
     public string Data { get; set; } = CreateComputedDefault();
 
     [OptionalArgument(0)]

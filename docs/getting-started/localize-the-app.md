@@ -93,19 +93,17 @@ The neutral resource file is the fallback when a key is missing from a translate
 
 ## Localize parameter descriptions
 
-Keep the literal `[Description]` text as a fallback and add a `[ResourceDescription]` key. Update `AddParameters` and `TodoGlobalOptions`:
+Combine the literal fallback text and a resource key in `[HelpDescription]`. Update `AddParameters` and `TodoGlobalOptions`:
 
 ```csharp
 public sealed partial record AddParameters : TodoGlobalOptions
 {
     [Argument(0)]
-    [Description("Task title")]
-    [ResourceDescription("TitleDescription")]
+    [HelpDescription("Task title", ResourceKey = "TitleDescription")]
     public required string Title { get; init; }
 
     [Option("--priority", "-p")]
-    [Description("Task priority")]
-    [ResourceDescription("PriorityDescription")]
+    [HelpDescription("Task priority", ResourceKey = "PriorityDescription")]
     public TodoPriority Priority { get; init; } = TodoPriority.Normal;
 }
 
@@ -113,13 +111,12 @@ public sealed partial record AddParameters : TodoGlobalOptions
 public partial record TodoGlobalOptions
 {
     [Option("--log-level", "-l")]
-    [Description("Minimum log level")]
-    [ResourceDescription("LogLevelDescription")]
+    [HelpDescription("Minimum log level", ResourceKey = "LogLevelDescription")]
     public LogLevel LogLevel { get; init; } = LogLevel.Information;
 }
 ```
 
-Command descriptions use `HelpText.FromResource(...)` in the registration above. Parameter descriptions use `[ResourceDescription]` because they are declared on the parameter properties.
+Command descriptions use `HelpText.FromResource(...)` in the registration above. Parameter descriptions use `[HelpDescription]` because they are declared on the parameter properties.
 
 ## Run the app
 

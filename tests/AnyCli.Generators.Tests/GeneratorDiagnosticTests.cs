@@ -264,7 +264,7 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System.Collections.Generic;
-            using System.ComponentModel;
+            using AnyCli.Help;
             using AnyCli.Parameters.Arguments;
             using AnyCli.Parameters.Options;
             using AnyCli.Parameters.Parsing;
@@ -653,7 +653,7 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using System.Collections.Generic;
-            using System.ComponentModel;
+            using AnyCli.Help;
             using AnyCli.Parameters.Arguments;
             using AnyCli.Parameters.Options;
             using AnyCli.Parameters.Parsing;
@@ -664,7 +664,7 @@ public class GeneratorDiagnosticTests
                 public string Config { get; set; } = "";
 
                 [Option("--output", "-o")]
-                [Description("Output path")]
+                [HelpDescription("Output path")]
                 public string Output { get; set; } = "";
 
                 [Option("--verbose", "-v")]
@@ -751,14 +751,14 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using System.ComponentModel;
+            using AnyCli.Help;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
             public sealed partial class AppOptions
             {
                 [Option("--log-level", "-l")]
-                [Description("Log level")]
+                [HelpDescription("Log level")]
                 public string LogLevel { get; set; } = "information";
 
                 [Option("--verbose")]
@@ -792,7 +792,7 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using System.ComponentModel;
+            using AnyCli.Help;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
@@ -821,7 +821,7 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using AnyCli.Parameters.Arguments;
-            using System.ComponentModel;
+            using AnyCli.Help;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
@@ -858,7 +858,7 @@ public class GeneratorDiagnosticTests
     {
         var result = RunGenerator(
             """
-            using System.ComponentModel;
+            using AnyCli.Help;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
@@ -883,7 +883,7 @@ public class GeneratorDiagnosticTests
         var result = RunGenerator(
             """
             using AnyCli.Parameters.Arguments;
-            using System.ComponentModel;
+            using AnyCli.Help;
             using AnyCli.Parameters.Options;
 
             [GlobalOptions]
@@ -928,7 +928,7 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task ReportsDefaultValueDisplayOnRequiredParameter()
+    public async Task ReportsHelpDefaultValueOnRequiredParameter()
     {
         var result = RunGenerator(
             """
@@ -938,7 +938,7 @@ public class GeneratorDiagnosticTests
             public sealed partial class BadParameters
             {
                 [RequiredOption("--name")]
-                [DefaultValueDisplay("value")]
+                [HelpDefaultValue("value")]
                 public string Name { get; set; } = "";
             }
             """);
@@ -953,7 +953,7 @@ public class GeneratorDiagnosticTests
     }
 
     [Test]
-    public async Task ReportsDefaultValueDisplayWithoutDefault()
+    public async Task ReportsHelpDefaultValueWithoutDefault()
     {
         var result = RunGenerator(
             """
@@ -963,7 +963,7 @@ public class GeneratorDiagnosticTests
             public sealed partial class BadParameters
             {
                 [Option("--name")]
-                [DefaultValueDisplay("value")]
+                [HelpDefaultValue("value")]
                 public string Name { get; set; }
             }
             """);
@@ -975,6 +975,66 @@ public class GeneratorDiagnosticTests
         await Assert.That(diagnostic.GetMessage()).Contains("Name");
         await Assert.That(result.GeneratedSourceCount).IsEqualTo(1);
         await Assert.That(generated).DoesNotContain("SetDefaultValueDisplay");
+    }
+
+    [Test]
+    public async Task GeneratesConsolidatedHelpMetadata()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Help;
+            using AnyCli.Parameters.Options;
+
+            public sealed partial class ValidParameters
+            {
+                [Option("--name")]
+                [HelpDescription("Name", ResourceKey = "NameDescription")]
+                [HelpDefaultValue("default", ResourceKey = "NameDefault")]
+                public string Name { get; set; } = "value";
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(generated).Contains(
+            "new global::AnyCli.Help.HelpText(\"Name\", \"NameDescription\")");
+        await Assert.That(generated).Contains(
+            "new global::AnyCli.Help.HelpText(\"default\", \"NameDefault\")");
+    }
+
+    [Test]
+    public async Task IgnoresEmptyConsolidatedHelpMetadata()
+    {
+        var result = RunGenerator(
+            """
+            using AnyCli.Help;
+            using AnyCli.Parameters.Options;
+
+            public sealed partial class ValidParameters
+            {
+                [Option("--name")]
+                [HelpDescription]
+                [HelpDefaultValue]
+                public string Name { get; set; } = "value";
+            }
+            """);
+
+        var errors = result.OutputCompilation
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToArray();
+        var generated = result.GeneratedSourceTexts.Single();
+
+        await Assert.That(result.GeneratorDiagnostics.Length).IsEqualTo(0);
+        await Assert.That(errors.Length).IsEqualTo(0);
+        await Assert.That(generated).DoesNotContain("SetDescription(");
+        await Assert.That(generated).DoesNotContain("SetDefaultValueDisplay(");
     }
 
     [Test]
@@ -1242,8 +1302,7 @@ public class GeneratorDiagnosticTests
             public sealed partial class ValidParameters
             {
                 [Option("--name", DefaultValueProvider = typeof(NameProvider))]
-                [DefaultValueDisplay("provider")]
-                [DefaultValueDisplayResource("NameDefault")]
+                [HelpDefaultValue("provider", ResourceKey = "NameDefault")]
                 public string Name { get; set; } = "";
             }
             """);
