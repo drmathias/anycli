@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Resources;
+
 using AnyCli.Tests.Fixtures;
 
 namespace AnyCli.Tests;
@@ -122,8 +124,9 @@ public class HelpLocalizationTests
             .WithName("anycli")
             .ConfigureHelp(help => help
                 .UseLocalizedTextProvider(
-                    "AnyCli.Tests.Resources.MissingHelpDescriptions",
-                    typeof(HelpLocalizationTests).Assembly))
+                    new ResourceManager(
+                        "AnyCli.Tests.Resources.MissingHelpDescriptions",
+                        typeof(HelpLocalizationTests).Assembly)))
             .ConfigureCommands(commands => commands.AddCommand<ArgumentCommand, ArgumentParameters>("run"))
             .Build();
 
@@ -136,7 +139,7 @@ public class HelpLocalizationTests
     [Test]
     public async Task HelpResources_ContainSectionTitleTranslations()
     {
-        var resources = new System.Resources.ResourceManager(
+        var resources = new ResourceManager(
             "AnyCli.Help.HelpMessages",
             typeof(LocalizedHelpTextProvider).Assembly);
 
@@ -162,7 +165,7 @@ public class HelpLocalizationTests
     [Test]
     public async Task HelpResources_ContainDefaultValueTranslations()
     {
-        var resources = new System.Resources.ResourceManager(
+        var resources = new ResourceManager(
             "AnyCli.Help.HelpMessages",
             typeof(LocalizedHelpTextProvider).Assembly);
 
@@ -189,7 +192,7 @@ public class HelpLocalizationTests
     [Test]
     public async Task HelpResources_ContainUsagePlaceholderTranslations()
     {
-        var resources = new System.Resources.ResourceManager(
+        var resources = new ResourceManager(
             "AnyCli.Help.HelpMessages",
             typeof(LocalizedHelpTextProvider).Assembly);
 

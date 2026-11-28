@@ -77,5 +77,6 @@ Cancellation is separate. Cancellation propagates through `RunAsync` and is not 
 ## Related
 
 - [Customize command-line errors](../guides/customize-command-line-errors.md)
+- [Localize help and errors](../guides/localize-help-and-errors.md)
 - [Help reference](help.md)
 - [Understanding help and error handling](../explanation/understanding-help-and-errors.md)

@@ -10,13 +10,13 @@ Command-line errors are separate from exceptions thrown by command bodies. This 
 
 ## Change error messages
 
-The default message provider is localized. Use `UseLocalizedMessageProvider` to add application-specific resource files:
+The default message provider is localized. Put replacements for built-in messages in a separate `ErrorOverrides.resx` file and register it with `UseLocalizedMessageProvider`:
 
 ```csharp
 var app = ConsoleAppBuilder.Create()
     .WithName("todo")
     .ConfigureErrorHandling(errors => errors
-        .UseLocalizedMessageProvider(Resources.ErrorMessages.ResourceManager))
+        .UseLocalizedMessageProvider(Resources.ErrorOverrides.ResourceManager))
     .ConfigureCommands(commands => commands
         .AddCommand<RunCommand, RunParameters>("run"))
     .Build();
@@ -161,6 +161,7 @@ Type-based registrations use DI or a parameterless constructor. Instance-based r
 ## Related
 
 - [Errors reference](../reference/errors.md)
+- [Localize help and errors](localize-help-and-errors.md)
 - [Help reference](../reference/help.md)
 - [Spectre.Console adapter reference](../reference/spectre-console-adapter.md)
 - [Understanding help and error handling](../explanation/understanding-help-and-errors.md)

@@ -73,6 +73,7 @@ Parameter descriptions use `[HelpDescription]`. Default value display text uses 
 ## Related
 
 - [Customize help output](../guides/customize-help-output.md)
+- [Localize help and errors](../guides/localize-help-and-errors.md)
 - [Errors reference](errors.md)
 - [Spectre.Console adapter reference](spectre-console-adapter.md)
 - [Understanding help and error handling](../explanation/understanding-help-and-errors.md)

@@ -4,7 +4,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Reflection;
 using System.Resources;
 
 namespace AnyCli.Commands.Registration;
@@ -102,29 +101,6 @@ public sealed class CommandErrorHandlingBuilder
         ArgumentNullException.ThrowIfNull(messageResources);
         _builder.UseLocalizedErrorMessageProviderCore(messageResources);
         return this;
-    }
-
-    /// <summary>
-    /// Uses the localized error message provider with the specified message resources.
-    /// </summary>
-    /// <param name="baseName">The resource base name.</param>
-    /// <param name="assembly">The assembly containing the resources.</param>
-    /// <returns>The current builder.</returns>
-    /// <exception cref="ArgumentException">
-    /// <paramref name="baseName"/> is <see langword="null"/>, empty, or whitespace.
-    /// </exception>
-    /// <exception cref="ArgumentNullException">
-    /// <paramref name="assembly"/> is <see langword="null"/>.
-    /// </exception>
-    public CommandErrorHandlingBuilder UseLocalizedMessageProvider(
-        string baseName,
-        Assembly assembly)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(baseName);
-        ArgumentNullException.ThrowIfNull(assembly);
-
-        var resourceManager = new ResourceManager(baseName, assembly);
-        return UseLocalizedMessageProvider(resourceManager);
     }
 
     /// <summary>

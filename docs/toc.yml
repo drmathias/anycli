@@ -30,10 +30,6 @@
 - name: How-to Guides
   expanded: true
   items:
-    - name: Customize Help Output
-      href: guides/customize-help-output.md
-    - name: Customize Command-line Errors
-      href: guides/customize-command-line-errors.md
     - name: Optional and Variadic Arguments
       href: guides/optional-and-variadic-arguments.md
     - name: Require an Option
@@ -50,6 +46,12 @@
       href: guides/test-a-cli-application.md
     - name: Handle Cancellation
       href: guides/handle-cancellation.md
+    - name: Customize Help Output
+      href: guides/customize-help-output.md
+    - name: Customize Command-line Errors
+      href: guides/customize-command-line-errors.md
+    - name: Localize Help and Errors
+      href: guides/localize-help-and-errors.md
 - name: Reference
   expanded: true
   items:

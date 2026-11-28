@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Resources;
 
 namespace AnyCli.Commands.Registration;
@@ -56,20 +55,6 @@ public sealed class HelpConfigurationBuilder
         params ResourceManager[] descriptionResources)
     {
         _builder.HelpFormatting.UseLocalizedTextProvider(descriptionResources);
-        return this;
-    }
-
-    /// <summary>
-    /// Uses the localized help text provider with resources from the specified assembly.
-    /// </summary>
-    /// <param name="baseName">The resource base name.</param>
-    /// <param name="assembly">The assembly containing the resources.</param>
-    /// <returns>The current builder.</returns>
-    public HelpConfigurationBuilder UseLocalizedTextProvider(
-        string baseName,
-        Assembly assembly)
-    {
-        _builder.HelpFormatting.UseLocalizedTextProvider(baseName, assembly);
         return this;
     }
 

@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Resources;
 
 
@@ -55,23 +54,6 @@ internal sealed class HelpFormattingOptions
             descriptionResources,
             context.Localization);
         return this;
-    }
-
-    /// <summary>
-    /// Uses the localized help text provider with resources from the specified assembly.
-    /// </summary>
-    /// <param name="baseName">The resource base name.</param>
-    /// <param name="assembly">The assembly containing the resources.</param>
-    /// <returns>The current options.</returns>
-    public HelpFormattingOptions UseLocalizedTextProvider(
-        string baseName,
-        Assembly assembly)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(baseName);
-        ArgumentNullException.ThrowIfNull(assembly);
-
-        var resourceManager = new ResourceManager(baseName, assembly);
-        return UseLocalizedTextProvider(resourceManager);
     }
 
     /// <summary>

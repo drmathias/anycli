@@ -36,6 +36,15 @@ var app = ConsoleAppBuilder.Create()
     .Build();
 ```
 
+If you need to replace built-in help headings or standard option descriptions, keep those keys in a separate `HelpOverrides.resx` file and register it before the application resources:
+
+```csharp
+.ConfigureHelp(help => help
+    .UseLocalizedTextProvider(
+        Resources.HelpOverrides.ResourceManager,
+        Resources.HelpDescriptions.ResourceManager))
+```
+
 To replace headings, labels, placeholders, and description resolution entirely, implement `IHelpTextProvider` and register it by type or instance:
 
 ```csharp
@@ -122,5 +131,6 @@ Run the app with `--help` for root help and `<command> --help` for command help.
 ## Related
 
 - [Help reference](../reference/help.md)
+- [Localize help and errors](localize-help-and-errors.md)
 - [Set default values](default-values.md)
 - [Understanding help and error handling](../explanation/understanding-help-and-errors.md)
