@@ -33,13 +33,14 @@ AnyCli is optimised for both utility and extensibility. It is mildly opinionated
 - Source-generated parameter binding with no runtime reflection
 - Typed positional arguments and named options
 - Required, optional, variadic, collection, and defaulted parameters
-- Nested command groups
+- Nested command groups and executable commands with subcommands
 - Custom value parsers
+- Custom default value providers
 - Dependency injection support
 - Typed enum exit codes
 - Typed global options
 - Interceptor middleware
-- Cancellation support for async commands and interceptors
+- Full async and cancellation support for commands, parsers, default value providers and interceptors
 - Fully customisable help and error handling
 - Built in internationalisation - localized error messages and help for English, French, German, Spanish, Brazilian Portuguese, Italian, and Dutch
 - Configurable localization

@@ -148,6 +148,7 @@ AnyCLI reports a structured command-line error and returns exit code `2`.
 ## Learn more
 
 - [Define optional and variadic arguments](../guides/optional-and-variadic-arguments.md)
+- [Write synchronous commands](../guides/write-synchronous-commands.md)
 - [Parameter attributes reference](../reference/parameter-attributes.md)
 
 ## Next

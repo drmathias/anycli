@@ -103,6 +103,8 @@ When the provider is not registered, it needs a public parameterless constructor
 
 The provider is invoked only when the option or argument is omitted. It is not invoked when a command-line value is supplied.
 
+Providers may also be used on options declared in a `[GlobalOptions]` type. Default values are bound the same way for global options and command parameters.
+
 ### Async providers
 
 Implement `IAsyncDefaultValueProvider<T>` when the default requires asynchronous work:

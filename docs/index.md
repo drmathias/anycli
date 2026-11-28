@@ -62,7 +62,7 @@ AnyCLI is a good fit for:
 
 ### Commands and parameters
 
-Commands are ordinary .NET classes, and their parameters are plain objects. Commands can be nested into groups, and parameters support required, optional, variadic, repeated, collection, and defaulted values. Positional arguments, named options, short aliases, grouped flags, enums, and custom parsers are all supported.
+Commands are ordinary .NET classes, and their parameters are plain objects. Commands can be synchronous or asynchronous, with or without typed parameters. They can be nested into groups or own subcommands, and parameters support required, optional, variadic, repeated, collection, and defaulted values. Positional arguments, named options, short aliases, grouped flags, enums, custom synchronous and asynchronous parsers, and custom default value providers are all supported.
 
 ### Global options
 
@@ -70,7 +70,7 @@ Global options are declared once and inherited by every command. They can appear
 
 ### Exit codes and cancellation
 
-Commands can return strongly typed exit codes, and asynchronous commands can observe cancellation.
+Commands can return strongly typed exit codes. Asynchronous commands, parsers, default value providers, and interceptors can observe cancellation.
 
 ### Dependency injection and interceptors
 
@@ -78,7 +78,7 @@ Commands and framework services support dependency injection. Interceptors can r
 
 ### Help and structured errors
 
-Help output is available by default and can be replaced. Failures are represented as structured errors, with configurable handlers, messages, output writers, and exit codes.
+Help output is available by default and can be replaced. Parameter descriptions and default value display text are configurable, and failures are represented as structured errors with configurable handlers, messages, output writers, and exit codes.
 
 ### Localization, out the box
 
